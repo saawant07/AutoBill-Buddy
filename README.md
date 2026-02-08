@@ -52,6 +52,3 @@ Open http://localhost:8000/static/index.html
 - **AI**: Google Gemini (fallback parser)
 - **Frontend**: Vanilla HTML/CSS/JS
 
-## 📝 License
-
-MIT License - Built with ❤️ for hackathons
