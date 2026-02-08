@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoBill Buddy 🛒</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #10B981;
+            --primary-dark: #059669;
+            --primary-light: #D1FAE5;
+            --accent: #6366F1;
+            --danger: #EF4444;
+            --danger-light: #FEE2E2;
+            --warning: #F59E0B;
+            --bg-main: #F0FDF4;
+            --bg-card: #FFFFFF;
+            --text-primary: #1F2937;
+            --text-secondary: #6B7280;
+            --border: #E5E7EB;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        /* RESET & LAYOUT */
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #F0FDF4 0%, #ECFDF5 50%, #F0FDFA 100%);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+            color: var(--text-primary);
+        }
+
+        /* TOP HEADER - Gradient */
+        #dashboard-header {
+            background: linear-gradient(135deg, #10B981 0%, #059669 50%, #047857 100%);
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+            box-shadow: 0 4px 20px rgba(16, 185, 129, 0.3);
+        }
+
+        #dashboard-header h2 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 700;
+            color: white;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        #search-box {
+            padding: 10px 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 25px;
+            font-size: 14px;
+            width: 220px;
+            outline: none;
+            background: rgba(255, 255, 255, 0.95);
+            transition: all 0.3s ease;
+        }
+
+        #search-box:focus {
+            border-color: white;
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
+            transform: scale(1.02);
+        }
+
+        /* Header Buttons */
+        .header-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            padding: 10px 18px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            margin-left: 10px;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .header-btn:hover {
+            background: white;
+            color: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Calendar Modal */
+        .calendar-modal-content {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .calendar-header h3 {
+            margin: 0;
+            color: #075e54;
+        }
+
+        .month-summary {
+            background: #f0f9f4;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            text-align: center;
+        }
+
+        .month-stat {
+            padding: 8px;
+        }
+
+        .month-stat-value {
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #075e54;
+        }
+
+        .month-stat-label {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+            margin-bottom: 15px;
+        }
+
+        .calendar-day-header {
+            text-align: center;
+            font-weight: bold;
+            font-size: 12px;
+            color: #666;
+            padding: 5px;
+        }
+
+        .calendar-day {
+            text-align: center;
+            padding: 8px 4px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            background: #f5f5f5;
+            transition: all 0.2s;
+        }
+
+        .calendar-day:hover {
+            background: #e0e0e0;
+        }
+
+        .calendar-day.has-sales {
+            background: #dcf8c6;
+        }
+
+        .calendar-day.selected {
+            background: #075e54;
+            color: white;
+        }
+
+        .calendar-day.today {
+            border: 2px solid #075e54;
+        }
+
+        .calendar-day .day-num {
+            font-weight: bold;
+        }
+
+        .calendar-day .day-revenue {
+            font-size: 10px;
+            color: #128c7e;
+        }
+
+        .calendar-day.selected .day-revenue {
+            color: #dcf8c6;
+        }
+
+        .calendar-day.empty {
+            background: transparent;
+            cursor: default;
+        }
+
+        .date-details {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+
+        .date-details h4 {
+            margin: 0 0 10px;
+            color: #075e54;
+        }
+
+        .date-detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            border-bottom: 1px solid #eee;
+            font-size: 13px;
+        }
+
+        .date-detail-row:last-child {
+            border: none;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            width: 320px;
+        }
+
+        .modal-content h3 {
+            margin: 0 0 20px;
+            color: #075e54;
+        }
+
+        .modal-content input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+
+        .modal-content .btn-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .modal-content button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .modal-content .cancel {
+            background: #eee;
+        }
+
+        .modal-content .submit {
+            background: #075e54;
+            color: white;
+        }
+
+        #dashboard {
+            background: linear-gradient(to right, #FFFFFF, #F9FAFB);
+            padding: 16px 20px;
+            display: flex;
+            gap: 12px;
+            overflow-x: auto;
+            border-bottom: none;
+            flex-shrink: 0;
+            height: 95px;
+            align-items: center;
+            box-shadow: inset 0 -1px 0 var(--border);
+        }
+
+        /* Hide scrollbar but allow scroll */
+        #dashboard::-webkit-scrollbar {
+            height: 4px;
+        }
+
+        #dashboard::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 10px;
+        }
+
+        .card {
+            background: linear-gradient(145deg, #FFFFFF, #F9FAFB);
+            padding: 12px 18px;
+            border-radius: 16px;
+            min-width: 85px;
+            text-align: center;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            transition: all 0.3s ease;
+            cursor: default;
+        }
+
+        .card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .card.low {
+            background: linear-gradient(145deg, #FEE2E2, #FECACA);
+            color: var(--danger);
+            border: 2px solid #FCA5A5;
+            animation: pulse-danger 2s infinite;
+        }
+
+        @keyframes pulse-danger {
+
+            0%,
+            100% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+            }
+
+            50% {
+                box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+            }
+        }
+
+        .qty {
+            font-size: 1.4em;
+            font-weight: 700;
+            display: block;
+            color: var(--primary-dark);
+        }
+
+        .card.low .qty {
+            color: var(--danger);
+        }
+
+        .card small {
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        /* CHAT AREA */
+        #chat {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            scroll-behavior: smooth;
+            background: linear-gradient(180deg, var(--bg-main) 0%, #E8F5E9 100%);
+        }
+
+        .msg {
+            max-width: 75%;
+            padding: 14px 18px;
+            border-radius: 20px;
+            font-size: 15px;
+            line-height: 1.5;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .user {
+            align-self: flex-end;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            border-bottom-right-radius: 6px;
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+        }
+
+        .bot {
+            align-self: flex-start;
+            background: white;
+            border: 1px solid var(--border);
+            border-bottom-left-radius: 6px;
+            box-shadow: var(--shadow);
+        }
+
+        .warn {
+            color: var(--danger);
+            font-weight: 600;
+            font-size: 0.85em;
+            display: block;
+            margin-top: 6px;
+        }
+
+        /* BOTTOM SECTION - 3 Column Layout */
+        #bottom-section {
+            display: flex;
+            gap: 16px;
+            padding: 16px 20px;
+            background: linear-gradient(to top, #ECFDF5, #F0FDF4);
+            border-top: 1px solid var(--border);
+            flex-shrink: 0;
+            height: 220px;
+        }
+
+        #transactions,
+        #items-sold,
+        #summary {
+            background: white;
+            border-radius: 16px;
+            padding: 16px;
+            overflow-y: auto;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+        }
+
+        #transactions {
+            flex: 2;
+        }
+
+        #transactions h3,
+        #items-sold h3,
+        #summary h3 {
+            margin: 0 0 12px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--primary-dark);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        #transactions table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        #transactions th {
+            text-align: left;
+            color: var(--text-secondary);
+            border-bottom: 2px solid var(--border);
+            padding: 8px 10px;
+            font-weight: 600;
+        }
+
+        #transactions td {
+            padding: 10px;
+            border-bottom: 1px solid #F3F4F6;
+        }
+
+        #transactions tr:hover {
+            background: #F9FAFB;
+        }
+
+        #transactions tr:last-child td {
+            border: none;
+        }
+
+        /* Column 2: Items Sold */
+        #items-sold {
+            flex: 1.5;
+        }
+
+        .item-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 12px;
+            border-radius: 10px;
+            margin-bottom: 6px;
+            background: #F9FAFB;
+            transition: all 0.2s ease;
+        }
+
+        .item-row:hover {
+            background: var(--primary-light);
+            transform: translateX(4px);
+        }
+
+        .item-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .item-qty {
+            font-weight: 700;
+            color: var(--primary-dark);
+            background: var(--primary-light);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+
+        /* Column 3: Today's Summary (smaller) */
+        #summary {
+            flex: 1;
+        }
+
+        .stat {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #F3F4F6;
+            font-size: 13px;
+        }
+
+        .stat:last-child {
+            border: none;
+        }
+
+        .stat-value {
+            font-weight: 700;
+            color: var(--primary-dark);
+            background: var(--primary-light);
+            padding: 4px 12px;
+            border-radius: 20px;
+        }
+
+        /* CONTROLS */
+        #controls {
+            background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+            padding: 14px 20px;
+            display: flex;
+            gap: 12px;
+            flex-shrink: 0;
+            box-shadow: 0 -4px 20px rgba(16, 185, 129, 0.2);
+        }
+
+        #controls input {
+            flex: 1;
+            padding: 14px 20px;
+            border-radius: 25px;
+            border: 2px solid transparent;
+            font-size: 15px;
+            outline: none;
+            background: white;
+            transition: all 0.3s ease;
+        }
+
+        #controls input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+        }
+
+        #controls button {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            border: none;
+            background: white;
+            color: var(--primary-dark);
+            font-size: 22px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        #controls button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        #mic.listening {
+            background: #d32f2f;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="dashboard-header">
+        <h2>📦 Stock Dashboard</h2>
+        <div>
+            <input type="text" id="search-box" placeholder="Search items..." oninput="filterDashboard()">
+            <button class="header-btn" onclick="openCalendarModal()">📅 Monthly</button>
+            <button class="header-btn" onclick="openModal()">+ Add Stock</button>
+        </div>
+    </div>
+    <div id="dashboard">Loading...</div>
+
+    <!-- Add Stock Modal -->
+    <div id="stock-modal" class="modal">
+        <div class="modal-content">
+            <h3>📦 Add Stock</h3>
+            <input type="text" id="stock-item" placeholder="Item name (e.g., Paneer)">
+            <input type="number" id="stock-qty" placeholder="Quantity" step="0.1">
+            <div class="btn-row">
+                <button class="cancel" onclick="closeModal()">Cancel</button>
+                <button class="submit" onclick="submitStock()">Add</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Monthly Sales Calendar Modal -->
+    <div id="calendar-modal" class="modal">
+        <div class="calendar-modal-content">
+            <div class="calendar-header">
+                <h3>📅 Monthly Sales</h3>
+                <button class="cancel" onclick="closeCalendarModal()" style="padding:8px 15px;">✕</button>
+            </div>
+            <div id="calendar-content">Loading...</div>
+        </div>
+    </div>
+
+    <div id="chat">
+        <div class="msg bot">👋 I'm ready! Try saying "Sold 5 Milk".</div>
+    </div>
+
+    <div id="bottom-section">
+        <div id="transactions">
+            <h3>📋 Transaction History</h3>
+            <div id="transactions-content">Loading...</div>
+        </div>
+        <div id="items-sold">
+            <h3>📦 Items Sold</h3>
+            <div id="items-sold-content">Loading...</div>
+        </div>
+        <div id="summary">
+            <h3>📊 Today's Summary</h3>
+            <div id="summary-content">Loading...</div>
+        </div>
+    </div>
+
+    <div id="controls">
+        <input type="text" id="txt" placeholder="Type message..." autocomplete="off">
+        <button id="mic">🎤</button>
+        <button id="send">➤</button>
+    </div>
+
+    <script>
+        // --- LOGIC ---
+
+        // Items sold by weight (kg)
+        const weightItems = ['Rice', 'Salt', 'Sugar', 'Flour', 'Oil', 'Wheat', 'Dal', 'Atta'];
+
+        function getUnit(itemName) {
+            return weightItems.includes(itemName) ? 'kg' : '';
+        }
+
+        async function refreshData() {
+            try {
+                const res = await fetch('/inventory');
+                const data = await res.json();
+
+                // Sort by stock_quantity ascending (low stock first)
+                data.sort((a, b) => a.stock_quantity - b.stock_quantity);
+
+                // Store globally for filtering
+                window.inventoryData = data;
+                renderDashboard(data);
+
+                // Fetch today's analysis
+                fetchAnalysis();
+            } catch (e) { console.error("Sync Error", e); }
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('txt');
+            const text = input.value.trim();
+            if (!text) return;
+
+            // UI Update
+            const chat = document.getElementById('chat');
+            chat.innerHTML += `<div class="msg user">${text}</div>`;
+            input.value = '';
+            chat.scrollTop = chat.scrollHeight;
+
+            try {
+                const res = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: text })
+                });
+                const data = await res.json();
+
+                let reply = data.message;
+                if (data.warning) reply += `<span class="warn">${data.warning}</span>`;
+                chat.innerHTML += `<div class="msg bot">${reply}</div>`;
+                chat.scrollTop = chat.scrollHeight;
+
+                // Refresh immediately after sale
+                refreshData();
+            } catch (e) {
+                chat.innerHTML += `<div class="msg bot">❌ Server Error. Check terminal.</div>`;
+            }
+        }
+
+        // --- EVENTS ---
+        document.getElementById('send').onclick = sendMessage;
+        document.getElementById('txt').onkeypress = (e) => {
+            if (e.key === 'Enter') sendMessage();
+        };
+
+        // Voice Logic
+        const mic = document.getElementById('mic');
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            const recognition = new SpeechRecognition();
+
+            mic.onclick = () => {
+                mic.classList.add('listening');
+                recognition.start();
+            };
+
+            recognition.onresult = (event) => {
+                mic.classList.remove('listening');
+                const transcript = event.results[0][0].transcript;
+                document.getElementById('txt').value = transcript;
+                sendMessage(); // Auto-send
+            };
+
+            recognition.onend = () => mic.classList.remove('listening');
+        } else {
+            mic.style.display = 'none'; // Hide if not supported
+        }
+
+        // Render dashboard cards
+        function renderDashboard(data) {
+            const dash = document.getElementById('dashboard');
+            if (data.length === 0) {
+                dash.innerHTML = '<p style="color:#888; margin:auto;">No items found</p>';
+                return;
+            }
+            dash.innerHTML = data.map(item => `
+                <div class="card ${item.stock_quantity < 10 ? 'low' : ''}">
+                    <span class="qty">${item.stock_quantity}${getUnit(item.item_name)}</span>
+                    <small>${item.item_name}</small>
+                </div>
+            `).join('');
+        }
+
+        // Filter dashboard by search
+        function filterDashboard() {
+            const query = document.getElementById('search-box').value.toLowerCase();
+            if (!window.inventoryData) return;
+            const filtered = window.inventoryData.filter(item =>
+                item.item_name.toLowerCase().includes(query)
+            );
+            renderDashboard(filtered);
+        }
+
+        // Analysis fetch
+        async function fetchAnalysis() {
+            try {
+                const res = await fetch('/sales/today');
+                const data = await res.json();
+                const txEl = document.getElementById('transactions-content');
+                const itemsEl = document.getElementById('items-sold-content');
+                const summaryEl = document.getElementById('summary-content');
+
+                // Check if no sales
+                if (data.items_sold.length === 0) {
+                    txEl.innerHTML = '<p style="color:#888">No transactions yet.</p>';
+                    itemsEl.innerHTML = '<p style="color:#888">No items sold yet.</p>';
+                    summaryEl.innerHTML = '<p style="color:#888">No sales today.</p>';
+                    return;
+                }
+
+                // Column 1: Transaction History
+                txEl.innerHTML = `
+                    <table>
+                        <tr><th>#</th><th>Items</th><th>Price</th><th>Time</th></tr>
+                        ${data.transactions.slice(0, 10).map(t => `
+                            <tr>
+                                <td>${t.order}</td>
+                                <td>${t.item}</td>
+                                <td>₹${t.price}</td>
+                                <td>${t.time || '-'}</td>
+                            </tr>
+                        `).join('')}
+                    </table>
+                `;
+
+                // Column 2: Items Sold breakdown
+                itemsEl.innerHTML = data.items_sold.map(i => `
+                    <div class="item-row">
+                        <span>${i.name}</span>
+                        <span class="item-qty">${i.qty}${getUnit(i.name)} sold</span>
+                    </div>
+                `).join('');
+
+                // Column 3: Today's Summary
+                summaryEl.innerHTML = `
+                    <div class="stat" style="font-weight:bold;color:#075e54"><span>📅 ${data.date || 'Today'}</span></div>
+                    <div class="stat"><span>Revenue</span><span class="stat-value">₹${data.total_revenue}</span></div>
+                    <div class="stat"><span>Customers</span><span class="stat-value">${data.total_sales}</span></div>
+                    <div class="stat"><span>Total Qty</span><span class="stat-value">${data.total_quantity}</span></div>
+                `;
+            } catch (e) { console.error('Analysis Error', e); }
+        }
+
+        // Modal functions
+        function openModal() {
+            document.getElementById('stock-modal').classList.add('show');
+            document.getElementById('stock-item').focus();
+        }
+
+        function closeModal() {
+            document.getElementById('stock-modal').classList.remove('show');
+            document.getElementById('stock-item').value = '';
+            document.getElementById('stock-qty').value = '';
+        }
+
+        async function submitStock() {
+            const item = document.getElementById('stock-item').value.trim();
+            const qty = parseFloat(document.getElementById('stock-qty').value);
+
+            if (!item || isNaN(qty) || qty <= 0) {
+                alert('Please enter valid item name and quantity');
+                return;
+            }
+
+            try {
+                const res = await fetch('/add-stock', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ item_name: item, quantity: qty })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    closeModal();
+                    refreshData(); // Refresh dashboard
+                    // Show in chat
+                    const chat = document.getElementById('chat');
+                    chat.innerHTML += `<div class="msg bot">${data.message}</div>`;
+                    chat.scrollTop = chat.scrollHeight;
+                } else {
+                    alert(data.message);
+                }
+            } catch (e) {
+                alert('Error adding stock');
+                console.error(e);
+            }
+        }
+
+        // Start Polling (every 10 seconds)
+        setInterval(refreshData, 10000);
+        refreshData(); // Initial load
+
+        // ============ CALENDAR MODAL FUNCTIONS ============
+        let monthlyData = null;
+
+        function openCalendarModal() {
+            document.getElementById('calendar-modal').classList.add('show');
+            loadMonthlyData();
+        }
+
+        function closeCalendarModal() {
+            document.getElementById('calendar-modal').classList.remove('show');
+        }
+
+        async function loadMonthlyData() {
+            const el = document.getElementById('calendar-content');
+            el.innerHTML = '<p style="color:#888;text-align:center;">Loading...</p>';
+
+            try {
+                const res = await fetch('/sales/month');
+                monthlyData = await res.json();
+                renderCalendar();
+            } catch (e) {
+                el.innerHTML = '<p style="color:#c62828;">Error loading data</p>';
+                console.error(e);
+            }
+        }
+
+        function renderCalendar() {
+            const el = document.getElementById('calendar-content');
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = now.getMonth();
+            const today = now.getDate();
+            const todayStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(today).padStart(2, '0')}`;
+
+            // Get first day and number of days in month
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+            // Month summary
+            let html = `
+                <div class="month-summary">
+                    <div class="month-stat">
+                        <div class="month-stat-value">₹${monthlyData.month_revenue}</div>
+                        <div class="month-stat-label">Total Revenue</div>
+                    </div>
+                    <div class="month-stat">
+                        <div class="month-stat-value">${monthlyData.month_orders}</div>
+                        <div class="month-stat-label">Total Orders</div>
+                    </div>
+                    <div class="month-stat">
+                        <div class="month-stat-value">${monthlyData.month_quantity}</div>
+                        <div class="month-stat-label">Items Sold</div>
+                    </div>
+                </div>
+            `;
+
+            // Calendar grid
+            html += '<div class="calendar-grid">';
+
+            // Day headers
+            const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            dayNames.forEach(d => {
+                html += `<div class="calendar-day-header">${d}</div>`;
+            });
+
+            // Empty cells before first day
+            for (let i = 0; i < firstDay; i++) {
+                html += '<div class="calendar-day empty"></div>';
+            }
+
+            // Days
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const dayData = monthlyData.daily_totals[dateStr];
+                const hasSales = dayData && dayData.revenue > 0;
+                const isToday = dateStr === todayStr;
+
+                let classes = 'calendar-day';
+                if (hasSales) classes += ' has-sales';
+                if (isToday) classes += ' today';
+
+                html += `
+                    <div class="${classes}" onclick="selectDate('${dateStr}')">
+                        <div class="day-num">${day}</div>
+                        ${hasSales ? `<div class="day-revenue">₹${dayData.revenue}</div>` : ''}
+                    </div>
+                `;
+            }
+
+            html += '</div>';
+            html += '<div id="date-details"></div>';
+            el.innerHTML = html;
+        }
+
+        async function selectDate(dateStr) {
+            // Highlight selected date
+            document.querySelectorAll('.calendar-day').forEach(d => d.classList.remove('selected'));
+            event.currentTarget.classList.add('selected');
+
+            const detailsEl = document.getElementById('date-details');
+            detailsEl.innerHTML = '<p style="color:#888;">Loading...</p>';
+
+            try {
+                const res = await fetch(`/sales/date/${dateStr}`);
+                const data = await res.json();
+
+                if (data.items_sold.length === 0) {
+                    detailsEl.innerHTML = `
+                        <div class="date-details">
+                            <h4>📅 ${data.display_date}</h4>
+                            <p style="color:#888;">No sales on this date.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                detailsEl.innerHTML = `
+                    <div class="date-details">
+                        <h4>📅 ${data.display_date}</h4>
+                        <div class="date-detail-row">
+                            <span>Revenue</span>
+                            <strong style="color:#075e54;">₹${data.revenue}</strong>
+                        </div>
+                        <div class="date-detail-row">
+                            <span>Orders</span>
+                            <strong>${data.orders}</strong>
+                        </div>
+                        <div class="date-detail-row">
+                            <span>Quantity Sold</span>
+                            <strong>${data.quantity}</strong>
+                        </div>
+                        <hr style="border:none;border-top:1px solid #eee;margin:10px 0;">
+                        ${data.items_sold.map(i => `
+                            <div class="date-detail-row">
+                                <span>${i.name}</span>
+                                <span>${i.qty}${getUnit(i.name)}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            } catch (e) {
+                detailsEl.innerHTML = '<p style="color:#c62828;">Error loading details</p>';
+                console.error(e);
+            }
+        }
+    </script>
+</body>
+
+</html>

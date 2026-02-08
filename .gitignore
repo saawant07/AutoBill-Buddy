@@ -1,0 +1,25 @@
+# Environment and secrets - NEVER commit these!
+.env
+.env.*
+*.env
+
+# Python virtual environments
+venv/
+.venv/
+env/
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Logs
+*.log
+logs/
