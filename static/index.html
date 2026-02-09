@@ -4,1041 +4,1064 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AutoBill Buddy 🛒</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <title>AutoBill Buddy - Voice-Powered Billing</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
     <style>
         :root {
-            --primary: #10B981;
-            --primary-dark: #059669;
-            --primary-light: #D1FAE5;
-            --accent: #6366F1;
-            --danger: #EF4444;
-            --danger-light: #FEE2E2;
-            --warning: #F59E0B;
-            --bg-main: #F0FDF4;
-            --bg-card: #FFFFFF;
-            --text-primary: #1F2937;
-            --text-secondary: #6B7280;
-            --border: #E5E7EB;
-            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-        }
-
-        /* RESET & LAYOUT */
-        * {
-            box-sizing: border-box;
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --glass-bg: rgba(255, 255, 255, 0.6);
+            --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
         }
 
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: linear-gradient(135deg, #F0FDF4 0%, #ECFDF5 50%, #F0FDFA 100%);
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            overflow: hidden;
-            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(-45deg, #ecfdf5, #d1fae5, #a7f3d0, #6ee7b7);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
         }
 
-        /* TOP HEADER - Gradient */
-        #dashboard-header {
-            background: linear-gradient(135deg, #10B981 0%, #059669 50%, #047857 100%);
-            padding: 16px 24px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-shrink: 0;
-            box-shadow: 0 4px 20px rgba(16, 185, 129, 0.3);
+        @keyframes gradientBG {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
         }
 
-        #dashboard-header h2 {
-            margin: 0;
-            font-size: 20px;
-            font-weight: 700;
-            color: white;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        .glass {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--glass-shadow);
         }
 
-        #search-box {
-            padding: 10px 16px;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-radius: 25px;
-            font-size: 14px;
-            width: 220px;
-            outline: none;
-            background: rgba(255, 255, 255, 0.95);
-            transition: all 0.3s ease;
+        .glass-dark {
+            background: rgba(6, 78, 59, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        #search-box:focus {
-            border-color: white;
-            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
-            transform: scale(1.02);
+        @keyframes float {
+            0% {
+                transform: translateY(0px);
+            }
+
+            50% {
+                transform: translateY(-5px);
+            }
+
+            100% {
+                transform: translateY(0px);
+            }
         }
 
-        /* Header Buttons */
-        .header-btn {
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            border: 2px solid rgba(255, 255, 255, 0.4);
-            padding: 10px 18px;
-            border-radius: 25px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 600;
-            margin-left: 10px;
-            transition: all 0.3s ease;
-            backdrop-filter: blur(10px);
+        .hover-lift {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        .header-btn:hover {
-            background: white;
-            color: var(--primary-dark);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        .hover-lift:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px -10px rgba(0, 0, 0, 0.2);
+            background: rgba(255, 255, 255, 0.8);
         }
 
-        /* Calendar Modal */
-        .calendar-modal-content {
-            background: white;
-            padding: 25px;
-            border-radius: 12px;
-            width: 500px;
-            max-height: 80vh;
-            overflow-y: auto;
+        @keyframes pulse-ring {
+            0% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            }
+
+            70% {
+                transform: scale(1);
+                box-shadow: 0 0 0 20px rgba(16, 185, 129, 0);
+            }
+
+            100% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+            }
         }
 
-        .calendar-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
+        .mic-button {
+            animation: float 6s ease-in-out infinite;
         }
 
-        .calendar-header h3 {
-            margin: 0;
-            color: #075e54;
+        .mic-listening {
+            animation: none;
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+            animation: pulse-red 2s infinite;
         }
 
-        .month-summary {
-            background: #f0f9f4;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            text-align: center;
+        @keyframes pulse-red {
+            0% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+            }
+
+            70% {
+                transform: scale(1);
+                box-shadow: 0 0 0 20px rgba(239, 68, 68, 0);
+            }
+
+            100% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+            }
         }
 
-        .month-stat {
-            padding: 8px;
+        /* Scrollbar Polish */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
         }
 
-        .month-stat-value {
-            font-size: 1.4em;
-            font-weight: bold;
-            color: #075e54;
+        ::-webkit-scrollbar-track {
+            background: transparent;
         }
 
-        .month-stat-label {
-            font-size: 12px;
-            color: #666;
+        ::-webkit-scrollbar-thumb {
+            background: rgba(16, 185, 129, 0.5);
+            border-radius: 10px;
         }
 
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(16, 185, 129, 0.8);
+        }
+
+        .spinner {
+            border: 3px solid rgba(16, 185, 129, 0.3);
+            border-top-color: #10b981;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Inventory Status Colors - Refined */
+        .stock-good {
+            color: #065f46;
+            background: rgba(236, 253, 245, 0.6);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .stock-low {
+            color: #92400e;
+            background: rgba(255, 251, 235, 0.6);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+        }
+
+        .stock-critical {
+            color: #991b1b;
+            background: rgba(254, 242, 242, 0.6);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        /* Calendar Styles */
         .calendar-grid {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
-            gap: 5px;
-            margin-bottom: 15px;
-        }
-
-        .calendar-day-header {
-            text-align: center;
-            font-weight: bold;
-            font-size: 12px;
-            color: #666;
-            padding: 5px;
+            gap: 8px;
         }
 
         .calendar-day {
-            text-align: center;
-            padding: 8px 4px;
-            border-radius: 8px;
+            aspect-ratio: 1;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
             cursor: pointer;
-            font-size: 13px;
-            background: #f5f5f5;
             transition: all 0.2s;
+            border: 1px solid transparent;
         }
 
         .calendar-day:hover {
-            background: #e0e0e0;
+            transform: scale(1.05);
+            z-index: 10;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
 
         .calendar-day.has-sales {
-            background: #dcf8c6;
+            background-color: #ecfdf5;
+            border-color: #a7f3d0;
+            color: #064e3b;
+        }
+
+        .calendar-day.no-sales {
+            background-color: #f8fafc;
+            color: #94a3b8;
         }
 
         .calendar-day.selected {
-            background: #075e54;
+            background-color: #10b981;
             color: white;
-        }
-
-        .calendar-day.today {
-            border: 2px solid #075e54;
-        }
-
-        .calendar-day .day-num {
-            font-weight: bold;
-        }
-
-        .calendar-day .day-revenue {
-            font-size: 10px;
-            color: #128c7e;
-        }
-
-        .calendar-day.selected .day-revenue {
-            color: #dcf8c6;
-        }
-
-        .calendar-day.empty {
-            background: transparent;
-            cursor: default;
-        }
-
-        .date-details {
-            background: #f9f9f9;
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 15px;
-        }
-
-        .date-details h4 {
-            margin: 0 0 10px;
-            color: #075e54;
-        }
-
-        .date-detail-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 6px 0;
-            border-bottom: 1px solid #eee;
-            font-size: 13px;
-        }
-
-        .date-detail-row:last-child {
-            border: none;
-        }
-
-        /* Modal */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .modal.show {
-            display: flex;
-        }
-
-        .modal-content {
-            background: white;
-            padding: 25px;
-            border-radius: 12px;
-            width: 320px;
-        }
-
-        .modal-content h3 {
-            margin: 0 0 20px;
-            color: #075e54;
-        }
-
-        .modal-content input {
-            width: 100%;
-            padding: 12px;
-            margin-bottom: 15px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            font-size: 16px;
-            box-sizing: border-box;
-        }
-
-        .modal-content .btn-row {
-            display: flex;
-            gap: 10px;
-        }
-
-        .modal-content button {
-            flex: 1;
-            padding: 12px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-
-        .modal-content .cancel {
-            background: #eee;
-        }
-
-        .modal-content .submit {
-            background: #075e54;
-            color: white;
-        }
-
-        #dashboard {
-            background: linear-gradient(to right, #FFFFFF, #F9FAFB);
-            padding: 16px 20px;
-            display: flex;
-            gap: 12px;
-            overflow-x: auto;
-            border-bottom: none;
-            flex-shrink: 0;
-            height: 95px;
-            align-items: center;
-            box-shadow: inset 0 -1px 0 var(--border);
-        }
-
-        /* Hide scrollbar but allow scroll */
-        #dashboard::-webkit-scrollbar {
-            height: 4px;
-        }
-
-        #dashboard::-webkit-scrollbar-thumb {
-            background: var(--primary);
-            border-radius: 10px;
-        }
-
-        .card {
-            background: linear-gradient(145deg, #FFFFFF, #F9FAFB);
-            padding: 12px 18px;
-            border-radius: 16px;
-            min-width: 85px;
-            text-align: center;
-            box-shadow: var(--shadow);
-            border: 1px solid var(--border);
-            transition: all 0.3s ease;
-            cursor: default;
-        }
-
-        .card:hover {
-            transform: translateY(-3px);
-            box-shadow: var(--shadow-lg);
-        }
-
-        .card.low {
-            background: linear-gradient(145deg, #FEE2E2, #FECACA);
-            color: var(--danger);
-            border: 2px solid #FCA5A5;
-            animation: pulse-danger 2s infinite;
-        }
-
-        @keyframes pulse-danger {
-
-            0%,
-            100% {
-                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
-            }
-
-            50% {
-                box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
-            }
-        }
-
-        .qty {
-            font-size: 1.4em;
-            font-weight: 700;
-            display: block;
-            color: var(--primary-dark);
-        }
-
-        .card.low .qty {
-            color: var(--danger);
-        }
-
-        .card small {
-            color: var(--text-secondary);
-            font-weight: 500;
-        }
-
-        /* CHAT AREA */
-        #chat {
-            flex: 1;
-            overflow-y: auto;
-            padding: 24px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            scroll-behavior: smooth;
-            background: linear-gradient(180deg, var(--bg-main) 0%, #E8F5E9 100%);
-        }
-
-        .msg {
-            max-width: 75%;
-            padding: 14px 18px;
-            border-radius: 20px;
-            font-size: 15px;
-            line-height: 1.5;
-            animation: slideIn 0.3s ease;
-        }
-
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .user {
-            align-self: flex-end;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            color: white;
-            border-bottom-right-radius: 6px;
-            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
-        }
-
-        .bot {
-            align-self: flex-start;
-            background: white;
-            border: 1px solid var(--border);
-            border-bottom-left-radius: 6px;
-            box-shadow: var(--shadow);
-        }
-
-        .warn {
-            color: var(--danger);
-            font-weight: 600;
-            font-size: 0.85em;
-            display: block;
-            margin-top: 6px;
-        }
-
-        /* BOTTOM SECTION - 3 Column Layout */
-        #bottom-section {
-            display: flex;
-            gap: 16px;
-            padding: 16px 20px;
-            background: linear-gradient(to top, #ECFDF5, #F0FDF4);
-            border-top: 1px solid var(--border);
-            flex-shrink: 0;
-            height: 220px;
-        }
-
-        #transactions,
-        #items-sold,
-        #summary {
-            background: white;
-            border-radius: 16px;
-            padding: 16px;
-            overflow-y: auto;
-            box-shadow: var(--shadow);
-            border: 1px solid var(--border);
-        }
-
-        #transactions {
-            flex: 2;
-        }
-
-        #transactions h3,
-        #items-sold h3,
-        #summary h3 {
-            margin: 0 0 12px;
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--primary-dark);
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        #transactions table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 13px;
-        }
-
-        #transactions th {
-            text-align: left;
-            color: var(--text-secondary);
-            border-bottom: 2px solid var(--border);
-            padding: 8px 10px;
-            font-weight: 600;
-        }
-
-        #transactions td {
-            padding: 10px;
-            border-bottom: 1px solid #F3F4F6;
-        }
-
-        #transactions tr:hover {
-            background: #F9FAFB;
-        }
-
-        #transactions tr:last-child td {
-            border: none;
-        }
-
-        /* Column 2: Items Sold */
-        #items-sold {
-            flex: 1.5;
-        }
-
-        .item-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 12px;
-            border-radius: 10px;
-            margin-bottom: 6px;
-            background: #F9FAFB;
-            transition: all 0.2s ease;
-        }
-
-        .item-row:hover {
-            background: var(--primary-light);
-            transform: translateX(4px);
-        }
-
-        .item-row:last-child {
-            margin-bottom: 0;
-        }
-
-        .item-qty {
-            font-weight: 700;
-            color: var(--primary-dark);
-            background: var(--primary-light);
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 12px;
-        }
-
-        /* Column 3: Today's Summary (smaller) */
-        #summary {
-            flex: 1;
-        }
-
-        .stat {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 0;
-            border-bottom: 1px solid #F3F4F6;
-            font-size: 13px;
-        }
-
-        .stat:last-child {
-            border: none;
-        }
-
-        .stat-value {
-            font-weight: 700;
-            color: var(--primary-dark);
-            background: var(--primary-light);
-            padding: 4px 12px;
-            border-radius: 20px;
-        }
-
-        /* CONTROLS */
-        #controls {
-            background: linear-gradient(135deg, #10B981 0%, #059669 100%);
-            padding: 14px 20px;
-            display: flex;
-            gap: 12px;
-            flex-shrink: 0;
-            box-shadow: 0 -4px 20px rgba(16, 185, 129, 0.2);
-        }
-
-        #controls input {
-            flex: 1;
-            padding: 14px 20px;
-            border-radius: 25px;
-            border: 2px solid transparent;
-            font-size: 15px;
-            outline: none;
-            background: white;
-            transition: all 0.3s ease;
-        }
-
-        #controls input:focus {
-            border-color: var(--accent);
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
-        }
-
-        #controls button {
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            border: none;
-            background: white;
-            color: var(--primary-dark);
-            font-size: 22px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        #controls button:hover {
-            transform: scale(1.1);
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        button:active {
-            transform: scale(0.95);
-        }
-
-        #mic.listening {
-            background: #d32f2f;
-            animation: pulse 1.5s infinite;
-        }
-
-        @keyframes pulse {
-            0% {
-                opacity: 1;
-            }
-
-            50% {
-                opacity: 0.5;
-            }
-
-            100% {
-                opacity: 1;
-            }
+            box-shadow: 0 0 0 2px white, 0 0 0 4px #10b981;
         }
     </style>
 </head>
 
-<body>
-    <div id="dashboard-header">
-        <h2>📦 Stock Dashboard</h2>
-        <div>
-            <input type="text" id="search-box" placeholder="Search items..." oninput="filterDashboard()">
-            <button class="header-btn" onclick="openCalendarModal()">📅 Monthly</button>
-            <button class="header-btn" onclick="openModal()">+ Add Stock</button>
+<body class="bg-gradient-main min-h-screen relative">
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed top-4 right-4 z-[60] flex flex-col gap-2 max-w-sm"></div>
+
+    <!-- Shop Name Modal -->
+    <div id="shop-name-modal"
+        class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="glass rounded-3xl shadow-2xl w-full max-w-md p-8 animate-bounce-in">
+            <h2 class="text-2xl font-bold text-slate-800 mb-2">Welcome! 👋</h2>
+            <p class="text-slate-500 mb-6">What is the name of your shop?</p>
+            <form id="shop-name-form" class="space-y-4">
+                <input type="text" id="shop-name-input" required
+                    class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none transition-all"
+                    placeholder="e.g. Gupta General Store">
+                <button type="submit"
+                    class="w-full py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-semibold rounded-xl hover:from-emerald-600 hover:to-emerald-700 transition-all shadow-lg">
+                    Save & Continue
+                </button>
+            </form>
         </div>
     </div>
-    <div id="dashboard">Loading...</div>
 
-    <!-- Add Stock Modal -->
-    <div id="stock-modal" class="modal">
-        <div class="modal-content">
-            <h3>📦 Add Stock</h3>
-            <input type="text" id="stock-item" placeholder="Item name (e.g., Paneer)">
-            <input type="number" id="stock-qty" placeholder="Quantity" step="0.1">
-            <div class="btn-row">
-                <button class="cancel" onclick="closeModal()">Cancel</button>
-                <button class="submit" onclick="submitStock()">Add</button>
+    <!-- Auth Modal -->
+    <div id="auth-overlay"
+        class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-40 flex items-center justify-center p-4">
+        <div class="glass rounded-3xl shadow-2xl w-full max-w-md p-8">
+            <div class="text-center mb-8">
+                <div
+                    class="w-16 h-16 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                    <i class="fas fa-shopping-cart text-white text-2xl"></i>
+                </div>
+                <h1 class="text-2xl font-bold text-slate-800">AutoBill Buddy</h1>
+                <p class="text-slate-500 mt-1">Voice-Powered Grocery Billing</p>
+            </div>
+            <div class="flex bg-slate-100 rounded-xl p-1 mb-6">
+                <button type="button" id="tab-login"
+                    class="flex-1 py-2 px-4 rounded-lg font-medium transition-all bg-white shadow text-emerald-600">Login</button>
+                <button type="button" id="tab-signup"
+                    class="flex-1 py-2 px-4 rounded-lg font-medium transition-all text-slate-500">Sign Up</button>
+            </div>
+            <form id="auth-form" class="space-y-4">
+                <input type="email" id="auth-email" required
+                    class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-emerald-500 outline-none"
+                    placeholder="Email">
+                <input type="password" id="auth-password" required minlength="6"
+                    class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-emerald-500 outline-none"
+                    placeholder="Password (min 6 chars)">
+                <button type="submit" id="auth-submit-btn"
+                    class="w-full py-3 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 transition-all flex justify-center items-center gap-2">
+                    <span id="auth-btn-text">Login</span>
+                </button>
+            </form>
+            <p id="auth-error" class="text-red-500 text-sm text-center mt-4 hidden"></p>
+            <p id="auth-success" class="text-emerald-600 text-sm text-center mt-4 hidden"></p>
+        </div>
+    </div>
+
+    <!-- MAIN DASHBOARD -->
+    <div id="dashboard" class="hidden min-h-screen flex flex-col pb-6">
+        <!-- Header -->
+        <header class="glass-dark text-white px-4 py-4 shadow-xl sticky top-0 z-30">
+            <div class="max-w-7xl mx-auto flex items-center justify-between">
+                <div>
+                    <h1 id="header-shop-name"
+                        class="font-bold text-xl sm:text-2xl cursor-pointer hover:underline decoration-dashed underline-offset-4"
+                        title="Click to rename">AutoBill Buddy</h1>
+                    <p class="text-emerald-200 text-xs flex items-center gap-1"><span
+                            class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></span> Connected</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span id="user-email" class="text-sm text-emerald-100 hidden sm:block"></span>
+                    <button id="logout-btn"
+                        class="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-sm transition-all">Logout</button>
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-1 max-w-7xl mx-auto w-full p-4 sm:p-6 space-y-6">
+
+            <!-- 1. Stats Grid (4 Cards) -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Today's Revenue -->
+                <div class="glass rounded-2xl p-4 shadow-lg flex items-center justify-between">
+                    <div>
+                        <p class="text-slate-500 text-xs uppercase font-bold tracking-wider">Today's Rev</p>
+                        <p id="stat-revenue" class="text-2xl font-bold text-emerald-600 mt-1">₹0</p>
+                    </div>
+                    <div
+                        class="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600">
+                        <i class="fas fa-indian-rupee-sign"></i>
+                    </div>
+                </div>
+                <!-- Monthly Revenue -->
+                <div class="glass rounded-2xl p-4 shadow-lg flex items-center justify-between cursor-pointer hover:bg-white/40 transition-all"
+                    onclick="openMonthlyDashboard()">
+                    <div>
+                        <p class="text-slate-500 text-xs uppercase font-bold tracking-wider">Monthly Rev</p>
+                        <p id="stat-month-revenue" class="text-2xl font-bold text-indigo-600 mt-1">₹0</p>
+                    </div>
+                    <div class="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600">
+                        <i class="fas fa-calendar-alt"></i>
+                    </div>
+                </div>
+                <!-- Items Sold -->
+                <div class="glass rounded-2xl p-4 shadow-lg flex items-center justify-between">
+                    <div>
+                        <p class="text-slate-500 text-xs uppercase font-bold tracking-wider">Items Sold</p>
+                        <p id="stat-items" class="text-2xl font-bold text-blue-600 mt-1">0</p>
+                    </div>
+                    <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600"><i
+                            class="fas fa-box"></i></div>
+                </div>
+                <!-- Total Orders -->
+                <div class="glass rounded-2xl p-4 shadow-lg flex items-center justify-between">
+                    <div>
+                        <p class="text-slate-500 text-xs uppercase font-bold tracking-wider">Orders</p>
+                        <p id="stat-orders" class="text-2xl font-bold text-purple-600 mt-1">0</p>
+                    </div>
+                    <div class="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center text-purple-600">
+                        <i class="fas fa-receipt"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Voice Command Center (Big Focus) -->
+            <div class="glass rounded-3xl p-8 shadow-xl text-center relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-400 to-teal-500"></div>
+                <h2 class="text-2xl font-bold text-slate-800 mb-2">Voice Command Center</h2>
+                <p class="text-slate-500 mb-8">Tap & Speak: "Sold 2 milk, 5 bread and 1 kg sugar"</p>
+
+                <button id="mic-btn"
+                    class="mic-button relative w-24 h-24 sm:w-32 sm:h-32 mx-auto rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 shadow-2xl hover:shadow-emerald-500/50 transition-all hover:scale-105 flex items-center justify-center group">
+                    <i
+                        class="fas fa-microphone text-white text-3xl sm:text-5xl group-hover:scale-110 transition-transform"></i>
+                </button>
+
+                <!-- Live Transcript & Interaction -->
+                <div id="transcript-container" class="mt-6 mb-4 hidden">
+                    <p class="text-sm text-emerald-600 font-medium animate-pulse">Listening...</p>
+                    <p id="live-transcript" class="text-slate-700 text-lg font-medium italic mt-2">"..."</p>
+                </div>
+
+                <!-- Manual Input (Subtle) -->
+                <div class="mt-8 max-w-lg mx-auto flex gap-2">
+                    <input type="text" id="text-input" placeholder="Or type here..."
+                        class="flex-1 px-4 py-2 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none">
+                    <button id="send-text-btn" class="w-12 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl"><i
+                            class="fas fa-paper-plane"></i></button>
+                </div>
+            </div>
+
+            <!-- 3. Bottom Grid: Inventory & Transactions -->
+            <div class="grid md:grid-cols-2 gap-6">
+
+                <!-- Inventory Status (Sorted, Color Coded) -->
+                <div class="glass rounded-2xl p-0 overflow-hidden shadow-xl flex flex-col h-[400px]">
+                    <div class="p-4 border-b border-slate-100 bg-white/50 flex flex-col gap-2 sticky top-0 z-10">
+                        <div class="flex justify-between items-center">
+                            <h3 class="font-bold text-slate-800 flex items-center gap-2"><i
+                                    class="fas fa-warehouse text-emerald-600"></i> Inventory Status</h3>
+                            <div class="flex gap-2">
+                                <button onclick="document.getElementById('add-stock-modal').classList.remove('hidden')"
+                                    class="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded hover:bg-emerald-200">
+                                    <i class="fas fa-plus"></i> Add
+                                </button>
+                                <button id="refresh-inventory-btn" class="text-slate-400 hover:text-emerald-600"><i
+                                        class="fas fa-refresh"></i></button>
+                            </div>
+                        </div>
+                        <!-- Search Bar -->
+                        <div class="relative">
+                            <i
+                                class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 text-xs"></i>
+                            <input type="text" id="inventory-search" placeholder="Search items..."
+                                class="w-full pl-8 pr-3 py-1.5 text-sm bg-white/60 border border-slate-200 rounded-lg focus:border-emerald-500 focus:ring-1 focus:ring-emerald-200 outline-none transition-all">
+                        </div>
+                    </div>
+                    <div class="overflow-y-auto flex-1 p-2" id="inventory-list">
+                        <!-- Items injected here -->
+                        <div class="text-center py-10 text-slate-400">Loading inventory...</div>
+                    </div>
+                </div>
+
+                <!-- Recent Transactions -->
+                <div class="glass rounded-2xl p-0 overflow-hidden shadow-xl flex flex-col h-[400px]">
+                    <div
+                        class="p-4 border-b border-slate-100 bg-white/50 flex justify-between items-center sticky top-0">
+                        <h3 class="font-bold text-slate-800 flex items-center gap-2"><i
+                                class="fas fa-history text-blue-600"></i> Recent Sales</h3>
+                        <button id="refresh-sales-btn" class="text-slate-400 hover:text-blue-600"><i
+                                class="fas fa-refresh"></i></button>
+                    </div>
+                    <div class="overflow-y-auto flex-1 p-2 space-y-2" id="transactions-list">
+                        <!-- Transactions injected here -->
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Add Stock Modal (Hidden default) -->
+    <div id="add-stock-modal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="glass bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 relative">
+            <button onclick="document.getElementById('add-stock-modal').classList.add('hidden')"
+                class="absolute top-4 right-4 text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
+            <h3 class="font-bold text-lg mb-4 text-slate-800">Add Stock</h3>
+            <form id="add-stock-form" class="space-y-3">
+                <input type="text" id="stock-item" required
+                    class="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none focus:border-emerald-500"
+                    placeholder="Item Name (e.g. Milk)">
+                <input type="number" id="stock-qty" required step="0.1"
+                    class="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none focus:border-emerald-500"
+                    placeholder="Quantity">
+                <input type="number" id="stock-price" step="0.01"
+                    class="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none focus:border-emerald-500"
+                    placeholder="Price (Optional)">
+                <button type="submit"
+                    class="w-full py-2 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-700">Add
+                    Stock</button>
+            </form>
+            <div class="mt-4 pt-4 border-t border-slate-100">
+                <button id="seed-btn"
+                    class="w-full py-2 bg-slate-100 text-slate-600 rounded-xl text-sm hover:bg-slate-200">Seed Default
+                    Items</button>
             </div>
         </div>
     </div>
 
-    <!-- Monthly Sales Calendar Modal -->
-    <div id="calendar-modal" class="modal">
-        <div class="calendar-modal-content">
-            <div class="calendar-header">
-                <h3>📅 Monthly Sales</h3>
-                <button class="cancel" onclick="closeCalendarModal()" style="padding:8px 15px;">✕</button>
+    <!-- Monthly Dashboard Modal -->
+    <div id="monthly-dashboard-modal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div
+            class="glass bg-white rounded-3xl shadow-2xl w-full max-w-2xl h-[80vh] flex flex-col relative overflow-hidden transition-all">
+
+            <!-- Header -->
+            <div
+                class="p-6 border-b border-slate-100 flex justify-between items-center bg-white/80 backdrop-blur shrink-0">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-800" id="calendar-month-title">Monthly Dashboard</h2>
+                    <p class="text-slate-500 text-sm" id="calendar-subtitle">Overview</p>
+                </div>
+                <button onclick="document.getElementById('monthly-dashboard-modal').classList.add('hidden')"
+                    class="w-10 h-10 rounded-full bg-slate-100 text-slate-500 hover:bg-red-50 hover:text-red-500 transition-all flex items-center justify-center">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
             </div>
-            <div id="calendar-content">Loading...</div>
+
+            <!-- VIEW 1: CALENDAR -->
+            <div id="view-calendar" class="flex-1 overflow-y-auto p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <div class="bg-emerald-50 text-emerald-700 px-4 py-2 rounded-xl border border-emerald-100 font-bold shadow-sm"
+                        id="calendar-total-rev">Total: ₹0</div>
+                </div>
+
+                <!-- Weekday Headers -->
+                <div
+                    class="grid grid-cols-7 gap-2 mb-2 text-center text-xs font-bold text-slate-400 uppercase tracking-wider">
+                    <div>Sun</div>
+                    <div>Mon</div>
+                    <div>Tue</div>
+                    <div>Wed</div>
+                    <div>Thu</div>
+                    <div>Fri</div>
+                    <div>Sat</div>
+                </div>
+
+                <!-- Days Grid -->
+                <div id="calendar-grid" class="calendar-grid"></div>
+            </div>
+
+            <!-- VIEW 2: DAILY DETAILS (Drill Down) -->
+            <div id="view-day-details" class="flex-1 overflow-y-auto p-6 hidden flex flex-col bg-slate-50">
+                <button onclick="showCalendarView()"
+                    class="mb-4 text-slate-500 hover:text-emerald-600 flex items-center gap-2 font-medium w-fit">
+                    <i class="fas fa-arrow-left"></i> Back to Month
+                </button>
+
+                <div id="day-details-content" class="flex-1 flex flex-col">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-2xl font-bold text-slate-800" id="day-title">Date</h3>
+                    </div>
+
+                    <!-- Mini Stats -->
+                    <div class="grid grid-cols-3 gap-3 mb-6">
+                        <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
+                            <p class="text-xs text-slate-500 uppercase font-bold">Revenue</p>
+                            <p class="text-xl font-bold text-emerald-600" id="day-rev">₹0</p>
+                        </div>
+                        <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
+                            <p class="text-xs text-slate-500 uppercase font-bold">Orders</p>
+                            <p class="text-xl font-bold text-indigo-600" id="day-orders">0</p>
+                        </div>
+                        <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
+                            <p class="text-xs text-slate-500 uppercase font-bold">Items</p>
+                            <p class="text-xl font-bold text-blue-600" id="day-items">0</p>
+                        </div>
+                    </div>
+
+                    <h4 class="font-bold text-slate-700 mb-3 text-sm flex items-center gap-2 uppercase tracking-wide">
+                        <i class="fas fa-receipt text-slate-400"></i> Transactions
+                    </h4>
+
+                    <div class="flex-1 overflow-y-auto pr-2 space-y-2" id="day-transactions-list">
+                        <!-- Transactions injected here -->
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <div id="chat">
-        <div class="msg bot">👋 I'm ready! Try saying "Sold 5 Milk".</div>
-    </div>
 
-    <div id="bottom-section">
-        <div id="transactions">
-            <h3>📋 Transaction History</h3>
-            <div id="transactions-content">Loading...</div>
-        </div>
-        <div id="items-sold">
-            <h3>📦 Items Sold</h3>
-            <div id="items-sold-content">Loading...</div>
-        </div>
-        <div id="summary">
-            <h3>📊 Today's Summary</h3>
-            <div id="summary-content">Loading...</div>
-        </div>
-    </div>
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
-    <div id="controls">
-        <input type="text" id="txt" placeholder="Type message..." autocomplete="off">
-        <button id="mic">🎤</button>
-        <button id="send">➤</button>
-    </div>
+        // --- CONFIG ---
+        const SUPABASE_URL = 'https://mhnueaafadnlweezmemc.supabase.co';
+        // Note: In production, use env vars. For prototype, anon key is fine if RLS is set.
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1obnVlYWFmYWRubHdlZXptZW1jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA1Mzc3OTcsImV4cCI6MjA4NjExMzc5N30.IuweIlK8DP0VY3y9a7DMuftn-XnuovKa39_2pcuj6ow';
+        const API_BASE = 'http://localhost:8000';
 
-    <script>
-        // --- LOGIC ---
+        const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // Items sold by weight (kg)
-        const weightItems = ['Rice', 'Salt', 'Sugar', 'Flour', 'Oil', 'Wheat', 'Dal', 'Atta'];
+        // --- STATE ---
+        let session = null;
+        let isLoginMode = true;
+        let recognition = null;
+        let allInventoryItems = []; // Store for client-side filtering
 
-        function getUnit(itemName) {
-            return weightItems.includes(itemName) ? 'kg' : '';
-        }
-
-        async function refreshData() {
-            try {
-                const res = await fetch('/inventory');
-                const data = await res.json();
-
-                // Sort by stock_quantity ascending (low stock first)
-                data.sort((a, b) => a.stock_quantity - b.stock_quantity);
-
-                // Store globally for filtering
-                window.inventoryData = data;
-                renderDashboard(data);
-
-                // Fetch today's analysis
-                fetchAnalysis();
-            } catch (e) { console.error("Sync Error", e); }
-        }
-
-        async function sendMessage() {
-            const input = document.getElementById('txt');
-            const text = input.value.trim();
-            if (!text) return;
-
-            // UI Update
-            const chat = document.getElementById('chat');
-            chat.innerHTML += `<div class="msg user">${text}</div>`;
-            input.value = '';
-            chat.scrollTop = chat.scrollHeight;
-
-            try {
-                const res = await fetch('/chat', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: text })
-                });
-                const data = await res.json();
-
-                let reply = data.message;
-                if (data.warning) reply += `<span class="warn">${data.warning}</span>`;
-                chat.innerHTML += `<div class="msg bot">${reply}</div>`;
-                chat.scrollTop = chat.scrollHeight;
-
-                // Refresh immediately after sale
-                refreshData();
-            } catch (e) {
-                chat.innerHTML += `<div class="msg bot">❌ Server Error. Check terminal.</div>`;
-            }
-        }
-
-        // --- EVENTS ---
-        document.getElementById('send').onclick = sendMessage;
-        document.getElementById('txt').onkeypress = (e) => {
-            if (e.key === 'Enter') sendMessage();
+        // --- ELEMENTS ---
+        const els = {
+            authOverlay: document.getElementById('auth-overlay'),
+            dashboard: document.getElementById('dashboard'),
+            shopNameModal: document.getElementById('shop-name-modal'),
+            headerShopName: document.getElementById('header-shop-name'),
+            invList: document.getElementById('inventory-list'),
+            transList: document.getElementById('transactions-list'),
+            refreshInv: document.getElementById('refresh-inventory-btn'),
+            refreshSales: document.getElementById('refresh-sales-btn'),
+            micBtn: document.getElementById('mic-btn'),
+            invSearch: document.getElementById('inventory-search'),
         };
 
-        // Voice Logic
-        const mic = document.getElementById('mic');
-        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            const recognition = new SpeechRecognition();
+        // --- AUTH & INIT ---
+        async function init() {
+            const { data } = await supabase.auth.getSession();
+            if (data.session) {
+                handleLoginSuccess(data.session);
+            }
 
-            mic.onclick = () => {
-                mic.classList.add('listening');
-                recognition.start();
-            };
+            supabase.auth.onAuthStateChange((event, _session) => {
+                if (event === 'SIGNED_OUT') window.location.reload();
+                if (event === 'SIGNED_IN' && _session) handleLoginSuccess(_session);
+            });
 
-            recognition.onresult = (event) => {
-                mic.classList.remove('listening');
-                const transcript = event.results[0][0].transcript;
-                document.getElementById('txt').value = transcript;
-                sendMessage(); // Auto-send
-            };
-
-            recognition.onend = () => mic.classList.remove('listening');
-        } else {
-            mic.style.display = 'none'; // Hide if not supported
+            initSpeech();
         }
 
-        // Render dashboard cards
-        function renderDashboard(data) {
-            const dash = document.getElementById('dashboard');
-            if (data.length === 0) {
-                dash.innerHTML = '<p style="color:#888; margin:auto;">No items found</p>';
+        async function handleLoginSuccess(s) {
+            session = s; // Keep session for UI logic (shop name), but Backend is now open.
+            // IMPORTANT: With backend reverted to no-auth, we don't strictly need session for API calls, 
+            // but we keep it for Shop Name personalization.
+
+            els.authOverlay.classList.add('hidden');
+            els.dashboard.classList.remove('hidden');
+            document.getElementById('user-email').textContent = session.user.email;
+
+            // Check Shop Name
+            const meta = session.user.user_metadata || {};
+            if (meta.shop_name) {
+                els.headerShopName.textContent = meta.shop_name;
+            } else {
+                els.shopNameModal.classList.remove('hidden');
+            }
+
+            refreshAllData();
+        }
+
+        // --- SHOP NAME ---
+        document.getElementById('shop-name-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('shop-name-input').value.trim();
+            if (!name) return;
+
+            const { error } = await supabase.auth.updateUser({ data: { shop_name: name } });
+            if (!error) {
+                els.headerShopName.textContent = name;
+                els.shopNameModal.classList.add('hidden');
+                showToast('Shop name saved!', 'success');
+            } else {
+                showToast('Error saving name', 'error');
+            }
+        });
+
+        els.headerShopName.addEventListener('click', () => els.shopNameModal.classList.remove('hidden'));
+
+        // --- DATA FETCHING ---
+        async function api(endpoint, method = 'GET', body = null) {
+            // Require session for authenticated API calls
+            if (!session) {
+                console.error("No session available for API call:", endpoint);
+                return { error: true, status: 401, detail: "Not authenticated" };
+            }
+
+            try {
+                const headers = {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`  // Send JWT for RLS
+                };
+                const opts = { method, headers };
+                if (body) opts.body = JSON.stringify(body);
+
+                const res = await fetch(`${API_BASE}${endpoint}`, opts);
+                if (!res.ok) {
+                    const text = await res.text();
+                    console.error(`API Error ${res.status} at ${endpoint}:`, text);
+                    // If unauthorized, session may have expired
+                    if (res.status === 401) {
+                        showToast("Session expired. Please log in again.", "warning");
+                        await supabase.auth.signOut();
+                        location.reload();
+                    }
+                    return { error: true, status: res.status, detail: text };
+                }
+                return await res.json();
+            } catch (e) {
+                console.error("Fetch Error:", e);
+                return null;
+            }
+        }
+
+        async function refreshAllData() {
+            fetchStats();
+            fetchInventory();
+        }
+
+        async function fetchStats() {
+            // Today
+            const today = await api('/sales/today');
+            if (today) {
+                document.getElementById('stat-revenue').textContent = `₹${today.total_revenue}`;
+                document.getElementById('stat-items').textContent = today.total_quantity;
+                document.getElementById('stat-orders').textContent = today.total_sales;
+                renderTransactions(today.transactions);
+            }
+            // Monthly
+            const month = await api('/sales/month');
+            if (month) {
+                document.getElementById('stat-month-revenue').textContent = `₹${month.month_revenue}`;
+            }
+        }
+
+        async function fetchInventory() {
+            els.invList.innerHTML = '<div class="text-center py-4"><span class="spinner text-emerald-500"></span></div>';
+            const items = await api('/inventory');
+            if (!items || items.error) {
+                const errMsg = items && items.detail ? items.detail : "Failed to load";
+                els.invList.innerHTML = `<div class="text-red-500 text-center p-4">
+                    <p class="font-bold">Error Loading Inventory</p>
+                    <p class="text-xs mt-1 text-red-400">${errMsg}</p>
+                </div>`;
                 return;
             }
-            dash.innerHTML = data.map(item => `
-                <div class="card ${item.stock_quantity < 10 ? 'low' : ''}">
-                    <span class="qty">${item.stock_quantity}${getUnit(item.item_name)}</span>
-                    <small>${item.item_name}</small>
+
+            allInventoryItems = items; // Store globally
+            renderInventory(allInventoryItems);
+        }
+
+        function renderInventory(items) {
+            if (items.length === 0) {
+                els.invList.innerHTML = '<p class="text-slate-400 text-center py-4">No items found</p>';
+                return;
+            }
+
+            els.invList.innerHTML = items.map(item => {
+                const qty = item.stock_quantity;
+                let statusClass = 'stock-good';
+
+                // 0 Stock - Red Alert
+                if (qty <= 0) {
+                    statusClass = 'stock-critical border-l-4 border-l-red-500';
+                } else if (qty < 5) {
+                    statusClass = 'stock-low';
+                }
+
+                return `
+                <div class="flex items-center justify-between p-3 mb-2 rounded-xl transition-all hover:shadow-sm border border-slate-50 ${statusClass}">
+                    <div>
+                        <p class="font-bold text-slate-800">${item.item_name}</p>
+                        <p class="text-xs opacity-75">₹${item.price || 0}/unit</p>
+                    </div>
+                    <div class="text-right">
+                        <span class="font-bold text-lg ${qty <= 0 ? 'text-red-600' : 'text-slate-700'}">${qty}</span>
+                        <p class="text-[10px] uppercase font-bold opacity-60">Stock</p>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        // Search Listener
+        els.invSearch.addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase();
+            const filtered = allInventoryItems.filter(i => i.item_name.toLowerCase().includes(term));
+            renderInventory(filtered);
+        });
+
+        function renderTransactions(txs) {
+            if (!txs || txs.length === 0) {
+                els.transList.innerHTML = '<p class="text-slate-400 text-center py-4">No sales today</p>';
+                return;
+            }
+            els.transList.innerHTML = txs.map(t => `
+                <div class="flex items-center justify-between p-3 bg-white border border-slate-100 rounded-xl hover:shadow-sm transition-all">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center font-bold text-xs">#${t.order}</div>
+                        <div>
+                            <p class="font-medium text-slate-700 text-sm truncate max-w-[120px]" title="${t.item}">${t.item}</p>
+                            <p class="text-xs text-slate-400 flex items-center gap-1"><i class="far fa-clock"></i> ${t.time || 'Just now'}</p>
+                        </div>
+                    </div>
+                    <span class="font-bold text-emerald-600">₹${t.price}</span>
                 </div>
             `).join('');
         }
 
-        // Filter dashboard by search
-        function filterDashboard() {
-            const query = document.getElementById('search-box').value.toLowerCase();
-            if (!window.inventoryData) return;
-            const filtered = window.inventoryData.filter(item =>
-                item.item_name.toLowerCase().includes(query)
-            );
-            renderDashboard(filtered);
+        // --- ACTIONS ---
+        els.refreshInv.onclick = fetchInventory;
+        els.refreshSales.onclick = fetchStats;
+
+        document.getElementById('logout-btn').onclick = async () => {
+            await supabase.auth.signOut();
+            window.location.reload();
+        };
+
+        // Auth Form
+        const authForm = document.getElementById('auth-form');
+        document.getElementById('tab-login').onclick = () => switchAuth(true);
+        document.getElementById('tab-signup').onclick = () => switchAuth(false);
+
+        function switchAuth(login) {
+            isLoginMode = login;
+            document.getElementById('tab-login').className = login ? 'flex-1 py-2 px-4 rounded-lg font-medium transition-all bg-white shadow text-emerald-600' : 'flex-1 py-2 px-4 rounded-lg font-medium transition-all text-slate-500';
+            document.getElementById('tab-signup').className = !login ? 'flex-1 py-2 px-4 rounded-lg font-medium transition-all bg-white shadow text-emerald-600' : 'flex-1 py-2 px-4 rounded-lg font-medium transition-all text-slate-500';
+            document.getElementById('auth-btn-text').innerText = login ? 'Login' : 'Create Account';
         }
 
-        // Analysis fetch
-        async function fetchAnalysis() {
+        authForm.onsubmit = async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('auth-email').value;
+            const password = document.getElementById('auth-password').value;
             try {
-                const res = await fetch('/sales/today');
-                const data = await res.json();
-                const txEl = document.getElementById('transactions-content');
-                const itemsEl = document.getElementById('items-sold-content');
-                const summaryEl = document.getElementById('summary-content');
+                const { data, error } = isLoginMode
+                    ? await supabase.auth.signInWithPassword({ email, password })
+                    : await supabase.auth.signUp({ email, password });
 
-                // Check if no sales
-                if (data.items_sold.length === 0) {
-                    txEl.innerHTML = '<p style="color:#888">No transactions yet.</p>';
-                    itemsEl.innerHTML = '<p style="color:#888">No items sold yet.</p>';
-                    summaryEl.innerHTML = '<p style="color:#888">No sales today.</p>';
+                if (error) throw error;
+                if (!isLoginMode && !data.session) showToast('Check email to confirm signup!', 'info');
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        };
+
+        // Add Stock
+        document.getElementById('add-stock-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const item = document.getElementById('stock-item').value;
+            const qty = document.getElementById('stock-qty').value;
+            const price = document.getElementById('stock-price').value;
+            const res = await api('/add-stock', 'POST', { item_name: item, quantity: parseFloat(qty), price: price ? parseFloat(price) : null });
+            if (res && res.success) {
+                showToast('Stock added!', 'success');
+                document.getElementById('add-stock-modal').classList.add('hidden');
+                document.getElementById('add-stock-form').reset();
+                fetchInventory();
+            }
+        };
+
+        document.getElementById('seed-btn').onclick = async () => {
+            if (confirm('Reset inventory to defaults?')) {
+                const res = await api('/seed-inventory', 'POST');
+                if (res && res.success) {
+                    showToast('Inventory seeded!', 'success');
+                    fetchInventory();
+                }
+            }
+        };
+
+        // --- VOICE ---
+        function initSpeech() {
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) return;
+            const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SR();
+            recognition.continuous = false;
+            recognition.lang = 'en-IN';
+
+            recognition.onstart = () => {
+                els.micBtn.classList.add('mic-listening', 'mic-pulse');
+                document.getElementById('transcript-container').classList.remove('hidden');
+            };
+            recognition.onend = () => {
+                els.micBtn.classList.remove('mic-listening', 'mic-pulse');
+                setTimeout(() => document.getElementById('transcript-container').classList.add('hidden'), 3000);
+            };
+
+            recognition.onresult = async (event) => {
+                const transcript = event.results[0][0].transcript;
+                document.getElementById('live-transcript').innerText = `"${transcript}"`;
+
+                // Send to backend
+                showToast('Processing...', 'info');
+                const res = await api('/chat', 'POST', { message: transcript });
+
+                if (res) {
+                    if (res.success) {
+                        showToast(res.message, 'success');
+                        // Play success sound?
+                        refreshAllData();
+                    } else {
+                        // Warning or Error
+                        showToast(res.message, res.warning ? 'warning' : 'error');
+                    }
+                }
+            };
+
+            // Handle speech recognition errors
+            recognition.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+                els.micBtn.classList.remove('mic-listening', 'mic-pulse');
+                document.getElementById('transcript-container').classList.add('hidden');
+
+                switch (event.error) {
+                    case 'not-allowed':
+                        showToast('🎤 Microphone permission denied. Please allow mic access.', 'error');
+                        break;
+                    case 'no-speech':
+                        showToast('🎤 No speech detected. Try again.', 'warning');
+                        break;
+                    case 'audio-capture':
+                        showToast('🎤 No microphone found. Check your device.', 'error');
+                        break;
+                    case 'network':
+                        showToast('🎤 Speech service unavailable. Use text input instead.', 'warning');
+                        break;
+                    case 'aborted':
+                        // User cancelled, no toast needed
+                        break;
+                    default:
+                        showToast(`🎤 Mic error: ${event.error}`, 'warning');
+                }
+            };
+
+            els.micBtn.onclick = async () => {
+                // First, try to get mic permission explicitly
+                try {
+                    await navigator.mediaDevices.getUserMedia({ audio: true });
+                } catch (e) {
+                    showToast('🎤 Please allow microphone access in your browser settings.', 'error');
                     return;
                 }
 
-                // Column 1: Transaction History
-                txEl.innerHTML = `
-                    <table>
-                        <tr><th>#</th><th>Items</th><th>Price</th><th>Time</th></tr>
-                        ${data.transactions.slice(0, 10).map(t => `
-                            <tr>
-                                <td>${t.order}</td>
-                                <td>${t.item}</td>
-                                <td>₹${t.price}</td>
-                                <td>${t.time || '-'}</td>
-                            </tr>
-                        `).join('')}
-                    </table>
-                `;
-
-                // Column 2: Items Sold breakdown
-                itemsEl.innerHTML = data.items_sold.map(i => `
-                    <div class="item-row">
-                        <span>${i.name}</span>
-                        <span class="item-qty">${i.qty}${getUnit(i.name)} sold</span>
-                    </div>
-                `).join('');
-
-                // Column 3: Today's Summary
-                summaryEl.innerHTML = `
-                    <div class="stat" style="font-weight:bold;color:#075e54"><span>📅 ${data.date || 'Today'}</span></div>
-                    <div class="stat"><span>Revenue</span><span class="stat-value">₹${data.total_revenue}</span></div>
-                    <div class="stat"><span>Customers</span><span class="stat-value">${data.total_sales}</span></div>
-                    <div class="stat"><span>Total Qty</span><span class="stat-value">${data.total_quantity}</span></div>
-                `;
-            } catch (e) { console.error('Analysis Error', e); }
-        }
-
-        // Modal functions
-        function openModal() {
-            document.getElementById('stock-modal').classList.add('show');
-            document.getElementById('stock-item').focus();
-        }
-
-        function closeModal() {
-            document.getElementById('stock-modal').classList.remove('show');
-            document.getElementById('stock-item').value = '';
-            document.getElementById('stock-qty').value = '';
-        }
-
-        async function submitStock() {
-            const item = document.getElementById('stock-item').value.trim();
-            const qty = parseFloat(document.getElementById('stock-qty').value);
-
-            if (!item || isNaN(qty) || qty <= 0) {
-                alert('Please enter valid item name and quantity');
-                return;
-            }
-
-            try {
-                const res = await fetch('/add-stock', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ item_name: item, quantity: qty })
-                });
-                const data = await res.json();
-
-                if (data.success) {
-                    closeModal();
-                    refreshData(); // Refresh dashboard
-                    // Show in chat
-                    const chat = document.getElementById('chat');
-                    chat.innerHTML += `<div class="msg bot">${data.message}</div>`;
-                    chat.scrollTop = chat.scrollHeight;
-                } else {
-                    alert(data.message);
+                // Now start recognition
+                try {
+                    recognition.start();
+                } catch (e) {
+                    console.warn("Mic error/already started", e);
+                    // If already started, stop and restart
+                    try {
+                        recognition.stop();
+                        setTimeout(() => recognition.start(), 100);
+                    } catch (e2) {
+                        console.error("Could not restart recognition", e2);
+                    }
                 }
-            } catch (e) {
-                alert('Error adding stock');
-                console.error(e);
+            };
+        }
+
+        // --- TEXT INPUT ---
+        async function sendTextMessage() {
+            const input = document.getElementById('text-input');
+            const message = input.value.trim();
+            if (!message) return;
+
+            input.value = '';
+            showToast('Processing...', 'info');
+
+            const res = await api('/chat', 'POST', { message });
+            if (res) {
+                if (res.success) {
+                    showToast(res.message, 'success');
+                    refreshAllData();
+                } else {
+                    showToast(res.message, res.warning ? 'warning' : 'error');
+                }
             }
         }
 
-        // Start Polling (every 10 seconds)
-        setInterval(refreshData, 10000);
-        refreshData(); // Initial load
+        document.getElementById('send-text-btn').onclick = sendTextMessage;
 
-        // ============ CALENDAR MODAL FUNCTIONS ============
+        document.getElementById('text-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                sendTextMessage();
+            }
+        });
+
+        // --- TOASTS ---
+        function showToast(msg, type = 'info') {
+            const toast = document.createElement('div');
+            let color = 'bg-slate-800';
+            let icon = 'fa-info-circle';
+
+            if (type === 'success') { color = 'bg-emerald-600'; icon = 'fa-check-circle'; }
+            if (type === 'error') { color = 'bg-red-500'; icon = 'fa-exclamation-circle'; }
+            if (type === 'warning') { color = 'bg-orange-500'; icon = 'fa-exclamation-triangle'; }
+
+            toast.className = `${color} text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 transform transition-all translate-x-full opacity-0`;
+            toast.innerHTML = `<i class="fas ${icon}"></i> <span>${msg}</span>`;
+
+            const container = document.getElementById('toast-container');
+            container.appendChild(toast);
+
+            // Animate in
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-x-full', 'opacity-0');
+            });
+
+            setTimeout(() => {
+                toast.classList.add('translate-x-full', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // --- MONTHLY DASHBOARD ---
         let monthlyData = null;
+        let selectedDateStr = null;
 
-        function openCalendarModal() {
-            document.getElementById('calendar-modal').classList.add('show');
-            loadMonthlyData();
-        }
+        window.openMonthlyDashboard = async function () {
+            const modal = document.getElementById('monthly-dashboard-modal');
+            modal.classList.remove('hidden');
+            showCalendarView(); // Reset to calendar view
 
-        function closeCalendarModal() {
-            document.getElementById('calendar-modal').classList.remove('show');
-        }
+            // Show loading...
 
-        async function loadMonthlyData() {
-            const el = document.getElementById('calendar-content');
-            el.innerHTML = '<p style="color:#888;text-align:center;">Loading...</p>';
-
-            try {
-                const res = await fetch('/sales/month');
-                monthlyData = await res.json();
-                renderCalendar();
-            } catch (e) {
-                el.innerHTML = '<p style="color:#c62828;">Error loading data</p>';
-                console.error(e);
+            const res = await api('/sales/month');
+            if (res) {
+                monthlyData = res;
+                renderMonthlyDashboard();
             }
-        }
+        };
 
-        function renderCalendar() {
-            const el = document.getElementById('calendar-content');
+        window.showCalendarView = function () {
+            document.getElementById('view-calendar').classList.remove('hidden');
+            document.getElementById('view-day-details').classList.add('hidden');
+            document.getElementById('calendar-subtitle').innerText = "Overview";
+        };
+
+        function renderMonthlyDashboard() {
+            // 1. Header Totals
+            document.getElementById('calendar-month-title').innerText = `Monthly: ${monthlyData.month}`;
+            document.getElementById('calendar-total-rev').innerText = `Total: ₹${monthlyData.month_revenue}`;
+
+            // 2. Calendar Grid
+            const grid = document.getElementById('calendar-grid');
+            grid.innerHTML = '';
+
             const now = new Date();
             const year = now.getFullYear();
             const month = now.getMonth();
-            const today = now.getDate();
-            const todayStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(today).padStart(2, '0')}`;
-
-            // Get first day and number of days in month
-            const firstDay = new Date(year, month, 1).getDay();
             const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const firstDay = new Date(year, month, 1).getDay(); // 0 = Sun
 
-            // Month summary
-            let html = `
-                <div class="month-summary">
-                    <div class="month-stat">
-                        <div class="month-stat-value">₹${monthlyData.month_revenue}</div>
-                        <div class="month-stat-label">Total Revenue</div>
-                    </div>
-                    <div class="month-stat">
-                        <div class="month-stat-value">${monthlyData.month_orders}</div>
-                        <div class="month-stat-label">Total Orders</div>
-                    </div>
-                    <div class="month-stat">
-                        <div class="month-stat-value">${monthlyData.month_quantity}</div>
-                        <div class="month-stat-label">Items Sold</div>
-                    </div>
-                </div>
-            `;
-
-            // Calendar grid
-            html += '<div class="calendar-grid">';
-
-            // Day headers
-            const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-            dayNames.forEach(d => {
-                html += `<div class="calendar-day-header">${d}</div>`;
-            });
-
-            // Empty cells before first day
+            // Empty slots
             for (let i = 0; i < firstDay; i++) {
-                html += '<div class="calendar-day empty"></div>';
+                const empty = document.createElement('div');
+                empty.className = 'calendar-day no-sales bg-transparent opacity-0 cursor-default';
+                grid.appendChild(empty);
             }
 
-            // Days
-            for (let day = 1; day <= daysInMonth; day++) {
-                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
                 const dayData = monthlyData.daily_totals[dateStr];
-                const hasSales = dayData && dayData.revenue > 0;
-                const isToday = dateStr === todayStr;
 
-                let classes = 'calendar-day';
-                if (hasSales) classes += ' has-sales';
-                if (isToday) classes += ' today';
+                const el = document.createElement('div');
+                el.className = `calendar-day ${dayData ? 'has-sales' : 'no-sales'}`;
+                el.onclick = () => {
+                    fetchDayDetails(dateStr);
+                };
 
-                html += `
-                    <div class="${classes}" onclick="selectDate('${dateStr}')">
-                        <div class="day-num">${day}</div>
-                        ${hasSales ? `<div class="day-revenue">₹${dayData.revenue}</div>` : ''}
-                    </div>
-                `;
+                el.innerHTML = `
+                    <span class="font-bold mb-1">${d}</span>
+                    ${dayData ? `<span class="text-[10px] font-bold">₹${dayData.revenue}</span>` : ''}
+                 `;
+
+                grid.appendChild(el);
             }
-
-            html += '</div>';
-            html += '<div id="date-details"></div>';
-            el.innerHTML = html;
         }
 
-        async function selectDate(dateStr) {
-            // Highlight selected date
-            document.querySelectorAll('.calendar-day').forEach(d => d.classList.remove('selected'));
-            event.currentTarget.classList.add('selected');
+        window.fetchDayDetails = async function (dateStr) {
+            selectedDateStr = dateStr;
 
-            const detailsEl = document.getElementById('date-details');
-            detailsEl.innerHTML = '<p style="color:#888;">Loading...</p>';
+            // Switch Views
+            document.getElementById('view-calendar').classList.add('hidden');
+            document.getElementById('view-day-details').classList.remove('hidden');
+            document.getElementById('calendar-subtitle').innerText = "Daily Breakdown";
 
-            try {
-                const res = await fetch(`/sales/date/${dateStr}`);
-                const data = await res.json();
+            document.getElementById('day-title').innerText = "Loading...";
+            document.getElementById('day-transactions-list').innerHTML = '<span class="spinner text-emerald-500"></span>';
 
-                if (data.items_sold.length === 0) {
-                    detailsEl.innerHTML = `
-                        <div class="date-details">
-                            <h4>📅 ${data.display_date}</h4>
-                            <p style="color:#888;">No sales on this date.</p>
+            const res = await api(`/sales/date/${dateStr}`);
+            if (res) {
+                document.getElementById('day-title').innerText = res.display_date;
+                document.getElementById('day-rev').innerText = `₹${res.revenue}`;
+                document.getElementById('day-orders').innerText = res.orders;
+                document.getElementById('day-items').innerText = res.quantity;
+
+                const list = document.getElementById('day-transactions-list');
+                if (res.items_sold.length === 0) {
+                    list.innerHTML = '<p class="text-slate-400 text-center py-4">No sales recorded.</p>';
+                } else {
+                    list.innerHTML = res.items_sold.map(i => `
+                        <div class="flex justify-between items-center p-3 bg-white border border-slate-100 rounded-xl mb-2">
+                            <span class="text-slate-700 font-medium">${i.name}</span>
+                            <span class="text-sm bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full border border-emerald-100">${i.qty} sold</span>
                         </div>
-                    `;
-                    return;
+                     `).join('');
                 }
-
-                detailsEl.innerHTML = `
-                    <div class="date-details">
-                        <h4>📅 ${data.display_date}</h4>
-                        <div class="date-detail-row">
-                            <span>Revenue</span>
-                            <strong style="color:#075e54;">₹${data.revenue}</strong>
-                        </div>
-                        <div class="date-detail-row">
-                            <span>Orders</span>
-                            <strong>${data.orders}</strong>
-                        </div>
-                        <div class="date-detail-row">
-                            <span>Quantity Sold</span>
-                            <strong>${data.quantity}</strong>
-                        </div>
-                        <hr style="border:none;border-top:1px solid #eee;margin:10px 0;">
-                        ${data.items_sold.map(i => `
-                            <div class="date-detail-row">
-                                <span>${i.name}</span>
-                                <span>${i.qty}${getUnit(i.name)}</span>
-                            </div>
-                        `).join('')}
-                    </div>
-                `;
-            } catch (e) {
-                detailsEl.innerHTML = '<p style="color:#c62828;">Error loading details</p>';
-                console.error(e);
             }
-        }
+        };
+
+        // Init
+        init();
+
     </script>
 </body>
 

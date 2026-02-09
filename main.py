@@ -1,6 +1,8 @@
 import os
 import json
-from fastapi import FastAPI, HTTPException
+import re
+from typing import Optional
+from fastapi import FastAPI, HTTPException, Header, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -14,7 +16,8 @@ SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+# Global client for public operations only
+supabase_anon: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel('gemini-2.0-flash')
 
@@ -22,21 +25,61 @@ app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+# ============================================================================
+# PER-REQUEST SUPABASE CLIENT (For RLS to work)
+# ============================================================================
+def get_user_client(authorization: Optional[str] = Header(None)) -> tuple[Client, str]:
+    """
+    Creates a fresh Supabase client for each request using the user's JWT token.
+    This ensures Row Level Security (RLS) policies are applied correctly.
+    Returns: (supabase_client, user_id)
+    """
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+    
+    token = authorization.replace("Bearer ", "")
+    
+    # Create a new client with the user's token
+    user_client: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+    
+    # Set the auth token so RLS policies will see this user
+    try:
+        user_client.auth.set_session(token, token)  # access_token, refresh_token
+    except Exception as e:
+        print(f"Set session error (ignoring): {e}")
+        # Continue anyway - get_user will validate the token
+    
+    # Get user_id from the token
+    try:
+        user_response = user_client.auth.get_user(token)
+        user_id = user_response.user.id
+    except Exception as e:
+        print(f"Auth Error: {e}")
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    
+    return user_client, user_id
+
 class ChatRequest(BaseModel):
     message: str
 
 @app.get("/inventory")
-async def get_inventory():
+async def get_inventory(auth: tuple = Depends(get_user_client)):
     try:
-        response = supabase.table("inventory").select("*").order("item_name").execute()
+        db, user_id = auth
+        # Sort by stock_quantity ASC (Low stock first)
+        response = db.table("inventory").select("*").eq("user_id", user_id).order("stock_quantity", desc=False).execute()
         return response.data
+    except HTTPException:
+        raise
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         print(f"Inventory Error: {e}")
         return []
 
 @app.post("/chat")
-async def chat_endpoint(req: ChatRequest):
-    import re
+async def chat_endpoint(req: ChatRequest, auth: tuple = Depends(get_user_client)):
+    db, user_id = auth
     import json
     
     ITEM_PRICES = {
@@ -99,42 +142,94 @@ async def chat_endpoint(req: ChatRequest):
     def parse_message_locally(message):
         text = message.lower()
         
-        text = re.sub(r'\b(sold|sell|sale|sold|selling|please|and|the|a|an|some|of|also|give|add|more)\b', ' ', text)
+        # Expanded voice typos (Hindi + English phonetic errors)
+        EXPANDED_VOICE_TYPOS = {
+            **VOICE_TYPOS,
+            # Hindi/Regional words
+            'doodh': 'milk', 'dudh': 'milk', 'dudth': 'milk',
+            'chawal': 'rice', 'chaawal': 'rice', 'chaval': 'rice',
+            'cheeni': 'sugar', 'chini': 'sugar', 'shakkar': 'sugar',
+            'aloo': 'potato', 'alu': 'potato', 'aaloo': 'potato',
+            'pyaz': 'onion', 'pyaaz': 'onion', 'kanda': 'onion',
+            'tamatar': 'tomato', 'tamater': 'tomato',
+            'anda': 'eggs', 'ande': 'eggs', 'anday': 'eggs',
+            'namak': 'salt', 'namkeen': 'salt',
+            'tel': 'oil', 'teil': 'oil',
+            'makhan': 'butter', 'makkhan': 'butter',
+            'dahi': 'curd', 'dahee': 'curd',
+            'roti': 'bread', 'rotee': 'bread',
+            # Common voice recognition errors
+            'sugarr': 'sugar', 'sugaar': 'sugar',
+            'ricee': 'rice', 'ricerice': 'rice',
+            'malak': 'milk', 'malk': 'milk', 'milkk': 'milk',
+            'breads': 'bread', 'breadd': 'bread',
+            'eggz': 'eggs', 'eg': 'eggs', 'eggg': 'eggs',
+            'buttar': 'butter', 'butr': 'butter',
+            'daal': 'dal', 'dhaal': 'dal', 'dhal': 'dal',
+            'chees': 'cheese', 'cheez': 'cheese', 'cheeze': 'cheese',
+            'panneer': 'paneer', 'pneer': 'paneer',
+            'ataa': 'atta', 'aata': 'atta', 'aatta': 'atta',
+            'maida': 'maida', 'mayda': 'maida',
+            'biskut': 'biscuits', 'biscut': 'biscuits', 'biskoot': 'biscuits',
+            'sabun': 'soap', 'saabun': 'soap',
+            'maggi': 'noodles', 'maagi': 'noodles',
+            'tooothpaste': 'toothpaste', 'toothpast': 'toothpaste', 'colgate': 'toothpaste',
+            'condum': 'condom', 'condem': 'condom', 'kondom': 'condom',
+        }
         
-        for typo, correction in VOICE_TYPOS.items():
+        # Remove common filler words
+        text = re.sub(r'\b(sold|sell|sale|selling|please|and|the|a|an|some|of|also|give|add|more|i|want|need|get|me|us|becho|bech|do|de|dena|le|lo|lena|karo)\b', ' ', text)
+        
+        # Apply voice typos
+        for typo, correction in EXPANDED_VOICE_TYPOS.items():
             text = re.sub(rf'\b{typo}\b', correction, text, flags=re.IGNORECASE)
         
-        for word, num in WORD_TO_NUM.items():
+        # Convert word numbers to digits (expanded)
+        EXPANDED_WORD_TO_NUM = {
+            **WORD_TO_NUM,
+            'ek': 1, 'do': 2, 'teen': 3, 'char': 4, 'paanch': 5, 'panch': 5,
+            'chhe': 6, 'chay': 6, 'saat': 7, 'aath': 8, 'nau': 9, 'das': 10,
+            'gyarah': 11, 'barah': 12, 'terah': 13, 'chaudah': 14, 'pandrah': 15,
+            'dhai': 2.5, 'adha': 0.5, 'dedh': 1.5, 'paune': 0.75,
+            'double': 2, 'triple': 3, 'single': 1,
+        }
+        
+        for word, num in EXPANDED_WORD_TO_NUM.items():
             text = re.sub(rf'\b{word}\b', str(num), text, flags=re.IGNORECASE)
         
+        # Remove unit words (keep the number)
         text = re.sub(r'\bkg\b|\bkgs\b|\bkilo\b|\bkilos\b|\bkilogram\b|\bkilograms\b', ' ', text)
-        text = re.sub(r'\bliters?\b|\bltrs?\b|\bml\b', ' ', text)
-        text = re.sub(r'\bpiece\b|\bpieces\b|\bpcs\b|\bunits?\b', ' ', text)
+        text = re.sub(r'\bliters?\b|\bltrs?\b|\bml\b|\bltr\b', ' ', text)
+        text = re.sub(r'\bpiece\b|\bpieces\b|\bpcs\b|\bunits?\b|\bpack\b|\bpacks\b|\bpacket\b|\bpackets\b', ' ', text)
+        text = re.sub(r'\brunning\b|\brupees?\b|\brs\.?\b', ' ', text)
         
+        # Clean up whitespace
         text = ' '.join(text.split())
         
         items_found = []
+        used_positions = set()
         
+        # Pattern 1: "2 milk" or "2.5 sugar" (number before item)
         pattern1 = r'(\d+(?:\.\d+)?)\s*([a-zA-Z]+)'
-        matches1 = re.findall(pattern1, text)
-        
-        for qty_str, item_word in matches1:
+        for match in re.finditer(pattern1, text):
+            qty_str, item_word = match.groups()
             matched_item = fuzzy_match_item(item_word)
-            if matched_item:
+            if matched_item and match.start() not in used_positions:
+                items_found.append({"item": matched_item, "qty": float(qty_str)})
+                used_positions.add(match.start())
+        
+        # Pattern 2: "milk 2" or "sugar 2.5" (item before number)
+        pattern2 = r'([a-zA-Z]+)\s+(\d+(?:\.\d+)?)'
+        for match in re.finditer(pattern2, text):
+            item_word, qty_str = match.groups()
+            matched_item = fuzzy_match_item(item_word)
+            if matched_item and not any(i["item"] == matched_item for i in items_found):
                 items_found.append({"item": matched_item, "qty": float(qty_str)})
         
-        pattern2 = r'([a-zA-Z]+)\s+(\d+(?:\.\d+)?)'
-        matches2 = re.findall(pattern2, text)
-        
-        for item_word, qty_str in matches2:
-            matched_item = fuzzy_match_item(item_word)
-            if matched_item:
-                if not any(i["item"] == matched_item for i in items_found):
-                    items_found.append({"item": matched_item, "qty": float(qty_str)})
-        
+        # Pattern 3: Standalone item names (default qty = 1)
         words = text.split()
         for word in words:
-            if not word.isdigit():
+            if not word.replace('.', '').isdigit():
                 matched_item = fuzzy_match_item(word)
                 if matched_item and not any(i["item"] == matched_item for i in items_found):
                     items_found.append({"item": matched_item, "qty": 1.0})
@@ -176,6 +271,8 @@ If nothing found, return: []"""
                     items_to_sell.append({"item": matched_item, "qty": qty})
                     
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             print(f"AI Parse Error (using local only): {e}")
     
     if not items_to_sell:
@@ -189,7 +286,7 @@ If nothing found, return: []"""
         item = sale["item"]
         qty = sale["qty"]
         
-        inv_check = supabase.table("inventory").select("stock_quantity").eq("item_name", item).execute()
+        inv_check = db.table("inventory").select("stock_quantity").eq("user_id", user_id).eq("item_name", item).execute()
         current_stock = inv_check.data[0]['stock_quantity'] if inv_check.data else 0
         
         if current_stock < qty:
@@ -202,15 +299,16 @@ If nothing found, return: []"""
         
         new_stock = current_stock - qty
         if inv_check.data:
-            supabase.table("inventory").update({"stock_quantity": new_stock}).eq("item_name", item).execute()
+            db.table("inventory").update({"stock_quantity": new_stock}).eq("user_id", user_id).eq("item_name", item).execute()
         else:
-            supabase.table("inventory").insert({"item_name": item, "stock_quantity": -qty}).execute()
+            db.table("inventory").insert({"item_name": item, "stock_quantity": -qty, "user_id": user_id}).execute()
         
-        supabase.table("sales").insert({
+        db.table("sales").insert({
             "item_name": item,
             "quantity": qty,
             "total_price": price,
-            "customer_name": "Walk-in"
+            "customer_name": "Walk-in",
+            "user_id": user_id
         }).execute()
         
         results.append(f"{qty} {item}")
@@ -225,12 +323,19 @@ If nothing found, return: []"""
         return {"message": f"❌ FAILED: {', '.join(failed)}", "warning": "Insufficient Stock", "success": False}
 
 @app.get("/sales/today")
-async def get_todays_sales():
-    from datetime import datetime, timezone
+async def get_todays_sales(auth: tuple = Depends(get_user_client)):
+    from datetime import datetime, timezone, timedelta
     try:
-        today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+        db, user_id = auth
+        # Use IST for "today" to match monthly calculations
+        ist_now = datetime.now(timezone.utc) + timedelta(hours=5, minutes=30)
+        today_ist = ist_now.strftime('%Y-%m-%d')
         
-        response = supabase.table("sales").select("*").gte("created_at", today).execute()
+        # Convert IST start of day to UTC for database query
+        today_start_ist = ist_now.replace(hour=0, minute=0, second=0, microsecond=0)
+        today_start_utc = today_start_ist - timedelta(hours=5, minutes=30)
+        
+        response = db.table("sales").select("*").eq("user_id", user_id).gte("created_at", today_start_utc.isoformat()).execute()
         sales = response.data
         
         total_revenue = sum(s.get('total_price', 0) for s in sales)
@@ -299,42 +404,55 @@ async def get_todays_sales():
             "transactions": transactions[:10]
         }
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         print(f"Sales Error: {e}")
         return {"total_revenue": 0, "total_sales": 0, "total_quantity": 0, "items_sold": [], "transactions": []}
 
 class AddStockRequest(BaseModel):
     item_name: str
     quantity: float
+    price: Optional[float] = None
 
 @app.post("/add-stock")
-async def add_stock(req: AddStockRequest):
+async def add_stock(req: AddStockRequest, auth: tuple = Depends(get_user_client)):
     try:
+        db, user_id = auth
         item = req.item_name.strip().title()
         qty = req.quantity
         
-        inv_check = supabase.table("inventory").select("stock_quantity").eq("item_name", item).execute()
+        inv_check = db.table("inventory").select("stock_quantity, price").eq("user_id", user_id).eq("item_name", item).execute()
         
         if inv_check.data:
             current = inv_check.data[0]['stock_quantity']
             new_stock = current + qty
-            supabase.table("inventory").update({"stock_quantity": new_stock}).eq("item_name", item).execute()
+            update_data = {"stock_quantity": new_stock}
+            if req.price is not None:
+                update_data["price"] = req.price
+            db.table("inventory").update(update_data).eq("user_id", user_id).eq("item_name", item).execute()
             return {"message": f"✅ Added {qty} to {item}. New stock: {new_stock}", "success": True}
         else:
-            supabase.table("inventory").insert({"item_name": item, "stock_quantity": qty}).execute()
+            insert_data = {"item_name": item, "stock_quantity": qty, "user_id": user_id}
+            if req.price is not None:
+                insert_data["price"] = req.price
+            db.table("inventory").insert(insert_data).execute()
             return {"message": f"✅ Created {item} with stock: {qty}", "success": True}
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         print(f"Add Stock Error: {e}")
         return {"message": f"❌ Error: {str(e)}", "success": False}
 
 @app.get("/sales/month")
-async def get_monthly_sales():
+async def get_monthly_sales(auth: tuple = Depends(get_user_client)):
     from datetime import datetime, timezone, timedelta
     try:
+        db, user_id = auth
         ist_now = datetime.now(timezone.utc) + timedelta(hours=5, minutes=30)
         month_start = ist_now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         month_start_utc = month_start - timedelta(hours=5, minutes=30)
         
-        response = supabase.table("sales").select("*").gte("created_at", month_start_utc.isoformat()).execute()
+        response = db.table("sales").select("*").eq("user_id", user_id).gte("created_at", month_start_utc.isoformat()).execute()
         sales = response.data
         
         daily_totals = {}
@@ -369,9 +487,10 @@ async def get_monthly_sales():
             if date in daily_totals:
                 daily_totals[date]["orders"] = len(orders)
         
-        month_revenue = sum(d["revenue"] for d in daily_totals.values())
+        # Calculate totals directly from sales (not from daily_totals) to avoid any rounding/grouping issues
+        month_revenue = sum(s.get("total_price", 0) for s in sales)
+        month_quantity = sum(s.get("quantity", 0) for s in sales)
         month_orders = sum(d["orders"] for d in daily_totals.values())
-        month_quantity = sum(d["quantity"] for d in daily_totals.values())
         
         return {
             "month": ist_now.strftime("%B %Y"),
@@ -381,20 +500,23 @@ async def get_monthly_sales():
             "daily_totals": {k: {"revenue": round(v["revenue"], 2), "orders": v["orders"], "quantity": round(v["quantity"], 2)} for k, v in daily_totals.items()}
         }
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         print(f"Monthly Sales Error: {e}")
         return {"month": "", "month_revenue": 0, "month_orders": 0, "month_quantity": 0, "daily_totals": {}}
 
 @app.get("/sales/date/{date}")
-async def get_date_sales(date: str):
+async def get_date_sales(date: str, auth: tuple = Depends(get_user_client)):
     from datetime import datetime, timezone, timedelta
     try:
+        db, user_id = auth
         target_date = datetime.strptime(date, "%Y-%m-%d")
         ist_start = target_date.replace(hour=0, minute=0, second=0)
         ist_end = target_date.replace(hour=23, minute=59, second=59)
         utc_start = ist_start - timedelta(hours=5, minutes=30)
         utc_end = ist_end - timedelta(hours=5, minutes=30)
         
-        response = supabase.table("sales").select("*").gte("created_at", utc_start.isoformat()).lte("created_at", utc_end.isoformat()).execute()
+        response = db.table("sales").select("*").eq("user_id", user_id).gte("created_at", utc_start.isoformat()).lte("created_at", utc_end.isoformat()).execute()
         sales = response.data
         
         total_revenue = sum(s.get("total_price", 0) for s in sales)
@@ -422,5 +544,11 @@ async def get_date_sales(date: str):
             "items_sold": [{"name": k, "qty": round(v, 2)} for k, v in item_summary.items()]
         }
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         print(f"Date Sales Error: {e}")
         return {"date": date, "display_date": date, "revenue": 0, "orders": 0, "quantity": 0, "items_sold": []}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
