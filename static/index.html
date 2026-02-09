@@ -811,7 +811,7 @@
 
         // Print Invoice Function - exposed to window for onclick
         window.printInvoice = function (orderNum, items, total, time) {
-            const shopName = document.getElementById('shop-title')?.innerText || 'My Store';
+            const shopName = document.getElementById('header-shop-name')?.innerText || 'My Store';
             const today = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 
             // Parse items string into array
