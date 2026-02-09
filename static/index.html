@@ -739,8 +739,8 @@
             }).join('');
         }
 
-        // Reduce Stock Prompt
-        async function reduceStockPrompt(itemName) {
+        // Reduce Stock Prompt - exposed to window for onclick
+        window.reduceStockPrompt = async function (itemName) {
             const qty = prompt(`Reduce stock for "${itemName}" by how much?`, "1");
             if (qty === null || qty === '') return;
             const amount = parseFloat(qty);
@@ -755,10 +755,10 @@
             } else {
                 showToast(res?.message || 'Failed to reduce stock', 'error');
             }
-        }
+        };
 
-        // Delete Item Prompt
-        async function deleteItemPrompt(itemName) {
+        // Delete Item Prompt - exposed to window for onclick
+        window.deleteItemPrompt = async function (itemName) {
             if (!confirm(`Are you sure you want to delete "${itemName}" from inventory?`)) return;
             const res = await fetch(`${API_BASE}/delete-item`, {
                 method: 'DELETE',
@@ -774,7 +774,7 @@
             } else {
                 showToast(res?.message || 'Failed to delete item', 'error');
             }
-        }
+        };
 
         // Search Listener
         els.invSearch.addEventListener('input', (e) => {
