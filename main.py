@@ -3,6 +3,7 @@ import json
 import re
 from typing import Optional
 from fastapi import FastAPI, HTTPException, Header, Depends
+from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -23,6 +24,11 @@ model = genai.GenerativeModel('gemini-2.0-flash')
 
 app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
+@app.get("/")
+async def root():
+    return RedirectResponse(url="/static/index.html")
+
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # ============================================================================
