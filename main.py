@@ -321,10 +321,20 @@ If nothing found, return: []"""
     failed = []
     
     for sale in items_to_sell:
-        item = sale["item"]
+        item = sale["item"].strip().title()  # Normalize to Title Case for consistency
         qty = sale["qty"]
         
-        inv_check = db.table("inventory").select("stock_quantity").eq("user_id", user_id).eq("item_name", item).execute()
+        # Case-insensitive lookup using .ilike() for Supabase or by using the normalized name
+        inv_check = db.table("inventory").select("stock_quantity, item_name").eq("user_id", user_id).eq("item_name", item).execute()
+        
+        # If exact match not found, try to find case-insensitive match from user_inventory
+        if not inv_check.data and user_inventory:
+            for inv_name, inv_data in user_inventory.items():
+                if inv_name.lower() == item.lower():
+                    item = inv_name  # Use the actual stored name
+                    inv_check = db.table("inventory").select("stock_quantity, item_name").eq("user_id", user_id).eq("item_name", item).execute()
+                    break
+        
         current_stock = inv_check.data[0]['stock_quantity'] if inv_check.data else 0
         
         if current_stock < qty:
