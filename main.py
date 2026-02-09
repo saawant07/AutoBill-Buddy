@@ -88,6 +88,8 @@ async def chat_endpoint(req: ChatRequest, auth: tuple = Depends(get_user_client)
     db, user_id = auth
     import json
     
+    print(f"[CHAT] User {user_id} said: '{req.message}'")
+    
     # Default prices for common items
     DEFAULT_PRICES = {
         "Milk": 60, "Bread": 40, "Eggs": 7, "Butter": 55, "Cheese": 100, "Paneer": 80, "Curd": 45,
@@ -99,12 +101,15 @@ async def chat_endpoint(req: ChatRequest, auth: tuple = Depends(get_user_client)
     }
     
     # Fetch user's inventory items dynamically
+    user_inventory = {}
     try:
         inv_response = db.table("inventory").select("item_name, price, stock_quantity").eq("user_id", user_id).execute()
         user_inventory = {item['item_name']: item for item in inv_response.data} if inv_response.data else {}
+        print(f"[CHAT] Fetched {len(user_inventory)} inventory items: {list(user_inventory.keys())}")
     except Exception as e:
-        print(f"Error fetching inventory for chat: {e}")
-        user_inventory = {}
+        print(f"[CHAT] Error fetching inventory: {e}")
+        import traceback
+        traceback.print_exc()
     
     # Build ITEM_PRICES: merge default prices with user's custom items
     ITEM_PRICES = DEFAULT_PRICES.copy()
@@ -117,6 +122,7 @@ async def chat_endpoint(req: ChatRequest, auth: tuple = Depends(get_user_client)
             ITEM_PRICES[item_name] = item_data['price']
     
     available_items = list(ITEM_PRICES.keys())
+    print(f"[CHAT] Total available items: {len(available_items)}, Custom items added: {[i for i in user_inventory.keys() if i not in DEFAULT_PRICES]}")
     
     WORD_TO_NUM = {
         'zero': 0, 'one': 1, 'won': 1, 'two': 2, 'too': 2, 'to': 2, 'tu': 2,
@@ -149,19 +155,26 @@ async def chat_endpoint(req: ChatRequest, auth: tuple = Depends(get_user_client)
         if word_lower in VOICE_TYPOS:
             word_lower = VOICE_TYPOS[word_lower].lower()
         
+        # Exact match (case insensitive)
         for item in available_items:
             if item.lower() == word_lower:
+                print(f"[MATCH] Exact match: '{word}' -> '{item}'")
                 return item
         
+        # Partial match
         for item in available_items:
             if item.lower() in word_lower or word_lower in item.lower():
+                print(f"[MATCH] Partial match: '{word}' -> '{item}'")
                 return item
         
+        # Prefix match
         if len(word_lower) >= 3:
             for item in available_items:
                 if item.lower().startswith(word_lower[:3]) or word_lower.startswith(item.lower()[:3]):
+                    print(f"[MATCH] Prefix match: '{word}' -> '{item}'")
                     return item
         
+        print(f"[MATCH] No match found for: '{word}'")
         return None
     
     def parse_message_locally(message):
