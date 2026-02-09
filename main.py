@@ -496,6 +496,54 @@ async def add_stock(req: AddStockRequest, auth: tuple = Depends(get_user_client)
         print(f"Add Stock Error: {e}")
         return {"message": f"❌ Error: {str(e)}", "success": False}
 
+class ReduceStockRequest(BaseModel):
+    item_name: str
+    quantity: float
+
+@app.post("/reduce-stock")
+async def reduce_stock(req: ReduceStockRequest, auth: tuple = Depends(get_user_client)):
+    try:
+        db, user_id = auth
+        item = req.item_name.strip().title()
+        qty = req.quantity
+        
+        inv_check = db.table("inventory").select("stock_quantity").eq("user_id", user_id).eq("item_name", item).execute()
+        
+        if not inv_check.data:
+            return {"message": f"❌ Item '{item}' not found", "success": False}
+        
+        current = inv_check.data[0]['stock_quantity']
+        if qty > current:
+            return {"message": f"❌ Cannot reduce by {qty}. Only {current} in stock.", "success": False}
+        
+        new_stock = current - qty
+        db.table("inventory").update({"stock_quantity": new_stock}).eq("user_id", user_id).eq("item_name", item).execute()
+        return {"message": f"✅ Reduced {item} by {qty}. New stock: {new_stock}", "success": True}
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"message": f"❌ Error: {str(e)}", "success": False}
+
+class DeleteItemRequest(BaseModel):
+    item_name: str
+
+@app.delete("/delete-item")
+async def delete_item(req: DeleteItemRequest, auth: tuple = Depends(get_user_client)):
+    try:
+        db, user_id = auth
+        item = req.item_name.strip().title()
+        
+        result = db.table("inventory").delete().eq("user_id", user_id).eq("item_name", item).execute()
+        
+        if result.data:
+            return {"message": f"✅ Deleted '{item}' from inventory", "success": True}
+        else:
+            return {"message": f"❌ Item '{item}' not found", "success": False}
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"message": f"❌ Error: {str(e)}", "success": False}
+
 @app.get("/sales/month")
 async def get_monthly_sales(auth: tuple = Depends(get_user_client)):
     from datetime import datetime, timezone, timedelta

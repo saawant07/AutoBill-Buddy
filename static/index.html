@@ -717,16 +717,63 @@
 
                 return `
                 <div class="flex items-center justify-between p-3 mb-2 rounded-xl transition-all hover:shadow-sm border border-slate-50 ${statusClass}">
-                    <div>
+                    <div class="flex-1">
                         <p class="font-bold text-slate-800">${item.item_name}</p>
                         <p class="text-xs opacity-75">₹${item.price || 0}/unit</p>
                     </div>
-                    <div class="text-right">
-                        <span class="font-bold text-lg ${qty <= 0 ? 'text-red-600' : 'text-slate-700'}">${qty}</span>
-                        <p class="text-[10px] uppercase font-bold opacity-60">Stock</p>
+                    <div class="flex items-center gap-2">
+                        <button onclick="reduceStockPrompt('${item.item_name}')" title="Reduce Stock" 
+                            class="w-7 h-7 flex items-center justify-center rounded-full bg-amber-100 text-amber-600 hover:bg-amber-200 transition-all">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path></svg>
+                        </button>
+                        <button onclick="deleteItemPrompt('${item.item_name}')" title="Delete Item"
+                            class="w-7 h-7 flex items-center justify-center rounded-full bg-red-100 text-red-600 hover:bg-red-200 transition-all">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        </button>
+                        <div class="text-right min-w-[50px]">
+                            <span class="font-bold text-lg ${qty <= 0 ? 'text-red-600' : 'text-slate-700'}">${qty}</span>
+                            <p class="text-[10px] uppercase font-bold opacity-60">Stock</p>
+                        </div>
                     </div>
                 </div>`;
             }).join('');
+        }
+
+        // Reduce Stock Prompt
+        async function reduceStockPrompt(itemName) {
+            const qty = prompt(`Reduce stock for "${itemName}" by how much?`, "1");
+            if (qty === null || qty === '') return;
+            const amount = parseFloat(qty);
+            if (isNaN(amount) || amount <= 0) {
+                showToast('Please enter a valid positive number', 'error');
+                return;
+            }
+            const res = await api('/reduce-stock', 'POST', { item_name: itemName, quantity: amount });
+            if (res && res.success) {
+                showToast(res.message, 'success');
+                fetchInventory();
+            } else {
+                showToast(res?.message || 'Failed to reduce stock', 'error');
+            }
+        }
+
+        // Delete Item Prompt
+        async function deleteItemPrompt(itemName) {
+            if (!confirm(`Are you sure you want to delete "${itemName}" from inventory?`)) return;
+            const res = await fetch(`${API_BASE}/delete-item`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`
+                },
+                body: JSON.stringify({ item_name: itemName })
+            }).then(r => r.json()).catch(e => null);
+            if (res && res.success) {
+                showToast(res.message, 'success');
+                fetchInventory();
+            } else {
+                showToast(res?.message || 'Failed to delete item', 'error');
+            }
         }
 
         // Search Listener
