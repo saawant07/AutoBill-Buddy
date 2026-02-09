@@ -88,7 +88,8 @@ async def chat_endpoint(req: ChatRequest, auth: tuple = Depends(get_user_client)
     db, user_id = auth
     import json
     
-    ITEM_PRICES = {
+    # Default prices for common items
+    DEFAULT_PRICES = {
         "Milk": 60, "Bread": 40, "Eggs": 7, "Butter": 55, "Cheese": 100, "Paneer": 80, "Curd": 45,
         "Rice": 50, "Sugar": 45, "Salt": 25, "Flour": 35, "Wheat": 35, "Atta": 40, "Maida": 40, "Suji": 50, "Poha": 45,
         "Dal": 120, "Toor Dal": 140, "Moong Dal": 130, "Chana Dal": 90, "Urad Dal": 120, "Rajma": 150, "Chana": 80,
@@ -96,6 +97,24 @@ async def chat_endpoint(req: ChatRequest, auth: tuple = Depends(get_user_client)
         "Oil": 150, "Ghee": 550, "Mustard Oil": 180, "Turmeric": 200, "Red Chilli": 300, "Cumin": 350, "Coriander": 150,
         "Biscuits": 30, "Chips": 20, "Noodles": 15, "Soap": 40, "Detergent": 120, "Toothpaste": 80,
     }
+    
+    # Fetch user's inventory items dynamically
+    try:
+        inv_response = db.table("inventory").select("item_name, price, stock_quantity").eq("user_id", user_id).execute()
+        user_inventory = {item['item_name']: item for item in inv_response.data} if inv_response.data else {}
+    except Exception as e:
+        print(f"Error fetching inventory for chat: {e}")
+        user_inventory = {}
+    
+    # Build ITEM_PRICES: merge default prices with user's custom items
+    ITEM_PRICES = DEFAULT_PRICES.copy()
+    for item_name, item_data in user_inventory.items():
+        if item_name not in ITEM_PRICES:
+            # Custom item - use stored price or default to 0
+            ITEM_PRICES[item_name] = item_data.get('price') or 0
+        elif item_data.get('price'):
+            # User has set a custom price for a default item
+            ITEM_PRICES[item_name] = item_data['price']
     
     available_items = list(ITEM_PRICES.keys())
     
