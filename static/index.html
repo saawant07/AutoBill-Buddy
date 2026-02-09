@@ -788,7 +788,16 @@
                 if (error) throw error;
                 if (!isLoginMode && !data.session) showToast('Check email to confirm signup!', 'info');
             } catch (err) {
-                showToast(err.message, 'error');
+                // Improve error messages for common issues
+                let message = err.message;
+                if (message.includes('rate limit') || message.includes('exceeded')) {
+                    message = 'Too many signups. Please wait a few minutes and try again.';
+                } else if (message.includes('already registered')) {
+                    message = 'This email is already registered. Try logging in instead.';
+                } else if (message.includes('Invalid login')) {
+                    message = 'Incorrect email or password.';
+                }
+                showToast(message, 'error');
             }
         };
 
@@ -804,6 +813,9 @@
                 document.getElementById('add-stock-modal').classList.add('hidden');
                 document.getElementById('add-stock-form').reset();
                 fetchInventory();
+            } else {
+                const errMsg = res && res.message ? res.message : 'Failed to add stock. Please try again.';
+                showToast(errMsg, 'error');
             }
         };
 
