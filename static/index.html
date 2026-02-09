@@ -797,10 +797,99 @@
                             <p class="text-xs text-slate-400 flex items-center gap-1"><i class="far fa-clock"></i> ${t.time || 'Just now'}</p>
                         </div>
                     </div>
-                    <span class="font-bold text-emerald-600">₹${t.price}</span>
+                    <div class="flex items-center gap-2">
+                        <button onclick="printInvoice('${t.order}', '${t.item.replace(/'/g, "\\'")}', ${t.price}, '${t.time || 'Just now'}')" 
+                            title="Print Invoice" 
+                            class="w-7 h-7 flex items-center justify-center rounded-full bg-blue-100 text-blue-600 hover:bg-blue-200 transition-all">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                        </button>
+                        <span class="font-bold text-emerald-600">₹${t.price}</span>
+                    </div>
                 </div>
             `).join('');
         }
+
+        // Print Invoice Function - exposed to window for onclick
+        window.printInvoice = function (orderNum, items, total, time) {
+            const shopName = document.getElementById('shop-title')?.innerText || 'My Store';
+            const today = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+
+            // Parse items string into array
+            const itemList = items.split(', ').map(item => {
+                const match = item.match(/^([\d.]+)\s+(.+)$/);
+                if (match) {
+                    return { qty: match[1], name: match[2] };
+                }
+                return { qty: 1, name: item };
+            });
+
+            const invoiceHTML = `
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Invoice #${orderNum}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; max-width: 300px; margin: auto; }
+        .header { text-align: center; border-bottom: 2px dashed #333; padding-bottom: 15px; margin-bottom: 15px; }
+        .shop-name { font-size: 20px; font-weight: bold; margin-bottom: 5px; }
+        .shop-tagline { font-size: 11px; color: #666; }
+        .invoice-info { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 15px; color: #555; }
+        .items-table { width: 100%; margin-bottom: 15px; }
+        .items-table th { text-align: left; border-bottom: 1px solid #ddd; padding: 8px 0; font-size: 11px; color: #666; }
+        .items-table td { padding: 8px 0; font-size: 13px; border-bottom: 1px dotted #eee; }
+        .items-table .qty { width: 40px; text-align: center; }
+        .items-table .price { text-align: right; }
+        .total-row { border-top: 2px solid #333; padding-top: 10px; display: flex; justify-content: space-between; font-weight: bold; font-size: 16px; }
+        .footer { text-align: center; margin-top: 20px; padding-top: 15px; border-top: 2px dashed #333; font-size: 11px; color: #666; }
+        .thank-you { font-size: 14px; font-weight: bold; margin-bottom: 5px; color: #333; }
+        @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="shop-name">${shopName}</div>
+        <div class="shop-tagline">Thank you for shopping with us!</div>
+    </div>
+    
+    <div class="invoice-info">
+        <div>
+            <strong>Invoice #${orderNum}</strong><br>
+            Date: ${today}<br>
+            Time: ${time}
+        </div>
+    </div>
+    
+    <table class="items-table">
+        <thead>
+            <tr>
+                <th class="qty">Qty</th>
+                <th>Item</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${itemList.map(item => `<tr><td class="qty">${item.qty}</td><td>${item.name}</td></tr>`).join('')}
+        </tbody>
+    </table>
+    
+    <div class="total-row">
+        <span>TOTAL</span>
+        <span>₹${total}</span>
+    </div>
+    
+    <div class="footer">
+        <div class="thank-you">Thank You! Visit Again!</div>
+        <div>Powered by AutoBill Buddy</div>
+    </div>
+</body>
+</html>`;
+
+            const printWindow = window.open('', '_blank', 'width=350,height=600');
+            printWindow.document.write(invoiceHTML);
+            printWindow.document.close();
+            printWindow.focus();
+            setTimeout(() => { printWindow.print(); }, 250);
+        };
 
         // --- ACTIONS ---
         els.refreshInv.onclick = fetchInventory;
