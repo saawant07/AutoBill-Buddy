@@ -316,6 +316,10 @@ If nothing found, return: []"""
     if not items_to_sell:
         return {"message": "❌ I didn't understand that.", "warning": "Try: 'Sold 2kg Sugar, 9kg Flour'"}
     
+    # Generate a unique transaction_id for this order (groups all items from same command)
+    import uuid
+    transaction_id = str(uuid.uuid4())[:8]  # Short 8-char ID like "a1b2c3d4"
+    
     results = []
     total_price = 0
     failed = []
@@ -356,7 +360,8 @@ If nothing found, return: []"""
             "quantity": qty,
             "total_price": price,
             "customer_name": "Walk-in",
-            "user_id": user_id
+            "user_id": user_id,
+            "transaction_id": transaction_id  # Groups all items from same voice command
         }).execute()
         
         results.append(f"{qty} {item}")
@@ -401,9 +406,9 @@ async def get_todays_sales(auth: tuple = Depends(get_user_client)):
         
         for s in reversed(sales):
             created = s.get("created_at", "")
-            if created:
-                oid = created[:19]
-            else:
+            # Use transaction_id for grouping if available, else fallback to timestamp
+            oid = s.get("transaction_id") or (created[:19] if created else None)
+            if not oid:
                 legacy_counter += 1
                 oid = f"LEGACY_{legacy_counter}"
             
