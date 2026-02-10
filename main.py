@@ -2,7 +2,7 @@ import os
 import json
 import re
 from typing import Optional
-from fastapi import FastAPI, HTTPException, Header, Depends
+from fastapi import FastAPI, HTTPException, Header, Depends, BackgroundTasks
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -72,9 +72,39 @@ class ChatRequest(BaseModel):
 async def get_inventory(auth: tuple = Depends(get_user_client)):
     try:
         db, user_id = auth
-        # Sort by stock_quantity ASC (Low stock first)
-        response = db.table("inventory").select("*").eq("user_id", user_id).order("stock_quantity", desc=False).execute()
-        return response.data
+        # Fetch all batches
+        response = db.table("inventory").select("*").eq("user_id", user_id).execute()
+        raw_inventory = response.data
+        
+        # Aggregate Batches
+        aggregated = {}
+        for row in raw_inventory:
+            name = row['item_name']
+            if name not in aggregated:
+                aggregated[name] = {
+                    "item_name": name,
+                    "stock_quantity": 0,
+                    "price": row['price'],
+                    "expiry_date": None, # Start with None to avoid picking up 0-stock dates
+                    "ids": []
+                }
+            
+            agg = aggregated[name]
+            agg["stock_quantity"] += row['stock_quantity']
+            agg["ids"].append(row['id'])
+            
+            # Keep earliest non-null expiry from ACTIVE batches
+            if row['stock_quantity'] > 0:
+                current_exp = row['expiry_date']
+                if current_exp:
+                    if agg['expiry_date'] is None or current_exp < agg['expiry_date']:
+                        agg['expiry_date'] = current_exp
+                    
+        # Convert to list and sort by lowest stock first
+        result = list(aggregated.values())
+        result.sort(key=lambda x: x['stock_quantity'])
+        
+        return result
     except HTTPException:
         raise
     except Exception as e:
@@ -83,55 +113,50 @@ async def get_inventory(auth: tuple = Depends(get_user_client)):
         print(f"Inventory Error: {e}")
         return []
 
-@app.post("/chat")
-async def chat_endpoint(req: ChatRequest, auth: tuple = Depends(get_user_client)):
-    db, user_id = auth
-    import json
-    
-    print(f"[CHAT] User {user_id} said: '{req.message}'")
-    
-    # Default prices for common items
-    DEFAULT_PRICES = {
-        "Milk": 60, "Bread": 40, "Eggs": 7, "Butter": 55, "Cheese": 100, "Paneer": 80, "Curd": 45,
-        "Rice": 50, "Sugar": 45, "Salt": 25, "Flour": 35, "Wheat": 35, "Atta": 40, "Maida": 40, "Suji": 50, "Poha": 45,
-        "Dal": 120, "Toor Dal": 140, "Moong Dal": 130, "Chana Dal": 90, "Urad Dal": 120, "Rajma": 150, "Chana": 80,
-        "Tea": 250, "Coffee": 400,
-        "Oil": 150, "Ghee": 550, "Mustard Oil": 180, "Turmeric": 200, "Red Chilli": 300, "Cumin": 350, "Coriander": 150,
-        "Biscuits": 30, "Chips": 20, "Noodles": 15, "Soap": 40, "Detergent": 120, "Toothpaste": 80,
-    }
-    
-    # Fetch user's inventory items dynamically
+@app.get("/prices")
+async def get_all_prices(auth: tuple = Depends(get_user_client)):
+    try:
+        db, user_id = auth
+        ITEM_PRICES, _ = get_user_inventory_data(db, user_id)
+        return ITEM_PRICES
+    except Exception as e:
+        print(f"Prices Error: {e}")
+        return DEFAULT_PRICES
+
+# Default prices global
+DEFAULT_PRICES = {
+    "Milk": 60, "Bread": 40, "Eggs": 7, "Butter": 55, "Cheese": 100, "Paneer": 80, "Curd": 45,
+    "Rice": 50, "Sugar": 45, "Salt": 25, "Flour": 35, "Wheat": 35, "Atta": 40, "Maida": 40, "Suji": 50, "Poha": 45,
+    "Dal": 120, "Toor Dal": 140, "Moong Dal": 130, "Chana Dal": 90, "Urad Dal": 120, "Rajma": 150, "Chana": 80,
+    "Tea": 250, "Coffee": 400,
+    "Oil": 150, "Ghee": 550, "Mustard Oil": 180, "Turmeric": 200, "Red Chilli": 300, "Cumin": 350, "Coriander": 150,
+    "Biscuits": 30, "Chips": 20, "Noodles": 15, "Soap": 40, "Detergent": 120, "Toothpaste": 80,
+}
+
+# Helper to fetch inventory and build price dict
+def get_user_inventory_data(db, user_id):
+    # Fetch user's inventory
     user_inventory = {}
     try:
         inv_response = db.table("inventory").select("item_name, price, stock_quantity").eq("user_id", user_id).execute()
         user_inventory = {item['item_name']: item for item in inv_response.data} if inv_response.data else {}
-        print(f"[CHAT] Fetched {len(user_inventory)} inventory items: {list(user_inventory.keys())}")
     except Exception as e:
-        print(f"[CHAT] Error fetching inventory: {e}")
-        import traceback
-        traceback.print_exc()
-    
-    # Build ITEM_PRICES: merge default prices with user's custom items
+        print(f"[INVENTORY] Error fetching inventory: {e}")
+        import traceback; traceback.print_exc()
+
+    # Build ITEM_PRICES
     ITEM_PRICES = DEFAULT_PRICES.copy()
     for item_name, item_data in user_inventory.items():
         if item_name not in ITEM_PRICES:
-            # Custom item - use stored price or default to 0
             ITEM_PRICES[item_name] = item_data.get('price') or 0
         elif item_data.get('price'):
-            # User has set a custom price for a default item
             ITEM_PRICES[item_name] = item_data['price']
     
-    available_items = list(ITEM_PRICES.keys())
-    print(f"[CHAT] Total available items: {len(available_items)}, Custom items added: {[i for i in user_inventory.keys() if i not in DEFAULT_PRICES]}")
-    
-    WORD_TO_NUM = {
-        'zero': 0, 'one': 1, 'won': 1, 'two': 2, 'too': 2, 'to': 2, 'tu': 2,
-        'three': 3, 'tree': 3, 'free': 3, 'four': 4, 'for': 4, 'ford': 4, 'fore': 4,
-        'five': 5, 'fife': 5, 'six': 6, 'sex': 6, 'sax': 6, 'seven': 7, 'saven': 7,
-        'eight': 8, 'ate': 8, 'ait': 8, 'nine': 9, 'nain': 9, 'ten': 10, 'tan': 10,
-        'eleven': 11, 'twelve': 12, 'half': 0.5, 'quarter': 0.25
-    }
-    
+    return ITEM_PRICES, user_inventory
+
+# Helper for fuzzy matching
+def fuzzy_match_item(word, available_items):
+    # Dictionaries for fuzzy matching (moved outside to save space/recreation, but defined here for closure)
     VOICE_TYPOS = {
         'keji': 'kg', 'kaji': 'kg', 'kaji': 'kg', 'kilo': 'kg', 'kilos': 'kg', 'kilogram': 'kg',
         'rise': 'rice', 'rais': 'rice', 'raice': 'rice',
@@ -149,231 +174,344 @@ async def chat_endpoint(req: ChatRequest, auth: tuple = Depends(get_user_client)
         'noodle': 'noodles',
     }
     
-    def fuzzy_match_item(word):
-        word_lower = word.lower().strip()
-        
-        if word_lower in VOICE_TYPOS:
-            word_lower = VOICE_TYPOS[word_lower].lower()
-        
-        # Exact match (case insensitive)
+    word_lower = word.lower().strip()
+    if word_lower in VOICE_TYPOS:
+        word_lower = VOICE_TYPOS[word_lower].lower()
+    
+    # Exact match
+    for item in available_items:
+        if item.lower() == word_lower:
+            return item
+    
+    # Partial match
+    for item in available_items:
+        if item.lower() in word_lower or word_lower in item.lower():
+            return item
+            
+    # Prefix match
+    if len(word_lower) >= 3:
         for item in available_items:
-            if item.lower() == word_lower:
-                print(f"[MATCH] Exact match: '{word}' -> '{item}'")
+            if item.lower().startswith(word_lower[:3]) or word_lower.startswith(item.lower()[:3]):
                 return item
-        
-        # Partial match
-        for item in available_items:
-            if item.lower() in word_lower or word_lower in item.lower():
-                print(f"[MATCH] Partial match: '{word}' -> '{item}'")
-                return item
-        
-        # Prefix match
-        if len(word_lower) >= 3:
-            for item in available_items:
-                if item.lower().startswith(word_lower[:3]) or word_lower.startswith(item.lower()[:3]):
-                    print(f"[MATCH] Prefix match: '{word}' -> '{item}'")
-                    return item
-        
-        print(f"[MATCH] No match found for: '{word}'")
-        return None
-    
-    def parse_message_locally(message):
-        text = message.lower()
-        
-        # Expanded voice typos (Hindi + English phonetic errors)
-        EXPANDED_VOICE_TYPOS = {
-            **VOICE_TYPOS,
-            # Hindi/Regional words
-            'doodh': 'milk', 'dudh': 'milk', 'dudth': 'milk',
-            'chawal': 'rice', 'chaawal': 'rice', 'chaval': 'rice',
-            'cheeni': 'sugar', 'chini': 'sugar', 'shakkar': 'sugar',
-            'aloo': 'potato', 'alu': 'potato', 'aaloo': 'potato',
-            'pyaz': 'onion', 'pyaaz': 'onion', 'kanda': 'onion',
-            'tamatar': 'tomato', 'tamater': 'tomato',
-            'anda': 'eggs', 'ande': 'eggs', 'anday': 'eggs',
-            'namak': 'salt', 'namkeen': 'salt',
-            'tel': 'oil', 'teil': 'oil',
-            'makhan': 'butter', 'makkhan': 'butter',
-            'dahi': 'curd', 'dahee': 'curd',
-            'roti': 'bread', 'rotee': 'bread',
-            # Common voice recognition errors
-            'sugarr': 'sugar', 'sugaar': 'sugar',
-            'ricee': 'rice', 'ricerice': 'rice',
-            'malak': 'milk', 'malk': 'milk', 'milkk': 'milk',
-            'breads': 'bread', 'breadd': 'bread',
-            'eggz': 'eggs', 'eg': 'eggs', 'eggg': 'eggs',
-            'buttar': 'butter', 'butr': 'butter',
-            'daal': 'dal', 'dhaal': 'dal', 'dhal': 'dal',
-            'chees': 'cheese', 'cheez': 'cheese', 'cheeze': 'cheese',
-            'panneer': 'paneer', 'pneer': 'paneer',
-            'ataa': 'atta', 'aata': 'atta', 'aatta': 'atta',
-            'maida': 'maida', 'mayda': 'maida',
-            'biskut': 'biscuits', 'biscut': 'biscuits', 'biskoot': 'biscuits',
-            'sabun': 'soap', 'saabun': 'soap',
-            'maggi': 'noodles', 'maagi': 'noodles',
-            'tooothpaste': 'toothpaste', 'toothpast': 'toothpaste', 'colgate': 'toothpaste',
-            'condum': 'condom', 'condem': 'condom', 'kondom': 'condom',
-        }
-        
-        # Remove common filler words
-        text = re.sub(r'\b(sold|sell|sale|selling|please|and|the|a|an|some|of|also|give|add|more|i|want|need|get|me|us|becho|bech|do|de|dena|le|lo|lena|karo)\b', ' ', text)
-        
-        # Apply voice typos
-        for typo, correction in EXPANDED_VOICE_TYPOS.items():
-            text = re.sub(rf'\b{typo}\b', correction, text, flags=re.IGNORECASE)
-        
-        # Convert word numbers to digits (expanded)
-        EXPANDED_WORD_TO_NUM = {
-            **WORD_TO_NUM,
-            'ek': 1, 'do': 2, 'teen': 3, 'char': 4, 'paanch': 5, 'panch': 5,
-            'chhe': 6, 'chay': 6, 'saat': 7, 'aath': 8, 'nau': 9, 'das': 10,
-            'gyarah': 11, 'barah': 12, 'terah': 13, 'chaudah': 14, 'pandrah': 15,
-            'dhai': 2.5, 'adha': 0.5, 'dedh': 1.5, 'paune': 0.75,
-            'double': 2, 'triple': 3, 'single': 1,
-        }
-        
-        for word, num in EXPANDED_WORD_TO_NUM.items():
-            text = re.sub(rf'\b{word}\b', str(num), text, flags=re.IGNORECASE)
-        
-        # Remove unit words (keep the number)
-        text = re.sub(r'\bkg\b|\bkgs\b|\bkilo\b|\bkilos\b|\bkilogram\b|\bkilograms\b', ' ', text)
-        text = re.sub(r'\bliters?\b|\bltrs?\b|\bml\b|\bltr\b', ' ', text)
-        text = re.sub(r'\bpiece\b|\bpieces\b|\bpcs\b|\bunits?\b|\bpack\b|\bpacks\b|\bpacket\b|\bpackets\b', ' ', text)
-        text = re.sub(r'\brunning\b|\brupees?\b|\brs\.?\b', ' ', text)
-        
-        # Clean up whitespace
-        text = ' '.join(text.split())
-        
-        items_found = []
-        used_positions = set()
-        
-        # Pattern 1: "2 milk" or "2.5 sugar" (number before item)
-        pattern1 = r'(\d+(?:\.\d+)?)\s*([a-zA-Z]+)'
-        for match in re.finditer(pattern1, text):
-            qty_str, item_word = match.groups()
-            matched_item = fuzzy_match_item(item_word)
-            if matched_item and match.start() not in used_positions:
-                items_found.append({"item": matched_item, "qty": float(qty_str)})
-                used_positions.add(match.start())
-        
-        # Pattern 2: "milk 2" or "sugar 2.5" (item before number)
-        pattern2 = r'([a-zA-Z]+)\s+(\d+(?:\.\d+)?)'
-        for match in re.finditer(pattern2, text):
-            item_word, qty_str = match.groups()
-            matched_item = fuzzy_match_item(item_word)
-            if matched_item and not any(i["item"] == matched_item for i in items_found):
-                items_found.append({"item": matched_item, "qty": float(qty_str)})
-        
-        # Pattern 3: Standalone item names (default qty = 1)
-        words = text.split()
-        for word in words:
-            if not word.replace('.', '').isdigit():
-                matched_item = fuzzy_match_item(word)
-                if matched_item and not any(i["item"] == matched_item for i in items_found):
-                    items_found.append({"item": matched_item, "qty": 1.0})
-        
-        return items_found
-    
-    items_to_sell = parse_message_locally(req.message)
-    
-    if not items_to_sell:
-        parse_prompt = f"""Parse this voice command for a grocery shop: "{req.message}"
-Available items: {available_items}
-Common errors: "four"/"for"/"Ford"→4, "too"/"to"→2, "keji"→kg
-Return ONLY valid JSON array: [{{"item": "ItemName", "qty": number}}, ...]
-If nothing found, return: []"""
+    return None
 
+def parse_message_locally(message, available_items, custom_aliases=None):
+    text = message.lower()
+    
+    if custom_aliases is None:
+        custom_aliases = {}
+    
+    # Typos and Numbers dictionaries
+    WORD_TO_NUM = {
+        'zero': 0, 'one': 1, 'won': 1, 'two': 2, 'too': 2, 'to': 2, 'tu': 2,
+        'three': 3, 'tree': 3, 'free': 3, 'four': 4, 'for': 4, 'ford': 4, 'fore': 4,
+        'five': 5, 'fife': 5, 'six': 6, 'sex': 6, 'sax': 6, 'seven': 7, 'saven': 7,
+        'eight': 8, 'ate': 8, 'ait': 8, 'nine': 9, 'nain': 9, 'ten': 10, 'tan': 10,
+        'eleven': 11, 'twelve': 12, 'half': 0.5, 'quarter': 0.25,
+        'ek': 1, 'do': 2, 'teen': 3, 'char': 4, 'paanch': 5, 'panch': 5,
+        'chhe': 6, 'chay': 6, 'saat': 7, 'aath': 8, 'nau': 9, 'das': 10,
+        'gyarah': 11, 'barah': 12, 'terah': 13, 'chaudah': 14, 'pandrah': 15,
+        'dhai': 2.5, 'adha': 0.5, 'dedh': 1.5, 'paune': 0.75,
+        'double': 2, 'triple': 3, 'single': 1,
+    }
+
+    # Expanded typos including Hindi
+    EXPANDED_VOICE_TYPOS = {
+        'keji': 'kg', 'kaji': 'kg', 'kaji': 'kg', 'kilo': 'kg', 'kilos': 'kg', 'kilogram': 'kg',
+        'doodh': 'milk', 'dudh': 'milk', 'dudth': 'milk', 'melk': 'milk', 'malk': 'milk', 'milkk': 'milk',
+        'chawal': 'rice', 'chaawal': 'rice', 'chaval': 'rice', 'rise': 'rice', 'rais': 'rice', 'raice': 'rice', 'ricee': 'rice',
+        'cheeni': 'sugar', 'chini': 'sugar', 'shakkar': 'sugar', 'suger': 'sugar', 'sugur': 'sugar', 'sugarr': 'sugar',
+        'aloo': 'potato', 'alu': 'potato', 'aaloo': 'potato',
+        'pyaz': 'onion', 'pyaaz': 'onion', 'kanda': 'onion',
+        'tamatar': 'tomato', 'tamater': 'tomato',
+        'anda': 'eggs', 'ande': 'eggs', 'anday': 'eggs', 'ags': 'eggs', 'aggs': 'eggs', 'eggz': 'eggs', 'eg': 'eggs',
+        'namak': 'salt', 'namkeen': 'salt',
+        'tel': 'oil', 'teil': 'oil',
+        'makhan': 'butter', 'makkhan': 'butter', 'buttar': 'butter', 'butr': 'butter',
+        'dahi': 'curd', 'dahee': 'curd',
+        'roti': 'bread', 'rotee': 'bread', 'bred': 'bread', 'brad': 'bread', 'breads': 'bread',
+        'daal': 'dal', 'dhaal': 'dal', 'dhal': 'dal',
+        'chees': 'cheese', 'cheez': 'cheese', 'cheeze': 'cheese',
+        'panneer': 'paneer', 'pneer': 'paneer', 'panir': 'paneer', 'paner': 'paneer',
+        'ataa': 'atta', 'aata': 'atta', 'aatta': 'atta',
+        'maida': 'maida', 'mayda': 'maida',
+        'biskut': 'biscuits', 'biscut': 'biscuits', 'biskoot': 'biscuits', 'biskit': 'biscuits',
+        'sabun': 'soap', 'saabun': 'soap',
+        'maggi': 'noodles', 'maagi': 'noodles', 'noodle': 'noodles',
+        'tooothpaste': 'toothpaste', 'toothpast': 'toothpaste', 'colgate': 'toothpaste',
+        'tee': 'tea', 'chai': 'tea',
+        'coffe': 'coffee', 'koffee': 'coffee', 'cofee': 'coffee',
+    }
+    
+    # Merge custom aliases
+    EXPANDED_VOICE_TYPOS.update(custom_aliases)
+
+
+    # Detect Payment Mode & Customer
+    detected_mode = 'Cash'
+    detected_customer = 'Walk-in'
+    
+    udhaar_keywords = ['udhaar', 'udhar', 'udhhaar', 'udhar', 'credit', 'khata', 'khate', 'udhaari', 'udhari', 'uthaar', 'uthar', 'udhaar pe', 'udhar pe', 'credit pe', 'on credit']
+    for kw in udhaar_keywords:
+        if kw in text:
+            detected_mode = 'Udhaar'
+            break
+            
+    customer_patterns = [
+        r'(?:to|for)\s+([A-Za-z]+?)\s+(?:on|udhaar|udhar|credit|khata)',
+        r'([A-Za-z]+?)\s+(?:ko|ka|ki|ke|se)\s',
+        r'(?:to|for)\s+([A-Za-z]+?)(?:\s|$)',
+        r'([A-Za-z]+?)\s+(?:udhaar|udhar|credit|khata)',
+    ]
+    
+    original_text = text
+    for pat in customer_patterns:
+        m = re.search(pat, original_text, re.IGNORECASE)
+        if m:
+            candidate = m.group(1).strip().title()
+            non_names = {'on', 'the', 'and', 'sold', 'sell', 'sale', 'give', 'some', 'also', 'more', 'cash', 'udhaar', 'milk', 'bread', 'sugar', 'rice', 'oil', 'eggs', 'butter', 'cheese', 'paneer', 'curd', 'atta', 'dal', 'tea', 'coffee', 'ghee', 'soap', 'chips', 'noodles', 'biscuits', 'toothpaste', 'detergent', 'flour', 'salt', 'wheat', 'maida', 'suji', 'poha'}
+            if candidate.lower() not in non_names and len(candidate) >= 2 and not candidate.replace('.','').isdigit():
+                detected_customer = candidate
+                break
+
+    # Clean text
+    text = re.sub(r'\b(udhaar|udhar|credit|khata|khate|udhaari)\b', ' ', text, flags=re.IGNORECASE)
+    if detected_customer != 'Walk-in':
+        text = re.sub(rf'\b{re.escape(detected_customer)}\b', ' ', text, flags=re.IGNORECASE)
+    text = re.sub(r'\b(ko|ka|ki|ke|se|pe|par|on|for|to)\b', ' ', text, flags=re.IGNORECASE)
+    text = re.sub(r'\b(sold|sell|sale|selling|please|and|the|a|an|some|of|also|give|add|more|i|want|need|get|me|us|becho|bech|do|de|dena|le|lo|lena|karo)\b', ' ', text)
+
+    for typo, correction in EXPANDED_VOICE_TYPOS.items():
+        text = re.sub(rf'\b{typo}\b', correction, text, flags=re.IGNORECASE)
+        
+    for word, num in WORD_TO_NUM.items():
+        text = re.sub(rf'\b{word}\b', str(num), text, flags=re.IGNORECASE)
+        
+    # Remove units
+    text = re.sub(r'\b(kg|kgs|kilo|kilos|liter|liters|ltr|ml|piece|pieces|pcs|packet|packets|pack)\b', ' ', text, flags=re.IGNORECASE)
+    text = ' '.join(text.split())
+
+    items_found = []
+    used_positions = set()
+    
+    # Pattern 1: "2 milk"
+    for match in re.finditer(r'(\d+(?:\.\d+)?)\s*([a-zA-Z]+)', text):
+        qty_str, item_word = match.groups()
+        matched_item = fuzzy_match_item(item_word, available_items)
+        if matched_item and match.start() not in used_positions:
+            items_found.append({"item": matched_item, "qty": float(qty_str)})
+            used_positions.add(match.start())
+            
+    # Pattern 2: "milk 2"
+    for match in re.finditer(r'([a-zA-Z]+)\s+(\d+(?:\.\d+)?)', text):
+        item_word, qty_str = match.groups()
+        matched_item = fuzzy_match_item(item_word, available_items)
+        if matched_item and not any(i["item"] == matched_item for i in items_found):
+            items_found.append({"item": matched_item, "qty": float(qty_str)})
+
+    # Pattern 3: Standalone items
+    for word in text.split():
+        if not word.replace('.', '').isdigit():
+            matched_item = fuzzy_match_item(word, available_items)
+            if matched_item and not any(i["item"] == matched_item for i in items_found):
+                items_found.append({"item": matched_item, "qty": 1.0})
+                
+    return items_found, detected_mode, detected_customer
+
+@app.post("/parse-order")
+async def parse_order_endpoint(req: ChatRequest, auth: tuple = Depends(get_user_client)):
+    db, user_id = auth
+    print(f"[PARSE] User {user_id} said: '{req.message}'")
+    
+    ITEM_PRICES, user_inventory = get_user_inventory_data(db, user_id)
+    available_items = list(ITEM_PRICES.keys())
+    
+    # Local parsing
+    items_to_sell, payment_mode, customer_name = parse_message_locally(req.message, available_items)
+    
+    # AI Fallback if needed
+    if not items_to_sell:
+        parse_prompt = f"""Parse this voice command: "{req.message}"
+Available items: {available_items}
+Return ONLY valid JSON: {{"items": [{{"item": "ItemName", "qty": number}}, ...], "payment_mode": "Cash" or "Udhaar", "customer_name": "Name" or "Walk-in"}}"""
         try:
             response = model.generate_content(parse_prompt)
-            ai_response = response.text.strip()
+            ai_response = response.text.replace('```json', '').replace('```', '').strip()
+            ai_parsed = json.loads(ai_response)
             
-            if ai_response.startswith("```"):
-                ai_response = ai_response.split("```")[1]
-                if ai_response.startswith("json"):
-                    ai_response = ai_response[4:]
-            ai_response = ai_response.strip()
+            ai_items = ai_parsed if isinstance(ai_parsed, list) else ai_parsed.get("items", [])
             
-            ai_items = json.loads(ai_response)
+            # Adopt AI values
+            if isinstance(ai_parsed, dict):
+                if payment_mode == 'Cash' and ai_parsed.get("payment_mode") == "Udhaar":
+                    payment_mode = "Udhaar"
+                if customer_name == 'Walk-in' and ai_parsed.get("customer_name") != "Walk-in":
+                    customer_name = ai_parsed.get("customer_name", "Walk-in").strip().title()
             
             for item_data in ai_items:
                 item_name = item_data.get("item", "").strip().title()
                 qty = float(item_data.get("qty", 1))
-                
-                matched_item = None
-                for available in available_items:
-                    if available.lower() == item_name.lower():
-                        matched_item = available
-                        break
-                
-                if matched_item and qty > 0:
-                    items_to_sell.append({"item": matched_item, "qty": qty})
-                    
+                matched = fuzzy_match_item(item_name, available_items)
+                if matched and qty > 0:
+                    items_to_sell.append({"item": matched, "qty": qty})
         except Exception as e:
-            import traceback
-            traceback.print_exc()
-            print(f"AI Parse Error (using local only): {e}")
-    
-    if not items_to_sell:
-        return {"message": "❌ I didn't understand that.", "warning": "Try: 'Sold 2kg Sugar, 9kg Flour'"}
-    
-    # Generate a unique transaction_id for this order (groups all items from same command)
+            print(f"AI Parse Error: {e}")
+
+    # Prepare response items with price details
+    parsed_items = []
+    for s in items_to_sell:
+        item_name = s["item"]
+        unit_price = ITEM_PRICES.get(item_name, 0)
+        parsed_items.append({
+            "item_name": item_name,
+            "quantity": s["qty"],
+            "unit_price": unit_price,
+            "total_price": s["qty"] * unit_price
+        })
+
+    return {
+        "success": bool(parsed_items),
+        "items": parsed_items,
+        "payment_mode": payment_mode,
+        "customer_name": customer_name
+    }
+
+class ConfirmOrderRequest(BaseModel):
+    items: list[dict] # [{"item_name": "Milk", "quantity": 2, "total_price": 120}]
+    payment_mode: str
+    customer_name: str
+
+@app.post("/confirm-order")
+async def confirm_order_endpoint(req: ConfirmOrderRequest, auth: tuple = Depends(get_user_client)):
+    db, user_id = auth
     import uuid
-    transaction_id = str(uuid.uuid4())[:8]  # Short 8-char ID like "a1b2c3d4"
+    transaction_id = str(uuid.uuid4())[:8]
     
+    ITEM_PRICES, user_inventory = get_user_inventory_data(db, user_id)
+    
+    total_order_price = 0
     results = []
-    total_price = 0
     failed = []
     
-    for sale in items_to_sell:
-        item = sale["item"].strip().title()  # Normalize to Title Case for consistency
-        qty = sale["qty"]
+    for item_data in req.items:
+        item = item_data["item_name"].strip().title()
+        qty = float(item_data["quantity"])
         
-        # Case-insensitive lookup using .ilike() for Supabase or by using the normalized name
-        inv_check = db.table("inventory").select("stock_quantity, item_name").eq("user_id", user_id).eq("item_name", item).execute()
-        
-        # If exact match not found, try to find case-insensitive match from user_inventory
-        if not inv_check.data and user_inventory:
-            for inv_name, inv_data in user_inventory.items():
-                if inv_name.lower() == item.lower():
-                    item = inv_name  # Use the actual stored name
-                    inv_check = db.table("inventory").select("stock_quantity, item_name").eq("user_id", user_id).eq("item_name", item).execute()
-                    break
-        
-        current_stock = inv_check.data[0]['stock_quantity'] if inv_check.data else 0
-        
-        if current_stock < qty:
-            failed.append(f"{item} (only {current_stock} left)")
-            continue
-        
+        # Determine price (trust backend price over frontend)
+        # However, if frontend sends price, we could use it, but safer to lookup
         unit_price = ITEM_PRICES.get(item, 0)
         price = qty * unit_price
-        total_price += price
         
-        new_stock = current_stock - qty
-        if inv_check.data:
-            db.table("inventory").update({"stock_quantity": new_stock}).eq("user_id", user_id).eq("item_name", item).execute()
-        else:
-            db.table("inventory").insert({"item_name": item, "stock_quantity": -qty, "user_id": user_id}).execute()
+        # Check Stock (Aggregate)
+        batches = db.table("inventory").select("id, stock_quantity").eq("user_id", user_id).eq("item_name", item).order("expiry_date", desc=False).execute().data
         
+        current_stock = sum(b['stock_quantity'] for b in batches)
+        
+        if current_stock < qty:
+            failed.append(f"{item} (Stock: {current_stock})")
+            continue
+            
+        # Update Stock (FIFO)
+        remaining_qty = qty
+        for b in batches:
+            if remaining_qty <= 0:
+                break
+                
+            available = b['stock_quantity']
+            if available > remaining_qty:
+                # Deduct from this batch
+                new_batch_stock = available - remaining_qty
+                db.table("inventory").update({"stock_quantity": new_batch_stock}).eq("id", b['id']).execute()
+                remaining_qty = 0
+            else:
+                # Deplete this batch
+                db.table("inventory").update({"stock_quantity": 0}).eq("id", b['id']).execute()
+                remaining_qty -= available
+            
+        # Record Sale
         db.table("sales").insert({
             "item_name": item,
             "quantity": qty,
             "total_price": price,
-            "customer_name": "Walk-in",
+            "customer_name": req.customer_name,
             "user_id": user_id,
-            "transaction_id": transaction_id  # Groups all items from same voice command
+            "transaction_id": transaction_id,
+            "payment_mode": req.payment_mode,
+            "is_settled": req.payment_mode == 'Cash'
         }).execute()
         
+        total_order_price += price
         results.append(f"{qty} {item}")
+        
+    # Update Dues if Udhaar
+    if results and req.payment_mode == 'Udhaar' and req.customer_name != 'Walk-in':
+        try:
+            dues_check = db.table("dues").select("total_due").eq("user_id", user_id).eq("customer_name", req.customer_name).execute()
+            if dues_check.data:
+                new_due = dues_check.data[0]['total_due'] + total_order_price
+                db.table("dues").update({"total_due": new_due, "last_updated": "now()"}).eq("user_id", user_id).eq("customer_name", req.customer_name).execute()
+            else:
+                db.table("dues").insert({"customer_name": req.customer_name, "total_due": total_order_price, "user_id": user_id}).execute()
+        except Exception as e:
+            print(f"Dues Update Error: {e}")
+            
+    if failed:
+        return {"success": len(results) > 0, "message": f"Saved {len(results)} items. Failed: {', '.join(failed)}", "failed_items": failed}
     
-    if results and failed:
-        msg = f"✅ Sold {', '.join(results)} for ₹{round(total_price, 2)} | ❌ Failed: {', '.join(failed)}"
-        return {"message": msg, "warning": "Some items failed", "success": True}
-    elif results:
-        msg = f"✅ Sold {', '.join(results)} for ₹{round(total_price, 2)}"
-        return {"message": msg, "warning": None, "success": True}
-    else:
-        return {"message": f"❌ FAILED: {', '.join(failed)}", "warning": "Insufficient Stock", "success": False}
+    return {"success": True, "message": f"✅ Order Confirmed: ₹{total_order_price}", "transaction_id": transaction_id}
+
+
+@app.get("/dues")
+async def get_dues(auth: tuple = Depends(get_user_client)):
+    try:
+        db, user_id = auth
+        response = db.table("dues").select("customer_name, total_due, last_updated").eq("user_id", user_id).gt("total_due", 0).order("total_due", desc=True).execute()
+        return {"dues": response.data or []}
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print(f"Dues Error: {e}")
+        return {"dues": []}
+
+@app.get("/dues/{customer_name}")
+async def get_customer_dues(customer_name: str, auth: tuple = Depends(get_user_client)):
+    from datetime import datetime, timezone, timedelta
+    try:
+        db, user_id = auth
+        response = db.table("sales").select("item_name, quantity, total_price, created_at").eq("user_id", user_id).eq("customer_name", customer_name).eq("payment_mode", "Udhaar").order("created_at", desc=True).execute()
+        
+        transactions = []
+        for s in (response.data or []):
+            date_str = ""
+            created = s.get("created_at", "")
+            if created:
+                try:
+                    dt = datetime.fromisoformat(created.replace("Z", "+00:00"))
+                    ist = dt + timedelta(hours=5, minutes=30)
+                    date_str = ist.strftime("%d %b, %I:%M %p")
+                except:
+                    date_str = created
+            transactions.append({
+                "date_time": date_str,
+                "item_name": s.get("item_name", ""),
+                "quantity": s.get("quantity", 0),
+                "total_price": s.get("total_price", 0)
+            })
+        
+        # Get total due
+        dues_check = db.table("dues").select("total_due").eq("user_id", user_id).eq("customer_name", customer_name).execute()
+        total_due = dues_check.data[0]["total_due"] if dues_check.data else 0
+        
+        return {"customer_name": customer_name, "total_due": total_due, "transactions": transactions}
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print(f"Customer Dues Error: {e}")
+        return {"customer_name": customer_name, "total_due": 0, "transactions": []}
 
 @app.get("/sales/today")
 async def get_todays_sales(auth: tuple = Depends(get_user_client)):
@@ -427,7 +565,9 @@ async def get_todays_sales(auth: tuple = Depends(get_user_client)):
                     "items": [],
                     "total_price": 0,
                     "order_id": oid,
-                    "time": time_str
+                    "time": time_str,
+                    "payment_mode": s.get("payment_mode", "Cash"),
+                    "customer_name": s.get("customer_name", "Walk-in")
                 }
             orders[oid]["items"].append(f"{s.get('quantity', 0)} {s.get('item_name', '?')}")
             orders[oid]["total_price"] += s.get("total_price", 0)
@@ -440,7 +580,9 @@ async def get_todays_sales(auth: tuple = Depends(get_user_client)):
                 "item": ", ".join(data["items"]),
                 "qty": len(data["items"]),
                 "price": round(data["total_price"], 2),
-                "time": data["time"]
+                "time": data["time"],
+                "payment_mode": data.get("payment_mode", "Cash"),
+                "customer_name": data.get("customer_name", "Walk-in")
             })
             order_num -= 1
         
@@ -462,34 +604,113 @@ async def get_todays_sales(auth: tuple = Depends(get_user_client)):
         print(f"Sales Error: {e}")
         return {"total_revenue": 0, "total_sales": 0, "total_quantity": 0, "items_sold": [], "transactions": []}
 
+from fastapi import FastAPI, HTTPException, Header, Depends, BackgroundTasks
+
+# ... (imports)
+
+# Helper to generate aliases using Gemini
+async def generate_aliases_task(item_name: str, user_id: str, db: Client):
+    try:
+        print(f"Generating aliases for: {item_name}")
+        model = genai.GenerativeModel('gemini-2.0-flash-exp')
+        prompt = f"""
+        Generate 5-10 common voice-to-text typos, phonetic misspellings, and Hindi/Hinglish synonyms for the grocery item '{item_name}'.
+        Return ONLY a JSON array of lowercase strings.
+        Example for 'Milk': ["doodh", "dudh", "melk", "malk", "milkk"]
+        Example for 'Sugar': ["cheeni", "chini", "shakkar", "suger"]
+        """
+        response = model.generate_content(prompt)
+        text = response.text.strip()
+        
+        # Clean up JSON if needed (remove markdown code blocks)
+        if text.startswith("```"):
+            text = text.split("\n", 1)[1]
+            if text.endswith("```"):
+                text = text.rsplit("\n", 1)[0]
+        
+        import json
+        aliases = json.loads(text)
+        
+        if aliases and isinstance(aliases, list):
+            data = [{"item_name": item_name, "alias": a.lower(), "user_id": user_id} for a in aliases]
+            # Add exact name too if not present, to be safe
+            if item_name.lower() not in aliases:
+                data.append({"item_name": item_name, "alias": item_name.lower(), "user_id": user_id})
+                
+            # Insert into item_aliases
+            db.table("item_aliases").insert(data).execute()
+            print(f"✅ Generated {len(data)} aliases for {item_name}")
+            
+    except Exception as e:
+        print(f"❌ Alias Generation Error: {e}")
+
 class AddStockRequest(BaseModel):
     item_name: str
     quantity: float
     price: Optional[float] = None
+    expiry_date: Optional[str] = None  # Format: YYYY-MM-DD
 
 @app.post("/add-stock")
-async def add_stock(req: AddStockRequest, auth: tuple = Depends(get_user_client)):
+async def add_stock(req: AddStockRequest, background_tasks: BackgroundTasks, auth: tuple = Depends(get_user_client)):
     try:
         db, user_id = auth
         item = req.item_name.strip().title()
         qty = req.quantity
+        expiry = req.expiry_date if req.expiry_date else None
         
-        inv_check = db.table("inventory").select("stock_quantity, price").eq("user_id", user_id).eq("item_name", item).execute()
+        # Check if item is NEW (no inventory records for this item yet)
+        # We do this check BEFORE inserting the new stock, to see if it was previously unknown.
+        # Although, if we just insert, we can check if it existing count was 0.
+        # Better: Check existing inventory count for this name.
+        existing_check = db.table("inventory").select("id", count="exact").eq("user_id", user_id).eq("item_name", item).execute()
+        is_new_item = existing_check.count == 0
+        
+        # 1. Update PRICE for ALL batches (logic unchanged) ...
+        if req.price is not None:
+             try:
+                 db.table("inventory").update({"price": req.price}).eq("user_id", user_id).eq("item_name", item).execute()
+             except:
+                 pass
+        
+        # 2. Upsert specific batch
+        query = db.table("inventory").select("id, stock_quantity").eq("user_id", user_id).eq("item_name", item)
+        if expiry:
+            query = query.eq("expiry_date", expiry)
+        else:
+            query = query.is_("expiry_date", "null")
+            
+        inv_check = query.execute()
         
         if inv_check.data:
+            # Update existing batch
             current = inv_check.data[0]['stock_quantity']
             new_stock = current + qty
+            batch_id = inv_check.data[0]['id']
             update_data = {"stock_quantity": new_stock}
             if req.price is not None:
                 update_data["price"] = req.price
-            db.table("inventory").update(update_data).eq("user_id", user_id).eq("item_name", item).execute()
-            return {"message": f"✅ Added {qty} to {item}. New stock: {new_stock}", "success": True}
+                
+            db.table("inventory").update(update_data).eq("id", batch_id).execute()
+            return {"message": f"✅ Added {qty} to {item} (Exp: {expiry or 'None'}). New stock: {new_stock}", "success": True}
         else:
-            insert_data = {"item_name": item, "stock_quantity": qty, "user_id": user_id}
+            # Insert new batch
+            insert_data = {
+                "item_name": item, 
+                "stock_quantity": qty, 
+                "user_id": user_id,
+                "expiry_date": expiry
+            }
             if req.price is not None:
                 insert_data["price"] = req.price
+                
             db.table("inventory").insert(insert_data).execute()
-            return {"message": f"✅ Created {item} with stock: {qty}", "success": True}
+            
+            # TRIGGER ALIAS GENERATION IF NEW
+            if is_new_item:
+                background_tasks.add_task(generate_aliases_task, item, user_id, db)
+                
+            return {"message": f"✅ Created {item} (Exp: {expiry or 'None'}) with stock: {qty}", "success": True}
+            
     except Exception as e:
         import traceback
         traceback.print_exc()
@@ -501,24 +722,48 @@ class ReduceStockRequest(BaseModel):
     quantity: float
 
 @app.post("/reduce-stock")
-async def reduce_stock(req: ReduceStockRequest, auth: tuple = Depends(get_user_client)):
+async def reduce_stock(req: AddStockRequest, auth: tuple = Depends(get_user_client)):
+    # Simple reduce (for manual correction) - just reduces from ANY batch (latest/earliest?)
+    # For manual correction, it's ambiguous which batch to reduce if we don't specify.
+    # For now, let's implement FIFO reduction similar to sales.
     try:
         db, user_id = auth
         item = req.item_name.strip().title()
         qty = req.quantity
         
-        inv_check = db.table("inventory").select("stock_quantity").eq("user_id", user_id).eq("item_name", item).execute()
+        # Fetch all batches ordered by expiry (Nulls last? Or nulls first? Usually null expiry means non-perishable, so last)
+        # Postgres sorts nulls last by default in ASC.
+        batches = db.table("inventory").select("id, stock_quantity, expiry_date").eq("user_id", user_id).eq("item_name", item).order("expiry_date", desc=False).execute().data
         
-        if not inv_check.data:
-            return {"message": f"❌ Item '{item}' not found", "success": False}
+        if not batches:
+             return {"message": f"❌ Item '{item}' not found", "success": False}
+             
+        total_stock = sum(b['stock_quantity'] for b in batches)
+        if qty > total_stock:
+             return {"message": f"❌ Cannot reduce by {qty}. Only {total_stock} in stock.", "success": False}
+             
+        remaining_to_reduce = qty
         
-        current = inv_check.data[0]['stock_quantity']
-        if qty > current:
-            return {"message": f"❌ Cannot reduce by {qty}. Only {current} in stock.", "success": False}
+        for b in batches:
+            if remaining_to_reduce <= 0:
+                break
+                
+            available = b['stock_quantity']
+            if available > remaining_to_reduce:
+                # Reduce this batch and done
+                new_qty = available - remaining_to_reduce
+                db.table("inventory").update({"stock_quantity": new_qty}).eq("id", b['id']).execute()
+                remaining_to_reduce = 0
+            else:
+                # Deplete this batch
+                # Option: Delete the row if 0? Or keep it at 0? 
+                # Let's keep at 0 for history/price reference, or user can delete manually.
+                # Actually, better to keep at 0 so we don't lose the item definition if it's the last batch.
+                db.table("inventory").update({"stock_quantity": 0}).eq("id", b['id']).execute()
+                remaining_to_reduce -= available
+                
+        return {"message": f"✅ Reduced {item} by {qty}.", "success": True}
         
-        new_stock = current - qty
-        db.table("inventory").update({"stock_quantity": new_stock}).eq("user_id", user_id).eq("item_name", item).execute()
-        return {"message": f"✅ Reduced {item} by {qty}. New stock: {new_stock}", "success": True}
     except Exception as e:
         import traceback
         traceback.print_exc()
@@ -539,6 +784,31 @@ async def delete_item(req: DeleteItemRequest, auth: tuple = Depends(get_user_cli
             return {"message": f"✅ Deleted '{item}' from inventory", "success": True}
         else:
             return {"message": f"❌ Item '{item}' not found", "success": False}
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"message": f"❌ Error: {str(e)}", "success": False}
+
+class SettleDuesRequest(BaseModel):
+    customer_name: str
+
+@app.post("/dues/settle")
+async def settle_dues(req: SettleDuesRequest, auth: tuple = Depends(get_user_client)):
+    try:
+        db, user_id = auth
+        customer = req.customer_name.strip()
+        
+        dues_check = db.table("dues").select("id, total_due").eq("user_id", user_id).eq("customer_name", customer).execute()
+        if not dues_check.data or dues_check.data[0]["total_due"] <= 0:
+            return {"message": f"No outstanding dues for {customer}", "success": False}
+        
+        settled_amount = dues_check.data[0]["total_due"]
+        db.table("dues").update({"total_due": 0, "last_updated": "now()"}).eq("user_id", user_id).eq("customer_name", customer).execute()
+        db.table("sales").update({"is_settled": True}).eq("user_id", user_id).eq("customer_name", customer).eq("payment_mode", "Udhaar").eq("is_settled", False).execute()
+        
+        return {"message": f"✅ Settled ₹{round(settled_amount)} for {customer}", "success": True, "settled_amount": round(settled_amount)}
+    except HTTPException:
+        raise
     except Exception as e:
         import traceback
         traceback.print_exc()

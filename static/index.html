@@ -225,6 +225,77 @@
             color: white;
             box-shadow: 0 0 0 2px white, 0 0 0 4px #10b981;
         }
+
+        /* Udhaar (Credit) Styles */
+        .udhaar-badge {
+            color: #dc2626;
+            background: rgba(254, 226, 226, 0.8);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .cash-badge {
+            color: #059669;
+            background: rgba(209, 250, 229, 0.8);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .udhaar-float-btn {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 35;
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+            color: white;
+            border: none;
+            border-radius: 16px;
+            padding: 14px 22px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 8px 24px rgba(220, 38, 38, 0.4);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .udhaar-float-btn:hover {
+            transform: translateY(-3px) scale(1.03);
+            box-shadow: 0 12px 32px rgba(220, 38, 38, 0.5);
+        }
+
+        .receipt-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 16px;
+            padding: 16px;
+            margin-top: 12px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+            animation: slideUp 0.4s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .dues-customer-row {
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .dues-customer-row:hover {
+            transform: translateX(4px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
     </style>
 </head>
 
@@ -309,7 +380,7 @@
         <main class="flex-1 max-w-7xl mx-auto w-full p-4 sm:p-6 space-y-6">
 
             <!-- 1. Stats Grid (4 Cards) -->
-            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
                 <!-- Today's Revenue -->
                 <div class="glass rounded-2xl p-4 shadow-lg flex items-center justify-between">
                     <div>
@@ -349,6 +420,17 @@
                     </div>
                     <div class="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center text-purple-600">
                         <i class="fas fa-receipt"></i>
+                    </div>
+                </div>
+                <!-- Udhaar Outstanding -->
+                <div class="glass rounded-2xl p-4 shadow-lg flex items-center justify-between cursor-pointer hover:bg-white/40 transition-all"
+                    onclick="openUdhaarDashboard()">
+                    <div>
+                        <p class="text-slate-500 text-xs uppercase font-bold tracking-wider">Udhaar</p>
+                        <p id="stat-udhaar" class="text-2xl font-bold text-red-600 mt-1">₹0</p>
+                    </div>
+                    <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center text-red-600">
+                        <i class="fas fa-book"></i>
                     </div>
                 </div>
             </div>
@@ -430,6 +512,77 @@
         </main>
     </div>
 
+    <!-- Floating Udhaar Khata Button -->
+    <button id="udhaar-float-btn" class="udhaar-float-btn hidden" onclick="openUdhaarDashboard()">
+        📒 Udhaar Khata
+    </button>
+
+    <!-- Udhaar Dashboard Modal -->
+    <div id="udhaar-dashboard-modal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div
+            class="glass bg-white rounded-3xl shadow-2xl w-full max-w-2xl h-[80vh] flex flex-col relative overflow-hidden transition-all">
+            <!-- Header -->
+            <div
+                class="p-6 border-b border-slate-100 flex justify-between items-center bg-white/80 backdrop-blur shrink-0">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                        📒 <span class="text-red-600">Udhaar</span> Khata
+                    </h2>
+                    <p class="text-slate-500 text-sm" id="udhaar-subtitle">Outstanding Dues</p>
+                </div>
+                <button onclick="document.getElementById('udhaar-dashboard-modal').classList.add('hidden')"
+                    class="w-10 h-10 rounded-full bg-slate-100 text-slate-500 hover:bg-red-50 hover:text-red-500 transition-all flex items-center justify-center">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+
+            <!-- VIEW 1: SUMMARY (All customers) -->
+            <div id="udhaar-view-summary" class="flex-1 overflow-y-auto p-6">
+                <div id="udhaar-total-banner"
+                    class="bg-red-50 text-red-700 px-4 py-3 rounded-xl border border-red-100 font-bold shadow-sm mb-6 flex justify-between items-center">
+                    <span>Total Outstanding</span>
+                    <span id="udhaar-total-amount">₹0</span>
+                </div>
+                <div id="udhaar-customers-list" class="space-y-3">
+                    <div class="text-center py-10 text-slate-400">Loading...</div>
+                </div>
+            </div>
+
+            <!-- VIEW 2: DRILL-DOWN (Per customer) -->
+            <div id="udhaar-view-detail" class="flex-1 overflow-y-auto p-6 hidden">
+                <button onclick="showUdhaarSummary()"
+                    class="mb-4 text-slate-500 hover:text-red-600 flex items-center gap-2 font-medium w-fit">
+                    <i class="fas fa-arrow-left"></i> Back to Summary
+                </button>
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-xl font-bold text-slate-800" id="udhaar-customer-title">Customer</h3>
+                    <div class="flex items-center gap-3">
+                        <span class="text-lg font-bold text-red-600" id="udhaar-customer-total">₹0</span>
+                        <button id="settle-dues-btn" onclick="settleDues()"
+                            class="px-4 py-2 bg-emerald-600 text-white text-sm font-bold rounded-xl hover:bg-emerald-700 transition-all shadow-lg flex items-center gap-2">
+                            <i class="fas fa-check-circle"></i> Settle
+                        </button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
+                                <th class="px-4 py-3 text-left rounded-l-lg">Date/Time</th>
+                                <th class="px-4 py-3 text-left">Item</th>
+                                <th class="px-4 py-3 text-center">Qty</th>
+                                <th class="px-4 py-3 text-right rounded-r-lg">Cost</th>
+                            </tr>
+                        </thead>
+                        <tbody id="udhaar-detail-tbody" class="divide-y divide-slate-100">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Add Stock Modal (Hidden default) -->
     <div id="add-stock-modal"
         class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
@@ -447,6 +600,9 @@
                 <input type="number" id="stock-price" step="0.01"
                     class="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none focus:border-emerald-500"
                     placeholder="Price (Optional)">
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Expiry Date (Optional)</label>
+                <input type="date" id="stock-expiry"
+                    class="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none focus:border-emerald-500">
                 <button type="submit"
                     class="w-full py-2 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-700">Add
                     Stock</button>
@@ -542,6 +698,80 @@
     </div>
 
 
+
+    <!-- Order Confirmation Modal -->
+    <div id="order-confirm-modal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div
+            class="glass bg-white rounded-3xl shadow-2xl w-full max-w-2xl flex flex-col relative overflow-hidden transition-all max-h-[80vh]">
+            <div
+                class="p-6 border-b border-slate-100 flex justify-between items-center bg-white/80 backdrop-blur shrink-0">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-800">Review Order</h2>
+                    <p class="text-slate-500 text-sm">Please verify items before confirming.</p>
+                </div>
+                <button onclick="closeOrderModal()"
+                    class="w-10 h-10 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition-all flex items-center justify-center">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-6">
+                <!-- Customer & Mode Selection -->
+                <div class="flex flex-col sm:flex-row gap-4 mb-6">
+                    <div class="flex-1">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Customer Name</label>
+                        <input type="text" id="confirm-customer"
+                            class="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none focus:border-emerald-500"
+                            placeholder="Walk-in">
+                    </div>
+                    <div class="flex-1">
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Payment Mode</label>
+                        <div class="flex bg-slate-100 rounded-xl p-1">
+                            <button type="button" id="mode-cash" onclick="setPaymentMode('Cash')"
+                                class="flex-1 py-1.5 px-3 rounded-lg font-medium transition-all bg-white shadow text-emerald-600">Cash</button>
+                            <button type="button" id="mode-udhaar" onclick="setPaymentMode('Udhaar')"
+                                class="flex-1 py-1.5 px-3 rounded-lg font-medium transition-all text-slate-500">Udhaar</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Items Table -->
+                <table class="w-full text-sm mb-4">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
+                            <th class="px-3 py-2 text-left rounded-l-lg">Item</th>
+                            <th class="px-3 py-2 text-center w-24">Qty</th>
+                            <th class="px-3 py-2 text-right">Price</th>
+                            <th class="px-3 py-2 text-center w-10 rounded-r-lg"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="confirm-items-tbody" class="divide-y divide-slate-100">
+                        <!-- Items injected here -->
+                    </tbody>
+                </table>
+
+                <button onclick="addEmptyRow()"
+                    class="w-full py-2 border border-dashed border-slate-300 rounded-xl text-slate-500 hover:bg-slate-50 hover:text-emerald-600 transition-all text-sm font-medium">
+                    <i class="fas fa-plus mr-1"></i> Add Manual Item
+                </button>
+            </div>
+
+            <!-- Footer -->
+            <div class="p-6 border-t border-slate-100 bg-slate-50 flex justify-between items-center shrink-0">
+                <div>
+                    <p class="text-xs text-slate-500 font-bold uppercase">Total</p>
+                    <p class="text-2xl font-bold text-slate-800" id="confirm-total-price">₹0</p>
+                </div>
+                <button onclick="confirmOrder()"
+                    class="px-8 py-3 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-all shadow-lg flex items-center gap-2">
+                    <i class="fas fa-check"></i> Confirm Sale
+                </button>
+            </div>
+        </div>
+    </div>
+
+
     <script type="module">
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
@@ -558,6 +788,7 @@
         let isLoginMode = true;
         let recognition = null;
         let allInventoryItems = []; // Store for client-side filtering
+        let allItemPrices = {}; // Global price map
 
         // --- ELEMENTS ---
         const els = {
@@ -596,6 +827,7 @@
             els.authOverlay.classList.add('hidden');
             els.dashboard.classList.remove('hidden');
             document.getElementById('user-email').textContent = session.user.email;
+            document.getElementById('udhaar-float-btn').classList.remove('hidden');
 
             // Check Shop Name
             const meta = session.user.user_metadata || {};
@@ -661,9 +893,20 @@
             }
         }
 
+
+
         async function refreshAllData() {
             fetchStats();
             fetchInventory();
+            fetchUdhaarStats();
+            fetchPrices();
+        }
+
+        async function fetchPrices() {
+            const prices = await api('/prices');
+            if (prices && !prices.error) {
+                allItemPrices = prices;
+            }
         }
 
         async function fetchStats() {
@@ -708,6 +951,26 @@
                 const qty = item.stock_quantity;
                 let statusClass = 'stock-good';
 
+                // Expiry Logic
+                let expiryHTML = '';
+                if (item.expiry_date) {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0); // Normalize today to start of day
+                    const exp = new Date(item.expiry_date);
+                    exp.setHours(0, 0, 0, 0); // Normalize expiry to start of day
+
+                    const diffTime = exp.getTime() - today.getTime();
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                    if (diffDays < 0) {
+                        expiryHTML = `<span class="text-[10px] font-bold text-red-600 bg-red-100 px-2 py-0.5 rounded-full ml-2">EXPIRED</span>`;
+                    } else if (diffDays <= 7) {
+                        expiryHTML = `<span class="text-[10px] font-bold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full ml-2">Exp: ${item.expiry_date}</span>`;
+                    } else {
+                        expiryHTML = `<span class="text-[10px] font-bold text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-full ml-2">Exp: ${item.expiry_date}</span>`;
+                    }
+                }
+
                 // 0 Stock - Red Alert
                 if (qty <= 0) {
                     statusClass = 'stock-critical border-l-4 border-l-red-500';
@@ -718,7 +981,10 @@
                 return `
                 <div class="flex items-center justify-between p-3 mb-2 rounded-xl transition-all hover:shadow-sm border border-slate-50 ${statusClass}">
                     <div class="flex-1">
-                        <p class="font-bold text-slate-800">${item.item_name}</p>
+                        <p class="font-bold text-slate-800 flex items-center">
+                            ${item.item_name}
+                            ${expiryHTML}
+                        </p>
                         <p class="text-xs opacity-75">₹${item.price || 0}/unit</p>
                     </div>
                     <div class="flex items-center gap-2">
@@ -798,6 +1064,10 @@
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
+                        <span class="text-xs px-2 py-0.5 rounded-full font-semibold ${t.payment_mode === 'Udhaar' ? 'udhaar-badge' : 'cash-badge'}">
+                            ${t.payment_mode === 'Udhaar' ? '🔴 Udhaar' : '🟢 Cash'}
+                        </span>
+                        ${t.payment_mode === 'Udhaar' && t.customer_name && t.customer_name !== 'Walk-in' ? `<span class="text-xs text-red-500 font-medium">${t.customer_name}</span>` : ''}
                         <button onclick="printInvoice('${t.order}', '${t.item.replace(/'/g, "\\'")}', ${t.price}, '${t.time || 'Just now'}')" 
                             title="Print Invoice" 
                             class="w-7 h-7 flex items-center justify-center rounded-full bg-blue-100 text-blue-600 hover:bg-blue-200 transition-all">
@@ -943,7 +1213,21 @@
             const item = document.getElementById('stock-item').value;
             const qty = document.getElementById('stock-qty').value;
             const price = document.getElementById('stock-price').value;
-            const res = await api('/add-stock', 'POST', { item_name: item, quantity: parseFloat(qty), price: price ? parseFloat(price) : null });
+            const expiry = document.getElementById('stock-expiry').value; // Get expiry date
+
+            if (!qty || parseFloat(qty) <= 0) {
+                showToast('Please enter a valid quantity', 'error');
+                return;
+            }
+
+            const body = {
+                item_name: item,
+                quantity: parseFloat(qty),
+                expiry_date: expiry || null // Include expiry date in the body
+            };
+            if (price) body.price = parseFloat(price);
+
+            const res = await api('/add-stock', 'POST', body);
             if (res && res.success) {
                 showToast('Stock added!', 'success');
                 document.getElementById('add-stock-modal').classList.add('hidden');
@@ -965,7 +1249,21 @@
             }
         };
 
-        // --- VOICE ---
+        // --- VOICE & TEXT INPUT ---
+
+        async function handleOrderInput(text) {
+            showToast('Processing...', 'info');
+            // Call Parse Endpoint
+            const res = await api('/parse-order', 'POST', { message: text });
+
+            if (res && res.success) {
+                openOrderModal(res.items, res.payment_mode, res.customer_name);
+                showToast("Please review order", "success");
+            } else {
+                showToast(res?.message || "Could not understand order", "error");
+            }
+        }
+
         function initSpeech() {
             if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) return;
             const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -982,105 +1280,48 @@
                 setTimeout(() => document.getElementById('transcript-container').classList.add('hidden'), 3000);
             };
 
-            recognition.onresult = async (event) => {
-                const transcript = event.results[0][0].transcript;
-                document.getElementById('live-transcript').innerText = `"${transcript}"`;
+            recognition.onresult = (event) => {
+                let interimTranscript = '';
+                let finalTranscript = '';
 
-                // Send to backend
-                showToast('Processing...', 'info');
-                const res = await api('/chat', 'POST', { message: transcript });
-
-                if (res) {
-                    if (res.success) {
-                        showToast(res.message, 'success');
-                        // Play success sound?
-                        refreshAllData();
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        finalTranscript += event.results[i][0].transcript;
                     } else {
-                        // Warning or Error
-                        showToast(res.message, res.warning ? 'warning' : 'error');
+                        interimTranscript += event.results[i][0].transcript;
                     }
+                }
+
+                if (interimTranscript) document.getElementById('live-transcript').innerText = `"${interimTranscript}..."`;
+                if (finalTranscript) {
+                    document.getElementById('live-transcript').innerText = `"${finalTranscript}"`;
+                    handleOrderInput(finalTranscript);
                 }
             };
 
-            // Handle speech recognition errors
             recognition.onerror = (event) => {
-                console.error('Speech recognition error:', event.error);
+                console.error('Speech error:', event.error);
                 els.micBtn.classList.remove('mic-listening', 'mic-pulse');
-                document.getElementById('transcript-container').classList.add('hidden');
-
-                switch (event.error) {
-                    case 'not-allowed':
-                        showToast('🎤 Microphone permission denied. Please allow mic access.', 'error');
-                        break;
-                    case 'no-speech':
-                        showToast('🎤 No speech detected. Try again.', 'warning');
-                        break;
-                    case 'audio-capture':
-                        showToast('🎤 No microphone found. Check your device.', 'error');
-                        break;
-                    case 'network':
-                        showToast('🎤 Speech service unavailable. Use text input instead.', 'warning');
-                        break;
-                    case 'aborted':
-                        // User cancelled, no toast needed
-                        break;
-                    default:
-                        showToast(`🎤 Mic error: ${event.error}`, 'warning');
-                }
+                if (event.error === 'not-allowed') showToast('🎤 Mic permission denied', 'error');
             };
 
             els.micBtn.onclick = async () => {
-                // First, try to get mic permission explicitly
-                try {
-                    await navigator.mediaDevices.getUserMedia({ audio: true });
-                } catch (e) {
-                    showToast('🎤 Please allow microphone access in your browser settings.', 'error');
-                    return;
-                }
-
-                // Now start recognition
-                try {
-                    recognition.start();
-                } catch (e) {
-                    console.warn("Mic error/already started", e);
-                    // If already started, stop and restart
-                    try {
-                        recognition.stop();
-                        setTimeout(() => recognition.start(), 100);
-                    } catch (e2) {
-                        console.error("Could not restart recognition", e2);
-                    }
-                }
+                try { await navigator.mediaDevices.getUserMedia({ audio: true }); } catch (e) { }
+                try { recognition.start(); } catch (e) { try { recognition.stop(); setTimeout(() => recognition.start(), 100); } catch (e2) { } }
             };
         }
 
-        // --- TEXT INPUT ---
         async function sendTextMessage() {
             const input = document.getElementById('text-input');
             const message = input.value.trim();
             if (!message) return;
-
             input.value = '';
-            showToast('Processing...', 'info');
-
-            const res = await api('/chat', 'POST', { message });
-            if (res) {
-                if (res.success) {
-                    showToast(res.message, 'success');
-                    refreshAllData();
-                } else {
-                    showToast(res.message, res.warning ? 'warning' : 'error');
-                }
-            }
+            handleOrderInput(message);
         }
 
         document.getElementById('send-text-btn').onclick = sendTextMessage;
-
         document.getElementById('text-input').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                sendTextMessage();
-            }
+            if (e.key === 'Enter') { e.preventDefault(); sendTextMessage(); }
         });
 
         // --- TOASTS ---
@@ -1209,6 +1450,321 @@
 
         // Init
         init();
+
+        // --- RECEIPT CARD ---
+        function showReceiptCard(res) {
+            showToast(res.message, 'success');
+
+            const mode = res.payment_mode || 'Cash';
+            const customer = res.customer_name || 'Walk-in';
+            const total = res.total_price || 0;
+            const isUdhaar = mode === 'Udhaar';
+
+            const modeHTML = isUdhaar
+                ? `<span class="udhaar-badge text-xs px-2 py-1 rounded-full font-bold">🔴 Udhaar</span>`
+                : `<span class="cash-badge text-xs px-2 py-1 rounded-full font-bold">🟢 Cash</span>`;
+
+            const customerHTML = customer !== 'Walk-in'
+                ? `<div class="flex justify-between text-sm mt-2"><span class="text-slate-500">Customer</span><span class="font-semibold ${isUdhaar ? 'text-red-600' : 'text-slate-700'}">${customer}</span></div>`
+                : '';
+
+            const card = document.createElement('div');
+            card.className = 'receipt-card';
+            card.innerHTML = `
+                <div class="flex justify-between items-center mb-3">
+                    <span class="font-bold text-slate-800">🧾 Receipt</span>
+                    ${modeHTML}
+                </div>
+                <div class="flex justify-between text-sm">
+                    <span class="text-slate-500">Total</span>
+                    <span class="font-bold text-lg text-emerald-600">₹${total}</span>
+                </div>
+                ${customerHTML}
+            `;
+
+            // Insert after the voice command center
+            const voiceSection = document.querySelector('.mic-button')?.closest('.glass.rounded-3xl');
+            if (voiceSection) {
+                // Remove previous receipt card if exists
+                const prev = voiceSection.parentNode.querySelector('.receipt-card');
+                if (prev) prev.remove();
+                voiceSection.after(card);
+                // Auto-remove after 8 seconds
+                setTimeout(() => { card.style.opacity = '0'; card.style.transition = 'opacity 0.5s'; setTimeout(() => card.remove(), 500); }, 8000);
+            }
+        }
+
+        // --- UDHAAR DASHBOARD ---
+        window.openUdhaarDashboard = async function () {
+            const modal = document.getElementById('udhaar-dashboard-modal');
+            modal.classList.remove('hidden');
+            showUdhaarSummary();
+
+            const listEl = document.getElementById('udhaar-customers-list');
+            listEl.innerHTML = '<div class="text-center py-10"><span class="spinner"></span></div>';
+
+            const res = await api('/dues');
+            if (res && res.dues) {
+                const totalDue = res.dues.reduce((sum, d) => sum + (d.total_due || 0), 0);
+                document.getElementById('udhaar-total-amount').textContent = `₹${Math.round(totalDue)}`;
+
+                if (res.dues.length === 0) {
+                    listEl.innerHTML = '<div class="text-center py-10 text-slate-400"><i class="fas fa-check-circle text-3xl text-emerald-400 mb-2"></i><p>No outstanding dues! 🎉</p></div>';
+                    return;
+                }
+
+                listEl.innerHTML = res.dues.map(d => `
+                    <div class="dues-customer-row flex items-center justify-between p-4 bg-white border border-slate-100 rounded-xl"
+                         onclick="openCustomerDues('${d.customer_name.replace(/'/g, "\\'")}')">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 bg-red-50 text-red-600 rounded-full flex items-center justify-center font-bold text-sm">
+                                ${d.customer_name.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                                <p class="font-semibold text-slate-800">${d.customer_name}</p>
+                                <p class="text-xs text-slate-400">${d.last_updated ? new Date(d.last_updated).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : ''}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold text-red-600 text-lg">₹${Math.round(d.total_due)}</span>
+                            <i class="fas fa-chevron-right text-slate-300 text-sm"></i>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                listEl.innerHTML = '<div class="text-center py-10 text-red-400">Failed to load dues</div>';
+            }
+        };
+
+        window.showUdhaarSummary = function () {
+            document.getElementById('udhaar-view-summary').classList.remove('hidden');
+            document.getElementById('udhaar-view-detail').classList.add('hidden');
+            document.getElementById('udhaar-subtitle').textContent = 'Outstanding Dues';
+        };
+
+        window.openCustomerDues = async function (customerName) {
+            document.getElementById('udhaar-view-summary').classList.add('hidden');
+            document.getElementById('udhaar-view-detail').classList.remove('hidden');
+            document.getElementById('udhaar-subtitle').textContent = 'Transaction History';
+            document.getElementById('udhaar-customer-title').textContent = customerName;
+            document.getElementById('settle-dues-btn').dataset.customer = customerName;
+
+            const tbody = document.getElementById('udhaar-detail-tbody');
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center py-6"><span class="spinner"></span></td></tr>';
+
+            const res = await api(`/dues/${encodeURIComponent(customerName)}`);
+            if (res) {
+                document.getElementById('udhaar-customer-total').textContent = `₹${Math.round(res.total_due)}`;
+
+                const settleBtn = document.getElementById('settle-dues-btn');
+                if (res.total_due <= 0) {
+                    settleBtn.classList.add('hidden');
+                } else {
+                    settleBtn.classList.remove('hidden');
+                }
+
+                if (!res.transactions || res.transactions.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="text-center py-6 text-slate-400">No transactions found</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = res.transactions.map(t => `
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="px-4 py-3 text-slate-500 whitespace-nowrap">${t.date_time}</td>
+                        <td class="px-4 py-3 font-medium text-slate-700">${t.item_name}</td>
+                        <td class="px-4 py-3 text-center text-slate-600">${t.quantity}</td>
+                        <td class="px-4 py-3 text-right font-semibold text-red-600">₹${t.total_price}</td>
+                    </tr>
+                `).join('');
+            }
+        };
+
+        // --- SETTLE DUES ---
+        window.settleDues = async function () {
+            const customerName = document.getElementById('settle-dues-btn').dataset.customer;
+            if (!customerName) return;
+            if (!confirm(`Settle all dues for "${customerName}"? This marks all credit as paid.`)) return;
+
+            const res = await api('/dues/settle', 'POST', { customer_name: customerName });
+            if (res && res.success) {
+                showToast(res.message, 'success');
+                // Refresh detail view to show updated state
+                openCustomerDues(customerName);
+                // Also refresh udhaar stats on dashboard
+                fetchUdhaarStats();
+            } else {
+                showToast(res?.message || 'Failed to settle dues', 'error');
+            }
+        };
+
+        // --- UDHAAR STATS ---
+        async function fetchUdhaarStats() {
+            const res = await api('/dues');
+            if (res && res.dues) {
+                const totalDue = res.dues.reduce((sum, d) => sum + (d.total_due || 0), 0);
+                document.getElementById('stat-udhaar').textContent = `₹${Math.round(totalDue)}`;
+            }
+        }
+
+        // --- ORDER CONFIRMATION LOGIC ---
+        let currentOrderItems = [];
+        let currentPaymentMode = "Cash";
+
+        window.openOrderModal = function (items, mode, customer) {
+            currentOrderItems = items.map(i => ({
+                item_name: i.item_name || i.item,
+                quantity: i.quantity || i.qty,
+                unit_price: i.unit_price || 0,
+                total_price: (i.quantity || i.qty) * (i.unit_price || 0)
+            }));
+
+            document.getElementById('confirm-customer').value = customer || "Walk-in";
+            setPaymentMode(mode || "Cash");
+
+            renderOrderItems();
+            document.getElementById('order-confirm-modal').classList.remove('hidden');
+        }
+
+        window.closeOrderModal = function () {
+            document.getElementById('order-confirm-modal').classList.add('hidden');
+        }
+
+        window.setPaymentMode = function (mode) {
+            currentPaymentMode = mode;
+            const cashBtn = document.getElementById('mode-cash');
+            const udhaarBtn = document.getElementById('mode-udhaar');
+
+            if (mode === 'Cash') {
+                cashBtn.className = "flex-1 py-1.5 px-3 rounded-lg font-medium transition-all bg-white shadow text-emerald-600";
+                udhaarBtn.className = "flex-1 py-1.5 px-3 rounded-lg font-medium transition-all text-slate-500";
+            } else {
+                cashBtn.className = "flex-1 py-1.5 px-3 rounded-lg font-medium transition-all text-slate-500";
+                udhaarBtn.className = "flex-1 py-1.5 px-3 rounded-lg font-medium transition-all bg-white shadow text-red-600";
+            }
+        }
+
+        window.renderOrderItems = function () {
+            const tbody = document.getElementById('confirm-items-tbody');
+            tbody.innerHTML = '';
+            let total = 0;
+
+            currentOrderItems.forEach((item, index) => {
+                const itemTotal = item.quantity * item.unit_price;
+                total += itemTotal;
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50/50";
+                tr.innerHTML = `
+                    <td class="px-3 py-2">
+                        <input type="text" value="${item.item_name}" 
+                            onchange="updateItemName(${index}, this.value)"
+                            class="w-full bg-transparent outline-none border-b border-transparent focus:border-emerald-300 font-medium text-slate-700">
+                    </td>
+                    <td class="px-3 py-2">
+                        <div class="flex items-center justify-center gap-2 bg-white rounded-lg border border-slate-200 py-1 px-1">
+                            <button onclick="updateQty(${index}, -0.5)" class="w-5 h-5 flex items-center justify-center text-slate-400 hover:text-red-500 rounded text-xs"><i class="fas fa-minus"></i></button>
+                            <span class="w-8 text-center font-bold text-slate-700">${item.quantity}</span>
+                            <button onclick="updateQty(${index}, 0.5)" class="w-5 h-5 flex items-center justify-center text-slate-400 hover:text-emerald-500 rounded text-xs"><i class="fas fa-plus"></i></button>
+                        </div>
+                    </td>
+                    <td class="px-3 py-2 text-right font-mono text-slate-600">₹${Math.round(itemTotal)}</td>
+                    <td class="px-3 py-2 text-center">
+                        <button onclick="deleteOrderItem(${index})" class="text-slate-300 hover:text-red-500 transition-colors"><i class="fas fa-trash-alt"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('confirm-total-price').textContent = `₹${Math.round(total)}`;
+        }
+
+        window.updateQty = function (index, change) {
+            const newQty = currentOrderItems[index].quantity + change;
+            if (newQty > 0) {
+                currentOrderItems[index].quantity = newQty;
+                renderOrderItems();
+            }
+        }
+
+        window.updateItemName = function (index, newName) {
+            if (newName.trim()) {
+                const name = newName.trim();
+                currentOrderItems[index].item_name = name;
+
+                // Auto-update price if found (case-insensitive)
+                // First try exact match
+                let price = allItemPrices[name];
+
+                // If not found, try case-insensitive
+                if (price === undefined) {
+                    const lowerName = name.toLowerCase();
+                    const match = Object.keys(allItemPrices).find(k => k.toLowerCase() === lowerName);
+                    if (match) {
+                        price = allItemPrices[match];
+                    }
+                }
+
+                if (price !== undefined) {
+                    currentOrderItems[index].unit_price = price;
+                }
+
+                renderOrderItems();
+            }
+        }
+
+        window.deleteOrderItem = function (index) {
+            currentOrderItems.splice(index, 1);
+            renderOrderItems();
+        }
+
+        window.addEmptyRow = function () {
+            currentOrderItems.push({
+                item_name: "New Item",
+                quantity: 1,
+                unit_price: 0
+            });
+            renderOrderItems();
+        }
+
+        window.confirmOrder = async function () {
+            const customer = document.getElementById('confirm-customer').value.trim() || "Walk-in";
+
+            if (currentOrderItems.length === 0) {
+                showToast("No items in order!", "error");
+                return;
+            }
+
+            const payload = {
+                items: currentOrderItems,
+                payment_mode: currentPaymentMode,
+                customer_name: customer
+            };
+
+            const btn = document.querySelector('button[onclick="confirmOrder()"]');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fas fa-circle-notch fa-spin"></i> Processing...`;
+
+            try {
+                const res = await api('/confirm-order', 'POST', payload);
+                if (res && res.success) {
+                    showToast(res.message, "success");
+                    closeOrderModal();
+                    refreshAllData();
+                } else {
+                    showToast(res.message || "Order Failed", "error");
+                    if (res.failed_items) {
+                        alert("Failed items:\n" + res.failed_items.join("\n"));
+                    }
+                }
+            } catch (e) {
+                console.error(e);
+                showToast("Network Error", "error");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
 
     </script>
 </body>
