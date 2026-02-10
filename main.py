@@ -68,6 +68,7 @@ def get_user_client(authorization: Optional[str] = Header(None)) -> tuple[Client
 class ChatRequest(BaseModel):
     message: str
 
+
 @app.get("/inventory")
 async def get_inventory(auth: tuple = Depends(get_user_client)):
     try:
@@ -278,8 +279,7 @@ def parse_message_locally(message, available_items, custom_aliases=None):
     text = re.sub(r'\b(udhaar|udhar|credit|khata|khate|udhaari)\b', ' ', text, flags=re.IGNORECASE)
     if detected_customer != 'Walk-in':
         text = re.sub(rf'\b{re.escape(detected_customer)}\b', ' ', text, flags=re.IGNORECASE)
-    text = re.sub(r'\b(ko|ka|ki|ke|se|pe|par|on|for|to)\b', ' ', text, flags=re.IGNORECASE)
-    text = re.sub(r'\b(sold|sell|sale|selling|please|and|the|a|an|some|of|also|give|add|more|i|want|need|get|me|us|becho|bech|do|de|dena|le|lo|lena|karo)\b', ' ', text)
+    text = re.sub(r'\b(sold|sell|sale|selling|please|and|the|a|an|some|of|also|give|add|more|i|want|need|get|me|us|becho|bech|do|de|dena|le|lo|lena|karo|nu|no|ko|ka|ki|ke|se|pe|par|on|for|to)\b', ' ', text, flags=re.IGNORECASE)
 
     for typo, correction in EXPANDED_VOICE_TYPOS.items():
         text = re.sub(rf'\b{typo}\b', correction, text, flags=re.IGNORECASE)
@@ -320,61 +320,70 @@ def parse_message_locally(message, available_items, custom_aliases=None):
 
 @app.post("/parse-order")
 async def parse_order_endpoint(req: ChatRequest, auth: tuple = Depends(get_user_client)):
-    db, user_id = auth
-    print(f"[PARSE] User {user_id} said: '{req.message}'")
-    
-    ITEM_PRICES, user_inventory = get_user_inventory_data(db, user_id)
-    available_items = list(ITEM_PRICES.keys())
-    
-    # Local parsing
-    items_to_sell, payment_mode, customer_name = parse_message_locally(req.message, available_items)
-    
-    # AI Fallback if needed
-    if not items_to_sell:
-        parse_prompt = f"""Parse this voice command: "{req.message}"
-Available items: {available_items}
-Return ONLY valid JSON: {{"items": [{{"item": "ItemName", "qty": number}}, ...], "payment_mode": "Cash" or "Udhaar", "customer_name": "Name" or "Walk-in"}}"""
-        try:
-            response = model.generate_content(parse_prompt)
-            ai_response = response.text.replace('```json', '').replace('```', '').strip()
-            ai_parsed = json.loads(ai_response)
+    try:
+        db, user_id = auth
+        print(f"[PARSE] User {user_id} said: '{req.message}'")
+        
+        ITEM_PRICES, user_inventory = get_user_inventory_data(db, user_id)
+        available_items = list(ITEM_PRICES.keys())
+        
+        # 1. Try Local Parsing First
+        items_to_sell, payment_mode, customer_name = parse_message_locally(req.message, available_items)
+        
+        # 2. AI Fallback if Local finds nothing
+        if not items_to_sell:
+            try:
+                prompt = f"""
+                You are a smart cashier. Parse: "{req.message}"
+                Items available: {json.dumps(available_items)}
+                Return ONLY JSON: {{"items": [{{"item": "Name", "qty": 1}}], "payment_mode": "Cash"/"Udhaar", "customer_name": "Name"}}
+                """
+                response = model.generate_content(prompt)
+                text = response.text.strip()
+                if "```json" in text: text = text.split("```json")[1].split("```")[0].strip()
+                elif "```" in text: text = text.split("```")[1].split("```")[0].strip()
+                
+                ai_parsed = json.loads(text)
+                ai_items = ai_parsed if isinstance(ai_parsed, list) else ai_parsed.get("items", [])
+                
+                # Update metadata from AI if local didn't find anything specific
+                if isinstance(ai_parsed, dict):
+                    if payment_mode == 'Cash' and ai_parsed.get("payment_mode") == "Udhaar":
+                        payment_mode = "Udhaar"
+                    if customer_name == 'Walk-in' and ai_parsed.get("customer_name") != "Walk-in":
+                        customer_name = ai_parsed.get("customer_name", "Walk-in").strip().title()
+                
+                for item_data in ai_items:
+                    item_name = item_data.get("item", "").strip().title()
+                    qty = float(item_data.get("qty", 1))
+                    matched = fuzzy_match_item(item_name, available_items)
+                    if matched and qty > 0:
+                        items_to_sell.append({"item": matched, "qty": qty})
+            except Exception as ai_err:
+                print(f"AI Parse Fallback Error (Quota/Network): {ai_err}")
+                # AI failed, but we still have local results (which are empty here)
+        
+        # 3. Prepare response with pricing
+        parsed_items = []
+        for s in items_to_sell:
+            name = s["item"]
+            price = ITEM_PRICES.get(name, 0)
+            parsed_items.append({
+                "item_name": name,
+                "quantity": s["qty"],
+                "unit_price": price,
+                "total_price": s["qty"] * price
+            })
             
-            ai_items = ai_parsed if isinstance(ai_parsed, list) else ai_parsed.get("items", [])
-            
-            # Adopt AI values
-            if isinstance(ai_parsed, dict):
-                if payment_mode == 'Cash' and ai_parsed.get("payment_mode") == "Udhaar":
-                    payment_mode = "Udhaar"
-                if customer_name == 'Walk-in' and ai_parsed.get("customer_name") != "Walk-in":
-                    customer_name = ai_parsed.get("customer_name", "Walk-in").strip().title()
-            
-            for item_data in ai_items:
-                item_name = item_data.get("item", "").strip().title()
-                qty = float(item_data.get("qty", 1))
-                matched = fuzzy_match_item(item_name, available_items)
-                if matched and qty > 0:
-                    items_to_sell.append({"item": matched, "qty": qty})
-        except Exception as e:
-            print(f"AI Parse Error: {e}")
-
-    # Prepare response items with price details
-    parsed_items = []
-    for s in items_to_sell:
-        item_name = s["item"]
-        unit_price = ITEM_PRICES.get(item_name, 0)
-        parsed_items.append({
-            "item_name": item_name,
-            "quantity": s["qty"],
-            "unit_price": unit_price,
-            "total_price": s["qty"] * unit_price
-        })
-
-    return {
-        "success": bool(parsed_items),
-        "items": parsed_items,
-        "payment_mode": payment_mode,
-        "customer_name": customer_name
-    }
+        return {
+            "success": len(parsed_items) > 0,
+            "items": parsed_items,
+            "payment_mode": payment_mode,
+            "customer_name": customer_name
+        }
+    except Exception as e:
+        print(f"Parse Endpoint Fatal Error: {e}")
+        return {"success": False, "message": "Could not understand order", "error_type": "fatal"}
 
 class ConfirmOrderRequest(BaseModel):
     items: list[dict] # [{"item_name": "Milk", "quantity": 2, "total_price": 120}]
@@ -791,22 +800,47 @@ async def delete_item(req: DeleteItemRequest, auth: tuple = Depends(get_user_cli
 
 class SettleDuesRequest(BaseModel):
     customer_name: str
+    amount: Optional[float] = None
 
 @app.post("/dues/settle")
 async def settle_dues(req: SettleDuesRequest, auth: tuple = Depends(get_user_client)):
     try:
         db, user_id = auth
         customer = req.customer_name.strip()
+        amount_to_settle = req.amount
         
         dues_check = db.table("dues").select("id, total_due").eq("user_id", user_id).eq("customer_name", customer).execute()
         if not dues_check.data or dues_check.data[0]["total_due"] <= 0:
             return {"message": f"No outstanding dues for {customer}", "success": False}
         
-        settled_amount = dues_check.data[0]["total_due"]
-        db.table("dues").update({"total_due": 0, "last_updated": "now()"}).eq("user_id", user_id).eq("customer_name", customer).execute()
-        db.table("sales").update({"is_settled": True}).eq("user_id", user_id).eq("customer_name", customer).eq("payment_mode", "Udhaar").eq("is_settled", False).execute()
+        total_due = dues_check.data[0]["total_due"]
         
-        return {"message": f"✅ Settled ₹{round(settled_amount)} for {customer}", "success": True, "settled_amount": round(settled_amount)}
+        # Handle Full vs Partial Settlement
+        if amount_to_settle is None or amount_to_settle >= total_due:
+            # Full Settle
+            db.table("dues").update({"total_due": 0, "last_updated": "now()"}).eq("user_id", user_id).eq("customer_name", customer).execute()
+            db.table("sales").update({"is_settled": True}).eq("user_id", user_id).eq("customer_name", customer).eq("payment_mode", "Udhaar").eq("is_settled", False).execute()
+            msg = f"✅ Fully Settled ₹{round(total_due)} for {customer}"
+            settled_val = total_due
+        else:
+            # Partial Settle
+            new_due = total_due - amount_to_settle
+            db.table("dues").update({"total_due": new_due, "last_updated": "now()"}).eq("user_id", user_id).eq("customer_name", customer).execute()
+            
+            # Record a negative sale to show payment in history
+            db.table("sales").insert({
+                "item_name": "Payment Received",
+                "quantity": 1,
+                "total_price": -amount_to_settle,
+                "customer_name": customer,
+                "user_id": user_id,
+                "payment_mode": "Udhaar",
+                "is_settled": True # Payments are effectively "settled" ledger entries
+            }).execute()
+            msg = f"✅ Received ₹{round(amount_to_settle)} from {customer}. Remaining: ₹{round(new_due)}"
+            settled_val = amount_to_settle
+            
+        return {"message": msg, "success": True, "settled_amount": round(settled_val)}
     except HTTPException:
         raise
     except Exception as e:

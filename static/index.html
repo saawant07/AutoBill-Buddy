@@ -557,12 +557,17 @@
                 </button>
                 <div class="flex items-center justify-between mb-4">
                     <h3 class="text-xl font-bold text-slate-800" id="udhaar-customer-title">Customer</h3>
-                    <div class="flex items-center gap-3">
-                        <span class="text-lg font-bold text-red-600" id="udhaar-customer-total">₹0</span>
-                        <button id="settle-dues-btn" onclick="settleDues()"
-                            class="px-4 py-2 bg-emerald-600 text-white text-sm font-bold rounded-xl hover:bg-emerald-700 transition-all shadow-lg flex items-center gap-2">
-                            <i class="fas fa-check-circle"></i> Settle
-                        </button>
+                    <div class="flex items-center gap-2">
+                        <span class="text-lg font-bold text-red-600 mr-2" id="udhaar-customer-total">₹0</span>
+                        <div class="flex items-center bg-slate-100 rounded-xl p-1 border border-slate-200">
+                            <input type="number" id="settle-amount-input"
+                                class="w-20 bg-transparent outline-none px-2 text-sm font-bold text-slate-700"
+                                placeholder="Amount">
+                            <button id="settle-dues-btn" onclick="settleDues()"
+                                class="px-4 py-1.5 bg-emerald-600 text-white text-sm font-bold rounded-lg hover:bg-emerald-700 transition-all shadow-sm flex items-center gap-2">
+                                <i class="fas fa-check-circle"></i> Settle
+                            </button>
+                        </div>
                     </div>
                 </div>
                 <div class="overflow-x-auto">
@@ -1548,6 +1553,7 @@
             document.getElementById('udhaar-subtitle').textContent = 'Transaction History';
             document.getElementById('udhaar-customer-title').textContent = customerName;
             document.getElementById('settle-dues-btn').dataset.customer = customerName;
+            document.getElementById('settle-amount-input').value = ''; // Clear partial input
 
             const tbody = document.getElementById('udhaar-detail-tbody');
             tbody.innerHTML = '<tr><td colspan="4" class="text-center py-6"><span class="spinner"></span></td></tr>';
@@ -1582,15 +1588,26 @@
         // --- SETTLE DUES ---
         window.settleDues = async function () {
             const customerName = document.getElementById('settle-dues-btn').dataset.customer;
-            if (!customerName) return;
-            if (!confirm(`Settle all dues for "${customerName}"? This marks all credit as paid.`)) return;
+            const amountInput = document.getElementById('settle-amount-input');
+            const partialAmount = parseFloat(amountInput.value);
 
-            const res = await api('/dues/settle', 'POST', { customer_name: customerName });
+            if (!customerName) return;
+
+            let confirmMsg = `Settle all dues for "${customerName}"?`;
+            let payload = { customer_name: customerName };
+
+            if (!isNaN(partialAmount) && partialAmount > 0) {
+                confirmMsg = `Recognize a payment of ₹${partialAmount} from "${customerName}"?`;
+                payload.amount = partialAmount;
+            }
+
+            if (!confirm(confirmMsg)) return;
+
+            const res = await api('/dues/settle', 'POST', payload);
             if (res && res.success) {
                 showToast(res.message, 'success');
-                // Refresh detail view to show updated state
+                amountInput.value = ''; // Clear input
                 openCustomerDues(customerName);
-                // Also refresh udhaar stats on dashboard
                 fetchUdhaarStats();
             } else {
                 showToast(res?.message || 'Failed to settle dues', 'error');
