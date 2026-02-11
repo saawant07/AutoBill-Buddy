@@ -381,10 +381,12 @@
 
             <!-- 1. Stats Grid (4 Cards) -->
             <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
-                <!-- Today's Revenue -->
-                <div class="glass rounded-2xl p-4 shadow-lg flex items-center justify-between">
+                <!-- Revenue (Starts with Today's Revenue) -->
+                <div class="glass rounded-2xl p-4 shadow-lg flex items-center justify-between cursor-pointer hover:bg-white/40 transition-all"
+                    onclick="toggleRevenueProfit()" id="revenue-card">
                     <div>
-                        <p class="text-slate-500 text-xs uppercase font-bold tracking-wider">Today's Rev</p>
+                        <p class="text-slate-500 text-xs uppercase font-bold tracking-wider" id="rev-card-title">Today's
+                            Rev</p>
                         <p id="stat-revenue" class="text-2xl font-bold text-emerald-600 mt-1">₹0</p>
                     </div>
                     <div
@@ -591,7 +593,7 @@
     <!-- Add Stock Modal (Hidden default) -->
     <div id="add-stock-modal"
         class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="glass bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 relative">
+        <div class="glass bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 relative">
             <button onclick="document.getElementById('add-stock-modal').classList.add('hidden')"
                 class="absolute top-4 right-4 text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
             <h3 class="font-bold text-lg mb-4 text-slate-800">Add Stock</h3>
@@ -604,7 +606,10 @@
                     placeholder="Quantity">
                 <input type="number" id="stock-price" step="0.01"
                     class="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none focus:border-emerald-500"
-                    placeholder="Price (Optional)">
+                    placeholder="Sell Price">
+                <input type="number" id="stock-cost" step="0.01"
+                    class="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none focus:border-emerald-500"
+                    placeholder="Cost Price">
                 <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Expiry Date (Optional)</label>
                 <input type="date" id="stock-expiry"
                     class="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none focus:border-emerald-500">
@@ -795,6 +800,10 @@
         let allInventoryItems = []; // Store for client-side filtering
         let allItemPrices = {}; // Global price map
 
+        // Profit State
+        let todayStats = { revenue: 0, profit: 0 };
+        let showProfit = false;
+
         // --- ELEMENTS ---
         const els = {
             authOverlay: document.getElementById('auth-overlay'),
@@ -918,7 +927,11 @@
             // Today
             const today = await api('/sales/today');
             if (today) {
-                document.getElementById('stat-revenue').textContent = `₹${today.total_revenue}`;
+                todayStats = {
+                    revenue: today.total_revenue,
+                    profit: today.total_profit
+                };
+                updateRevenueCard();
                 document.getElementById('stat-items').textContent = today.total_quantity;
                 document.getElementById('stat-orders').textContent = today.total_sales;
                 renderTransactions(today.transactions);
@@ -927,6 +940,30 @@
             const month = await api('/sales/month');
             if (month) {
                 document.getElementById('stat-month-revenue').textContent = `₹${month.month_revenue}`;
+            }
+        }
+
+        window.toggleRevenueProfit = function () {
+            showProfit = !showProfit;
+            updateRevenueCard();
+        }
+
+        function updateRevenueCard() {
+            const titleEl = document.getElementById('rev-card-title');
+            const valEl = document.getElementById('stat-revenue');
+
+            if (showProfit) {
+                titleEl.textContent = "Today's Profit";
+                titleEl.classList.add('text-emerald-600');
+                valEl.textContent = `₹${todayStats.profit || 0}`;
+                valEl.classList.remove('text-emerald-600');
+                valEl.classList.add('text-emerald-500'); // Lighter/Distinct
+            } else {
+                titleEl.textContent = "Today's Revenue";
+                titleEl.classList.remove('text-emerald-600');
+                valEl.textContent = `₹${todayStats.revenue}`;
+                valEl.classList.remove('text-emerald-500');
+                valEl.classList.add('text-emerald-600');
             }
         }
 
@@ -1218,6 +1255,7 @@
             const item = document.getElementById('stock-item').value;
             const qty = document.getElementById('stock-qty').value;
             const price = document.getElementById('stock-price').value;
+            const cost = document.getElementById('stock-cost').value;
             const expiry = document.getElementById('stock-expiry').value; // Get expiry date
 
             if (!qty || parseFloat(qty) <= 0) {
@@ -1231,6 +1269,7 @@
                 expiry_date: expiry || null // Include expiry date in the body
             };
             if (price) body.price = parseFloat(price);
+            if (cost) body.cost_price = parseFloat(cost);
 
             const res = await api('/add-stock', 'POST', body);
             if (res && res.success) {
@@ -1383,7 +1422,8 @@
         function renderMonthlyDashboard() {
             // 1. Header Totals
             document.getElementById('calendar-month-title').innerText = `Monthly: ${monthlyData.month}`;
-            document.getElementById('calendar-total-rev').innerText = `Total: ₹${monthlyData.month_revenue}`;
+            document.getElementById('calendar-total-rev').innerHTML =
+                `Rev: ₹${monthlyData.month_revenue} <span class="text-emerald-600 ml-2 border-l border-emerald-200 pl-2">Profit: ₹${monthlyData.month_profit}</span>`;
 
             // 2. Calendar Grid
             const grid = document.getElementById('calendar-grid');
@@ -1414,7 +1454,10 @@
 
                 el.innerHTML = `
                     <span class="font-bold mb-1">${d}</span>
-                    ${dayData ? `<span class="text-[10px] font-bold">₹${dayData.revenue}</span>` : ''}
+                    <div class="flex flex-col items-center leading-none">
+                        ${dayData ? `<span class="text-[10px] font-bold text-slate-700">₹${dayData.revenue}</span>` : ''}
+                        ${dayData ? `<span class="text-[8px] font-bold text-emerald-600">P:${dayData.profit || 0}</span>` : ''}
+                    </div>
                  `;
 
                 grid.appendChild(el);

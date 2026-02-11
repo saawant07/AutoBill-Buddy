@@ -213,6 +213,7 @@ def parse_message_locally(message, available_items, custom_aliases=None):
         'chhe': 6, 'chay': 6, 'saat': 7, 'aath': 8, 'nau': 9, 'das': 10,
         'gyarah': 11, 'barah': 12, 'terah': 13, 'chaudah': 14, 'pandrah': 15,
         'dhai': 2.5, 'adha': 0.5, 'dedh': 1.5, 'paune': 0.75,
+        'aadha': 0.5, 'adhaa': 0.5, 'pav': 0.25, 'paav': 0.25, 'sawa': 1.25,
         'double': 2, 'triple': 3, 'single': 1,
     }
 
@@ -240,8 +241,9 @@ def parse_message_locally(message, available_items, custom_aliases=None):
         'sabun': 'soap', 'saabun': 'soap',
         'maggi': 'noodles', 'maagi': 'noodles', 'noodle': 'noodles',
         'tooothpaste': 'toothpaste', 'toothpast': 'toothpaste', 'colgate': 'toothpaste',
-        'tee': 'tea', 'chai': 'tea',
+        'tee': 'tea', 'chai': 'tea', 'patti': 'tea',
         'coffe': 'coffee', 'koffee': 'coffee', 'cofee': 'coffee',
+        'jeera': 'cumin', 'jira': 'cumin', 'zeera': 'cumin',
     }
     
     # Merge custom aliases
@@ -252,17 +254,17 @@ def parse_message_locally(message, available_items, custom_aliases=None):
     detected_mode = 'Cash'
     detected_customer = 'Walk-in'
     
-    udhaar_keywords = ['udhaar', 'udhar', 'udhhaar', 'udhar', 'credit', 'khata', 'khate', 'udhaari', 'udhari', 'uthaar', 'uthar', 'udhaar pe', 'udhar pe', 'credit pe', 'on credit']
+    udhaar_keywords = ['udhaar', 'udhar', 'udhhaar', 'udhar', 'credit', 'khata', 'khate', 'khatte', 'udhaari', 'udhari', 'uthaar', 'uthar', 'udhaar pe', 'udhar pe', 'credit pe', 'on credit']
     for kw in udhaar_keywords:
         if kw in text:
             detected_mode = 'Udhaar'
             break
             
     customer_patterns = [
-        r'(?:to|for)\s+([A-Za-z]+?)\s+(?:on|udhaar|udhar|credit|khata)',
-        r'([A-Za-z]+?)\s+(?:ko|ka|ki|ke|se)\s',
+        r'(?:to|for)\s+([A-Za-z]+?)\s+(?:on|udhaar|udhar|credit|khata|khatte)',
+        r'([A-Za-z]+?)\s+(?:ko|ka|ki|ke|se)(?:\s|$)',
         r'(?:to|for)\s+([A-Za-z]+?)(?:\s|$)',
-        r'([A-Za-z]+?)\s+(?:udhaar|udhar|credit|khata)',
+        r'([A-Za-z]+?)\s+(?:udhaar|udhar|credit|khata|khatte)',
     ]
     
     original_text = text
@@ -270,16 +272,21 @@ def parse_message_locally(message, available_items, custom_aliases=None):
         m = re.search(pat, original_text, re.IGNORECASE)
         if m:
             candidate = m.group(1).strip().title()
-            non_names = {'on', 'the', 'and', 'sold', 'sell', 'sale', 'give', 'some', 'also', 'more', 'cash', 'udhaar', 'milk', 'bread', 'sugar', 'rice', 'oil', 'eggs', 'butter', 'cheese', 'paneer', 'curd', 'atta', 'dal', 'tea', 'coffee', 'ghee', 'soap', 'chips', 'noodles', 'biscuits', 'toothpaste', 'detergent', 'flour', 'salt', 'wheat', 'maida', 'suji', 'poha'}
+            non_names = {'on', 'the', 'and', 'sold', 'sell', 'sale', 'give', 'some', 'also', 'more', 'cash', 'udhaar', 'milk', 'bread', 'sugar', 'rice', 'oil', 'eggs', 'butter', 'cheese', 'paneer', 'curd', 'atta', 'dal', 'tea', 'coffee', 'ghee', 'soap', 'chips', 'noodles', 'biscuits', 'toothpaste', 'detergent', 'flour', 'salt', 'wheat', 'maida', 'suji', 'poha', 'jeera', 'cumin', 'khatte', 'khata'}
             if candidate.lower() not in non_names and len(candidate) >= 2 and not candidate.replace('.','').isdigit():
                 detected_customer = candidate
                 break
 
     # Clean text
-    text = re.sub(r'\b(udhaar|udhar|credit|khata|khate|udhaari)\b', ' ', text, flags=re.IGNORECASE)
+    text = re.sub(r'\b(udhaar|udhar|credit|khata|khate|khatte|udhaari)\b', ' ', text, flags=re.IGNORECASE)
     if detected_customer != 'Walk-in':
         text = re.sub(rf'\b{re.escape(detected_customer)}\b', ' ', text, flags=re.IGNORECASE)
-    text = re.sub(r'\b(sold|sell|sale|selling|please|and|the|a|an|some|of|also|give|add|more|i|want|need|get|me|us|becho|bech|do|de|dena|le|lo|lena|karo|nu|no|ko|ka|ki|ke|se|pe|par|on|for|to)\b', ' ', text, flags=re.IGNORECASE)
+    
+    # NEW: Remove common Hindi stop words and general filler words
+    text = re.sub(r'\b(sold|sell|sale|selling|please|and|aur|the|a|an|some|of|also|give|add|more|i|want|need|get|me|us|becho|bech|do|de|dena|le|lo|lena|karo|nu|no|ko|ka|ki|ke|se|pe|p|par|on|for|to)\b', ' ', text, flags=re.IGNORECASE)
+    
+    # Separate stuck digits and text (e.g., "2tel" -> "2 tel")
+    text = re.sub(r'(\d+)([a-zA-Z]+)', r'\1 \2', text)
 
     for typo, correction in EXPANDED_VOICE_TYPOS.items():
         text = re.sub(rf'\b{typo}\b', correction, text, flags=re.IGNORECASE)
@@ -288,7 +295,7 @@ def parse_message_locally(message, available_items, custom_aliases=None):
         text = re.sub(rf'\b{word}\b', str(num), text, flags=re.IGNORECASE)
         
     # Remove units
-    text = re.sub(r'\b(kg|kgs|kilo|kilos|liter|liters|ltr|ml|piece|pieces|pcs|packet|packets|pack)\b', ' ', text, flags=re.IGNORECASE)
+    text = re.sub(r'\b(kg|kgs|kilo|kilos|liter|liters|ltr|ml|gram|grams|gm|gms|g|piece|pieces|pcs|packet|packets|pack)\b', ' ', text, flags=re.IGNORECASE)
     text = ' '.join(text.split())
 
     items_found = []
@@ -412,7 +419,7 @@ async def confirm_order_endpoint(req: ConfirmOrderRequest, auth: tuple = Depends
         price = qty * unit_price
         
         # Check Stock (Aggregate)
-        batches = db.table("inventory").select("id, stock_quantity").eq("user_id", user_id).eq("item_name", item).order("expiry_date", desc=False).execute().data
+        batches = db.table("inventory").select("id, stock_quantity, cost_price").eq("user_id", user_id).eq("item_name", item).order("expiry_date", desc=False).execute().data
         
         current_stock = sum(b['stock_quantity'] for b in batches)
         
@@ -420,21 +427,27 @@ async def confirm_order_endpoint(req: ConfirmOrderRequest, auth: tuple = Depends
             failed.append(f"{item} (Stock: {current_stock})")
             continue
             
-        # Update Stock (FIFO)
+        # Update Stock (FIFO) & Calculate Total Cost
         remaining_qty = qty
+        total_cost_of_sold = 0
+        
         for b in batches:
             if remaining_qty <= 0:
                 break
                 
             available = b['stock_quantity']
+            batch_cp = b.get('cost_price', 0) or 0
+            
             if available > remaining_qty:
                 # Deduct from this batch
                 new_batch_stock = available - remaining_qty
                 db.table("inventory").update({"stock_quantity": new_batch_stock}).eq("id", b['id']).execute()
+                total_cost_of_sold += remaining_qty * batch_cp
                 remaining_qty = 0
             else:
                 # Deplete this batch
                 db.table("inventory").update({"stock_quantity": 0}).eq("id", b['id']).execute()
+                total_cost_of_sold += available * batch_cp
                 remaining_qty -= available
             
         # Record Sale
@@ -442,6 +455,7 @@ async def confirm_order_endpoint(req: ConfirmOrderRequest, auth: tuple = Depends
             "item_name": item,
             "quantity": qty,
             "total_price": price,
+            "total_cost": total_cost_of_sold,
             "customer_name": req.customer_name,
             "user_id": user_id,
             "transaction_id": transaction_id,
@@ -539,6 +553,9 @@ async def get_todays_sales(auth: tuple = Depends(get_user_client)):
         sales = response.data
         
         total_revenue = sum(s.get('total_price', 0) for s in sales)
+        total_cost = sum(s.get('total_cost', 0) or 0 for s in sales)
+        total_profit = total_revenue - total_cost
+        
         total_quantity = sum(s.get('quantity', 0) for s in sales)
         total_sales = len(sales)
         
@@ -602,6 +619,7 @@ async def get_todays_sales(auth: tuple = Depends(get_user_client)):
         return {
             "date": today_date,
             "total_revenue": round(total_revenue, 2),
+            "total_profit": round(total_profit, 2),
             "total_sales": len(orders),
             "total_quantity": round(total_quantity, 2),
             "items_sold": [{"name": k, "qty": round(v, 2)} for k, v in item_summary.items()],
@@ -611,7 +629,7 @@ async def get_todays_sales(auth: tuple = Depends(get_user_client)):
         import traceback
         traceback.print_exc()
         print(f"Sales Error: {e}")
-        return {"total_revenue": 0, "total_sales": 0, "total_quantity": 0, "items_sold": [], "transactions": []}
+        return {"total_revenue": 0, "total_profit": 0, "total_sales": 0, "total_quantity": 0, "items_sold": [], "transactions": []}
 
 from fastapi import FastAPI, HTTPException, Header, Depends, BackgroundTasks
 
@@ -657,6 +675,7 @@ class AddStockRequest(BaseModel):
     item_name: str
     quantity: float
     price: Optional[float] = None
+    cost_price: Optional[float] = None
     expiry_date: Optional[str] = None  # Format: YYYY-MM-DD
 
 @app.post("/add-stock")
@@ -698,6 +717,8 @@ async def add_stock(req: AddStockRequest, background_tasks: BackgroundTasks, aut
             update_data = {"stock_quantity": new_stock}
             if req.price is not None:
                 update_data["price"] = req.price
+            if req.cost_price is not None:
+                update_data["cost_price"] = req.cost_price
                 
             db.table("inventory").update(update_data).eq("id", batch_id).execute()
             return {"message": f"✅ Added {qty} to {item} (Exp: {expiry or 'None'}). New stock: {new_stock}", "success": True}
@@ -711,7 +732,9 @@ async def add_stock(req: AddStockRequest, background_tasks: BackgroundTasks, aut
             }
             if req.price is not None:
                 insert_data["price"] = req.price
-                
+            if req.cost_price is not None:
+                insert_data["cost_price"] = req.cost_price
+            
             db.table("inventory").insert(insert_data).execute()
             
             # TRIGGER ALIAS GENERATION IF NEW
@@ -892,17 +915,41 @@ async def get_monthly_sales(auth: tuple = Depends(get_user_client)):
             if date in daily_totals:
                 daily_totals[date]["orders"] = len(orders)
         
+        # Calculate daily profit
+        for s in sales:
+            created = s.get("created_at", "")
+            if created:
+                try:
+                    dt = datetime.fromisoformat(created.replace("Z", "+00:00"))
+                    ist_date = (dt + timedelta(hours=5, minutes=30)).strftime("%Y-%m-%d")
+                    if ist_date in daily_totals:
+                        current_profit = daily_totals[ist_date].get("profit", 0)
+                        # Add (Price - Cost)
+                        sale_profit = s.get("total_price", 0) - (s.get("total_cost", 0) or 0)
+                        daily_totals[ist_date]["profit"] = current_profit + sale_profit
+                except:
+                    pass
+
         # Calculate totals directly from sales (not from daily_totals) to avoid any rounding/grouping issues
         month_revenue = sum(s.get("total_price", 0) for s in sales)
+        month_cost = sum(s.get("total_cost", 0) or 0 for s in sales)
+        month_profit = month_revenue - month_cost
         month_quantity = sum(s.get("quantity", 0) for s in sales)
         month_orders = sum(d["orders"] for d in daily_totals.values())
         
+        # Round values for display
+        for d in daily_totals.values():
+            d["revenue"] = round(d["revenue"], 2)
+            d["quantity"] = round(d["quantity"], 2)
+            d["profit"] = round(d.get("profit", 0), 2)
+            
         return {
             "month": ist_now.strftime("%B %Y"),
             "month_revenue": round(month_revenue, 2),
+            "month_profit": round(month_profit, 2),
             "month_orders": month_orders,
             "month_quantity": round(month_quantity, 2),
-            "daily_totals": {k: {"revenue": round(v["revenue"], 2), "orders": v["orders"], "quantity": round(v["quantity"], 2)} for k, v in daily_totals.items()}
+            "daily_totals": daily_totals
         }
     except Exception as e:
         import traceback
@@ -956,4 +1003,4 @@ async def get_date_sales(date: str, auth: tuple = Depends(get_user_client)):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
