@@ -7,132 +7,872 @@
     <title>AutoBill Buddy - Voice-Powered Billing</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
     <script>
         tailwind.config = {
             theme: {
                 extend: {
-                    fontFamily: { sans: ['Inter', 'sans-serif'] }
+                    fontFamily: { sans: ['Plus Jakarta Sans', 'sans-serif'] }
                 }
             }
         }
     </script>
     <style>
+        /* ===== LOVABLE-INSPIRED DESIGN SYSTEM 2025 ===== */
         :root {
-            --glass-border: rgba(255, 255, 255, 0.2);
-            --glass-bg: rgba(255, 255, 255, 0.6);
-            --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+            --bg-page: #FAFBFC;
+            --card-bg: #FFFFFF;
+            --card-radius: 20px;
+            --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.04);
+            --card-shadow-hover: 0 8px 32px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+            --accent-green: #10B981;
+            --accent-purple: #8B5CF6;
+            --accent-blue: #3B82F6;
+            --accent-gradient: linear-gradient(135deg, #10B981 0%, #059669 100%);
+            --purple-gradient: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%);
+            --text-heading: #0F172A;
+            --text-label: #64748B;
+            --text-muted: #94A3B8;
+            --glass-bg: rgba(255, 255, 255, 0.72);
+            --glass-border: rgba(255, 255, 255, 0.8);
+            --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
+            --transition-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+            --transition-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+            --input-bg: #F8FAFC;
+            --input-border: #E2E8F0;
+            --border-subtle: rgba(0, 0, 0, 0.06);
+        }
+
+        /* === DARK MODE === */
+        [data-theme="dark"] {
+            --bg-page: #0F1117;
+            --card-bg: #1A1D27;
+            --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.2);
+            --card-shadow-hover: 0 8px 32px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.2);
+            --text-heading: #F1F5F9;
+            --text-label: #94A3B8;
+            --text-muted: #64748B;
+            --glass-bg: rgba(26, 29, 39, 0.85);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            --input-bg: #252836;
+            --input-border: #333647;
+            --border-subtle: rgba(255, 255, 255, 0.06);
+        }
+
+        [data-theme="dark"] body {
+            background: var(--bg-page);
+            color: var(--text-heading);
+            background-image:
+                radial-gradient(ellipse 80% 50% at 20% -10%, rgba(139, 92, 246, 0.15) 0%, transparent 60%),
+                radial-gradient(ellipse 60% 50% at 85% 0%, rgba(16, 185, 129, 0.1) 0%, transparent 50%),
+                radial-gradient(ellipse 70% 50% at 50% 100%, rgba(59, 130, 246, 0.08) 0%, transparent 50%);
+        }
+
+        /* Cards & Header */
+        [data-theme="dark"] .fintech-card {
+            background: var(--card-bg);
+            border-color: var(--border-subtle);
+        }
+
+        [data-theme="dark"] .fintech-card:hover {
+            border-color: rgba(139, 92, 246, 0.2);
+        }
+
+        [data-theme="dark"] .floating-header {
+            background: rgba(15, 17, 23, 0.92);
+            backdrop-filter: blur(20px);
+            border-bottom-color: var(--border-subtle);
+        }
+
+        /* Voice Center */
+        [data-theme="dark"] .voice-center::after {
+            background: rgba(26, 29, 39, 0.95);
+        }
+
+        [data-theme="dark"] .voice-center {
+            background-image: radial-gradient(circle, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+        }
+
+        /* Inputs */
+        [data-theme="dark"] .pill-input {
+            background: var(--input-bg);
+            border-color: var(--input-border);
+            color: var(--text-heading);
+        }
+
+        [data-theme="dark"] .pill-input input {
+            color: var(--text-heading);
+        }
+
+        [data-theme="dark"] .pill-input input::placeholder {
+            color: var(--text-muted);
+        }
+
+        [data-theme="dark"] input,
+        [data-theme="dark"] select,
+        [data-theme="dark"] textarea {
+            background: var(--input-bg) !important;
+            border-color: var(--input-border) !important;
+            color: var(--text-heading) !important;
+        }
+
+        [data-theme="dark"] input::placeholder,
+        [data-theme="dark"] textarea::placeholder {
+            color: var(--text-muted) !important;
+        }
+
+        /* Floating Items (Inventory) */
+        [data-theme="dark"] .floating-item {
+            background: var(--card-bg);
+            border-color: var(--border-subtle);
+        }
+
+        /* Transaction Rows (Sales) */
+        [data-theme="dark"] .txn-row {
+            background: var(--card-bg);
+            border-color: var(--border-subtle);
+        }
+
+        /* Stock Status Pills — dark variants */
+        [data-theme="dark"] .stock-good {
+            color: #6EE7B7;
+            background: rgba(16, 185, 129, 0.15);
+            border-color: rgba(16, 185, 129, 0.2);
+        }
+
+        [data-theme="dark"] .stock-low {
+            color: #FCD34D;
+            background: rgba(245, 158, 11, 0.15);
+            border-color: rgba(245, 158, 11, 0.2);
+        }
+
+        [data-theme="dark"] .stock-critical {
+            color: #FCA5A5;
+            background: rgba(239, 68, 68, 0.15);
+            border-color: rgba(239, 68, 68, 0.2);
+        }
+
+        /* Inventory Action Buttons */
+        [data-theme="dark"] .floating-item button[title="Reduce Stock"] {
+            background: rgba(245, 158, 11, 0.15) !important;
+            color: #FBBF24 !important;
+        }
+
+        [data-theme="dark"] .floating-item button[title="Delete Item"] {
+            background: rgba(239, 68, 68, 0.15) !important;
+            color: #F87171 !important;
+        }
+
+        [data-theme="dark"] .floating-item button:hover {
+            opacity: 0.85;
+        }
+
+        /* Profile & Auth */
+        [data-theme="dark"] .profile-pill {
+            background: rgba(139, 92, 246, 0.15);
+        }
+
+        [data-theme="dark"] .avatar-circle {
+            background: linear-gradient(135deg, #8B5CF6, #7C3AED);
+        }
+
+        /* Tailwind bg-gray overrides for dark mode */
+        [data-theme="dark"] .bg-gray-100,
+        [data-theme="dark"] .bg-gray-50 {
+            background-color: var(--input-bg) !important;
+        }
+
+        [data-theme="dark"] .bg-gray-200 {
+            background-color: #333647 !important;
+        }
+
+        /* Text color overrides for hardcoded Tailwind text classes */
+        [data-theme="dark"] .text-gray-500,
+        [data-theme="dark"] .text-gray-600,
+        [data-theme="dark"] .text-gray-700 {
+            color: var(--text-label) !important;
+        }
+
+        [data-theme="dark"] .text-gray-800,
+        [data-theme="dark"] .text-gray-900,
+        [data-theme="dark"] .text-slate-700,
+        [data-theme="dark"] .text-slate-800,
+        [data-theme="dark"] .text-slate-900 {
+            color: var(--text-heading) !important;
+        }
+
+        /* Calendar dark */
+        [data-theme="dark"] .calendar-grid>div {
+            background: var(--card-bg);
+            border-color: var(--border-subtle);
+        }
+
+        [data-theme="dark"] .calendar-grid>div:hover {
+            background: #252836;
+        }
+
+        /* Modal / Overlay dark */
+        [data-theme="dark"] .modal-content,
+        [data-theme="dark"] [class*="modal"]>div>div {
+            background: var(--card-bg) !important;
+            color: var(--text-heading);
+        }
+
+        /* Badges for dark mode (CASH, UDHAAR etc) */
+        [data-theme="dark"] .bg-red-50 {
+            background-color: rgba(239, 68, 68, 0.15) !important;
+        }
+
+        [data-theme="dark"] .bg-red-100 {
+            background-color: rgba(239, 68, 68, 0.2) !important;
+        }
+
+        [data-theme="dark"] .bg-amber-50 {
+            background-color: rgba(245, 158, 11, 0.12) !important;
+        }
+
+        [data-theme="dark"] .bg-amber-100 {
+            background-color: rgba(245, 158, 11, 0.18) !important;
+        }
+
+        [data-theme="dark"] .bg-emerald-100 {
+            background-color: rgba(16, 185, 129, 0.18) !important;
+        }
+
+        [data-theme="dark"] .border-red-100 {
+            border-color: rgba(239, 68, 68, 0.2) !important;
+        }
+
+        /* Dues / Udhaar rows */
+        [data-theme="dark"] .dues-customer-row {
+            border-color: var(--border-subtle);
+        }
+
+        [data-theme="dark"] .dues-customer-row:hover {
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Login card */
+        [data-theme="dark"] .login-card,
+        [data-theme="dark"] #login-card {
+            background: var(--card-bg) !important;
+            border-color: var(--border-subtle);
+        }
+
+        /* Tab switchers */
+        [data-theme="dark"] .bg-white {
+            background-color: var(--card-bg) !important;
+        }
+
+        [data-theme="dark"] .text-slate-500 {
+            color: var(--text-label) !important;
+        }
+
+        /* Scrollbar dark */
+        [data-theme="dark"] ::-webkit-scrollbar-track {
+            background: var(--bg-page);
+        }
+
+        [data-theme="dark"] ::-webkit-scrollbar-thumb {
+            background: #333647;
+        }
+
+        [data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+            background: #444;
+        }
+
+        /* ===== COMPLETE TAILWIND DARK OVERRIDES ===== */
+
+        /* Borders */
+        [data-theme="dark"] .border-gray-100,
+        [data-theme="dark"] .border-gray-200,
+        [data-theme="dark"] .border-slate-100,
+        [data-theme="dark"] .border-slate-200 {
+            border-color: var(--border-subtle) !important;
+        }
+
+        /* Backgrounds */
+        [data-theme="dark"] .bg-slate-50 {
+            background-color: var(--input-bg) !important;
+        }
+
+        [data-theme="dark"] .bg-slate-900\/70 {
+            background-color: rgba(0, 0, 0, 0.8) !important;
+        }
+
+        /* Hover states */
+        [data-theme="dark"] .hover\:bg-slate-50:hover {
+            background-color: #252836 !important;
+        }
+
+        [data-theme="dark"] .hover\:bg-red-50:hover {
+            background-color: rgba(239, 68, 68, 0.15) !important;
+        }
+
+        [data-theme="dark"] .hover\:bg-gray-100:hover {
+            background-color: #333647 !important;
+        }
+
+        [data-theme="dark"] .hover\:bg-gray-200:hover {
+            background-color: #3d4155 !important;
+        }
+
+        /* Table/Panel headers and sections with bg-white */
+        [data-theme="dark"] [class*="bg-white"] {
+            background-color: var(--card-bg) !important;
+        }
+
+        /* Fixed overlay and slide-over backgrounds */
+        [data-theme="dark"] .fixed>.fintech-card,
+        [data-theme="dark"] .fixed [class*="bg-white"] {
+            background-color: var(--card-bg) !important;
+        }
+
+        /* All hardcoded text colors that need flipping */
+        [data-theme="dark"] .text-slate-600,
+        [data-theme="dark"] .text-slate-700,
+        [data-theme="dark"] .text-slate-800,
+        [data-theme="dark"] .text-slate-900 {
+            color: var(--text-heading) !important;
+        }
+
+        [data-theme="dark"] .text-gray-400 {
+            color: var(--text-muted) !important;
+        }
+
+        /* Slide-over / Modal panel inner areas */
+        [data-theme="dark"] [class*="rounded-3xl"][class*="shadow-2xl"],
+        [data-theme="dark"] [class*="rounded-3xl"][class*="shadow-xl"] {
+            background-color: var(--card-bg) !important;
+            color: var(--text-heading);
+        }
+
+        /* Udhaar dashboard rows */
+        [data-theme="dark"] .dues-customer-row[class*="bg-white"] {
+            background-color: var(--card-bg) !important;
+        }
+
+        /* Day detail / Monthly dashboard modal */
+        [data-theme="dark"] [id*="modal"],
+        [data-theme="dark"] [id*="overlay"]:not(#auth-overlay)>div {
+            background-color: var(--card-bg) !important;
+        }
+
+        /* Inventory / Sales panel close & refresh buttons */
+        [data-theme="dark"] button[class*="bg-gray-50"] {
+            background-color: var(--input-bg) !important;
+            color: var(--text-label) !important;
+        }
+
+        /* Table rows in dark mode */
+        [data-theme="dark"] table,
+        [data-theme="dark"] th,
+        [data-theme="dark"] td {
+            color: var(--text-heading);
+            border-color: var(--border-subtle) !important;
+        }
+
+        [data-theme="dark"] th[class*="bg-gray-50"] {
+            background-color: #1E2130 !important;
+            color: var(--text-label) !important;
+        }
+
+        [data-theme="dark"] tr:hover {
+            background-color: rgba(139, 92, 246, 0.05) !important;
+        }
+
+        /* The "dotted border" add-item buttons */
+        [data-theme="dark"] [class*="border-dashed"] {
+            border-color: var(--input-border) !important;
+            color: var(--text-label) !important;
+        }
+
+        /* ===== NUCLEAR DARK MODE OVERRIDE ===== */
+        [data-theme="dark"] .bg-gray-50,
+        [data-theme="dark"] .bg-gray-100,
+        [data-theme="dark"] .bg-gray-200,
+        [data-theme="dark"] .bg-slate-50,
+        [data-theme="dark"] .bg-white,
+        [data-theme="dark"] [style*="background: #fff"],
+        [data-theme="dark"] [style*="background-color: #fff"],
+        [data-theme="dark"] [style*="background: white"],
+        [data-theme="dark"] [style*="background-color: white"],
+        [data-theme="dark"] [style*="background: #F3F4F6"],
+        [data-theme="dark"] [style*="background: #F9FAFB"] {
+            background-color: var(--card-bg) !important;
+            color: var(--text-heading) !important;
+            border-color: var(--border-subtle) !important;
+        }
+
+        [data-theme="dark"] body {
+            background-color: var(--bg-page) !important;
+        }
+
+        /* Payment confirmation cards */
+        [data-theme="dark"] div[class*="bg-white"][class*="border-gray-100"] {
+            background-color: var(--card-bg) !important;
+            border-color: var(--border-subtle) !important;
+        }
+
+        /* Quantity +/- controls */
+        [data-theme="dark"] [class*="border-slate-200"][class*="bg-white"] {
+            background-color: var(--card-bg) !important;
+            border-color: var(--border-subtle) !important;
+        }
+
+        /* --- Dark Mode Toggle --- */
+        .theme-toggle {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            border: 1px solid var(--border-subtle);
+            background: var(--card-bg);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            transition: all 0.3s var(--transition-smooth);
+            color: var(--text-label);
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.08);
+            border-color: var(--accent-purple);
+            color: var(--accent-purple);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
         }
 
         body {
-            font-family: 'Inter', sans-serif;
-            background: linear-gradient(-45deg, #ecfdf5, #d1fae5, #a7f3d0, #6ee7b7);
-            background-size: 400% 400%;
-            animation: gradientBG 15s ease infinite;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            color: var(--text-heading);
+            min-height: 100vh;
+            background: var(--bg-page);
+            background-image:
+                radial-gradient(ellipse 80% 50% at 20% -10%, rgba(139, 92, 246, 0.1) 0%, transparent 60%),
+                radial-gradient(ellipse 60% 50% at 85% 0%, rgba(16, 185, 129, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse 70% 50% at 50% 100%, rgba(59, 130, 246, 0.06) 0%, transparent 50%),
+                radial-gradient(ellipse 40% 40% at 70% 50%, rgba(236, 72, 153, 0.04) 0%, transparent 50%);
+            background-attachment: fixed;
         }
 
-        @keyframes gradientBG {
-            0% {
-                background-position: 0% 50%;
-            }
-
-            50% {
-                background-position: 100% 50%;
-            }
-
-            100% {
-                background-position: 0% 50%;
-            }
-        }
-
+        /* --- Glass Utility --- */
         .glass {
             background: var(--glass-bg);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
+            backdrop-filter: blur(24px) saturate(180%);
+            -webkit-backdrop-filter: blur(24px) saturate(180%);
             border: 1px solid var(--glass-border);
             box-shadow: var(--glass-shadow);
         }
 
+        /* --- Floating Header --- */
+        .floating-header {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+            box-shadow: 0 1px 0 rgba(0, 0, 0, 0.03), 0 4px 20px rgba(0, 0, 0, 0.03);
+        }
+
         .glass-dark {
-            background: rgba(6, 78, 59, 0.75);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+            box-shadow: 0 1px 0 rgba(0, 0, 0, 0.03), 0 4px 20px rgba(0, 0, 0, 0.03);
         }
 
-        @keyframes float {
-            0% {
-                transform: translateY(0px);
-            }
+        /* --- Cards --- */
+        .fintech-card {
+            background: var(--card-bg);
+            border-radius: var(--card-radius);
+            box-shadow: var(--card-shadow);
+            border: 1px solid rgba(0, 0, 0, 0.06);
+            transition: all 0.4s var(--transition-smooth);
+        }
 
-            50% {
-                transform: translateY(-5px);
-            }
+        .fintech-card:hover {
+            box-shadow: var(--card-shadow-hover);
+            transform: translateY(-2px);
+            border-color: rgba(139, 92, 246, 0.1);
+        }
 
-            100% {
-                transform: translateY(0px);
+        /* --- Hero Stat (Revenue Card) --- */
+        .hero-stat {
+            grid-column: span 2;
+            background: linear-gradient(135deg, #059669 0%, #10B981 40%, #34D399 100%) !important;
+            color: white !important;
+            border: none !important;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-stat::before {
+            content: '';
+            position: absolute;
+            top: -60%;
+            right: -20%;
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.12) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        .hero-stat::after {
+            content: '';
+            position: absolute;
+            bottom: -50%;
+            left: -10%;
+            width: 160px;
+            height: 160px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        .hero-stat .stat-icon {
+            background: rgba(255, 255, 255, 0.2) !important;
+            color: white !important;
+            backdrop-filter: blur(8px);
+        }
+
+        .hero-stat .stat-label {
+            color: rgba(255, 255, 255, 0.85) !important;
+        }
+
+        .hero-stat .stat-value {
+            color: white !important;
+        }
+
+        .hero-stat:hover {
+            transform: translateY(-3px) scale(1.005);
+            box-shadow: 0 16px 48px -8px rgba(16, 185, 129, 0.3) !important;
+        }
+
+        @media (max-width: 640px) {
+            .hero-stat {
+                grid-column: span 2;
             }
         }
 
-        .hover-lift {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        /* --- Stat Widget --- */
+        .stat-widget {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 18px 16px;
+            position: relative;
+            overflow: hidden;
         }
 
-        .hover-lift:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 12px 24px -10px rgba(0, 0, 0, 0.2);
-            background: rgba(255, 255, 255, 0.8);
+        .stat-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            flex-shrink: 0;
+            position: relative;
+            z-index: 1;
+            transition: transform 0.3s var(--transition-spring), box-shadow 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
 
-        @keyframes pulse-ring {
-            0% {
-                transform: scale(0.95);
-                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
-            }
-
-            70% {
-                transform: scale(1);
-                box-shadow: 0 0 0 20px rgba(16, 185, 129, 0);
-            }
-
-            100% {
-                transform: scale(0.95);
-                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
-            }
+        .fintech-card:hover .stat-icon {
+            transform: scale(1.1) rotate(-3deg);
         }
 
+        .stat-value {
+            font-size: 1.35rem;
+            font-weight: 800;
+            line-height: 1.1;
+            letter-spacing: -0.03em;
+            white-space: nowrap;
+        }
+
+        .stat-label {
+            font-size: 0.65rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-label);
+            margin-bottom: 3px;
+        }
+
+        /* --- Voice Command Center (Lovable Glass) --- */
+        .voice-center {
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(32px) saturate(200%);
+            -webkit-backdrop-filter: blur(32px) saturate(200%);
+            border-radius: 28px;
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            position: relative;
+            overflow: hidden;
+            box-shadow:
+                0 0 0 1px rgba(0, 0, 0, 0.03),
+                0 4px 24px rgba(0, 0, 0, 0.04),
+                inset 0 1px 0 rgba(255, 255, 255, 0.8);
+        }
+
+        .voice-center::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: var(--card-radius);
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(32px);
+            z-index: -1;
+        }
+
+        /* --- Mic Button (Lovable Glow) --- */
         .mic-button {
-            animation: float 6s ease-in-out infinite;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: var(--accent-gradient);
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            z-index: 1;
+            transition: transform 0.3s var(--transition-spring), box-shadow 0.4s ease;
+            box-shadow:
+                0 4px 16px rgba(16, 185, 129, 0.3),
+                0 8px 32px rgba(16, 185, 129, 0.15),
+                0 0 0 0 rgba(16, 185, 129, 0);
         }
 
+        .mic-button:hover {
+            transform: scale(1.08);
+            box-shadow:
+                0 6px 24px rgba(16, 185, 129, 0.4),
+                0 12px 48px rgba(16, 185, 129, 0.2),
+                0 0 80px rgba(16, 185, 129, 0.1);
+        }
+
+        /* Pulse rings */
+        .mic-pulse-ring {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            border: 2px solid rgba(16, 185, 129, 0.25);
+            /* animation: micPulse 5s ease-out infinite; REMOVED FOR PERFORMANCE */
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        .mic-pulse-ring:nth-child(2) {
+            animation-delay: 1s;
+        }
+
+        .mic-pulse-ring:nth-child(3) {
+            animation-delay: 2s;
+        }
+
+        /* @keyframes micPulse REMOVED */
+
+        /* Listening State */
         .mic-listening {
-            animation: none;
-            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
-            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
-            animation: pulse-red 2s infinite;
+            background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%) !important;
+            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6), 0 0 48px rgba(239, 68, 68, 0.15) !important;
+            animation: pulse-red 1.8s infinite !important;
+        }
+
+        .mic-listening~.mic-pulse-ring {
+            border-color: rgba(239, 68, 68, 0.3) !important;
         }
 
         @keyframes pulse-red {
             0% {
-                transform: scale(0.95);
-                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+                transform: scale(0.97);
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5);
             }
 
-            70% {
-                transform: scale(1);
-                box-shadow: 0 0 0 20px rgba(239, 68, 68, 0);
+            50% {
+                transform: scale(1.04);
+                box-shadow: 0 0 0 28px rgba(239, 68, 68, 0);
             }
 
             100% {
-                transform: scale(0.95);
+                transform: scale(0.97);
                 box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
             }
         }
 
-        /* Scrollbar Polish */
+        /* --- Pill Input (Lovable Style) --- */
+        .pill-input {
+            background: #fff;
+            border-radius: 50px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.04);
+            border: 1px solid rgba(0, 0, 0, 0.06);
+            padding: 6px 6px 6px 22px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s var(--transition-smooth);
+        }
+
+        .pill-input:focus-within {
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1), 0 4px 24px rgba(139, 92, 246, 0.08);
+            border-color: rgba(139, 92, 246, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .pill-input input {
+            border: none;
+            outline: none;
+            background: transparent;
+            flex: 1;
+            font-size: 0.9rem;
+            color: var(--text-heading);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        .pill-input input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .pill-input button {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--accent-gradient);
+            border: none;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.25s var(--transition-spring);
+            flex-shrink: 0;
+        }
+
+        .pill-input button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+
+        /* --- Floating List Items --- */
+        .floating-item {
+            background: #fff;
+            border-radius: 14px;
+            padding: 12px 14px;
+            margin-bottom: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.3s var(--transition-smooth);
+        }
+
+        .floating-item:hover {
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+            transform: translateY(-1px);
+            border-color: rgba(139, 92, 246, 0.1);
+        }
+
+        /* Stock Pill Badge */
+        .stock-pill {
+            font-size: 0.8rem;
+            font-weight: 700;
+            padding: 5px 12px;
+            border-radius: 50px;
+            min-width: 44px;
+            text-align: center;
+            line-height: 1;
+        }
+
+        /* --- Transaction Row (Sales) --- */
+        .txn-row {
+            background: #fff;
+            border-radius: 14px;
+            padding: 12px 14px;
+            margin-bottom: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.3s var(--transition-smooth);
+        }
+
+        .txn-row:hover {
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+            transform: translateY(-1px);
+            border-color: rgba(59, 130, 246, 0.1);
+        }
+
+        .txn-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+
+        /* --- Profile Pill --- */
+        .profile-pill {
+            background: rgba(139, 92, 246, 0.06);
+            border: 1px solid rgba(139, 92, 246, 0.12);
+            border-radius: 50px;
+            padding: 5px 14px 5px 7px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            font-size: 0.82rem;
+            color: var(--text-heading);
+            cursor: pointer;
+            transition: all 0.25s var(--transition-smooth);
+        }
+
+        .profile-pill:hover {
+            background: rgba(139, 92, 246, 0.1);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.1);
+        }
+
+        .profile-pill .avatar-circle {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--purple-gradient);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.7rem;
+            font-weight: 800;
+        }
+
+        /* --- Hover Lift --- */
+        .hover-lift {
+            transition: all 0.35s var(--transition-smooth);
+        }
+
+        .hover-lift:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--card-shadow-hover);
+        }
+
+        /* --- Scrollbar --- */
         ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
+            width: 4px;
+            height: 4px;
         }
 
         ::-webkit-scrollbar-track {
@@ -140,21 +880,22 @@
         }
 
         ::-webkit-scrollbar-thumb {
-            background: rgba(16, 185, 129, 0.5);
+            background: rgba(139, 92, 246, 0.15);
             border-radius: 10px;
         }
 
         ::-webkit-scrollbar-thumb:hover {
-            background: rgba(16, 185, 129, 0.8);
+            background: rgba(139, 92, 246, 0.3);
         }
 
+        /* --- Spinner --- */
         .spinner {
-            border: 3px solid rgba(16, 185, 129, 0.3);
-            border-top-color: #10b981;
+            border: 2.5px solid rgba(139, 92, 246, 0.12);
+            border-top-color: var(--accent-purple);
             border-radius: 50%;
             width: 20px;
             height: 20px;
-            animation: spin 1s linear infinite;
+            animation: spin 0.7s linear infinite;
             display: inline-block;
         }
 
@@ -164,32 +905,33 @@
             }
         }
 
-        /* Inventory Status Colors - Refined */
+        /* --- Status Colors (Subtle Gradient Fills) --- */
         .stock-good {
-            color: #065f46;
-            background: rgba(236, 253, 245, 0.6);
-            border: 1px solid rgba(16, 185, 129, 0.2);
+            color: #065F46;
+            background: linear-gradient(135deg, #ECFDF5, #D1FAE5);
+            border: 1px solid rgba(16, 185, 129, 0.15);
         }
 
         .stock-low {
-            color: #92400e;
-            background: rgba(255, 251, 235, 0.6);
-            border: 1px solid rgba(245, 158, 11, 0.2);
+            color: #92400E;
+            background: linear-gradient(135deg, #FFFBEB, #FEF3C7);
+            border: 1px solid rgba(245, 158, 11, 0.15);
         }
 
         .stock-critical {
-            color: #991b1b;
-            background: rgba(254, 242, 242, 0.6);
-            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: #991B1B;
+            background: linear-gradient(135deg, #FEF2F2, #FEE2E2);
+            border: 1px solid rgba(239, 68, 68, 0.15);
         }
 
-        /* Calendar Styles */
+        /* --- Calendar --- */
         .calendar-grid {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
-            gap: 8px;
+            gap: 6px;
         }
 
+        /* Calendar Day Tiles */
         .calendar-day {
             aspect-ratio: 1;
             border-radius: 12px;
@@ -197,63 +939,59 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            font-size: 0.8rem;
             cursor: pointer;
             transition: all 0.2s;
             border: 1px solid transparent;
+            background: #fff;
+            /* Default light */
         }
 
         .calendar-day:hover {
-            transform: scale(1.05);
-            z-index: 10;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        }
-
-        .calendar-day.has-sales {
-            background-color: #ecfdf5;
-            border-color: #a7f3d0;
-            color: #064e3b;
+            background: linear-gradient(135deg, #ECFDF5, #D1FAE5);
+            border-color: rgba(16, 185, 129, 0.2);
+            color: #064E3B;
         }
 
         .calendar-day.no-sales {
-            background-color: #f8fafc;
-            color: #94a3b8;
+            background-color: #F8FAFC;
+            color: #94A3B8;
         }
 
         .calendar-day.selected {
-            background-color: #10b981;
+            background: var(--accent-gradient);
             color: white;
-            box-shadow: 0 0 0 2px white, 0 0 0 4px #10b981;
+            box-shadow: 0 0 0 3px white, 0 0 0 5px var(--accent-green);
         }
 
-        /* Udhaar (Credit) Styles */
+        /* --- Udhaar / Cash Badges --- */
         .udhaar-badge {
-            color: #dc2626;
-            background: rgba(254, 226, 226, 0.8);
-            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #DC2626;
+            background: linear-gradient(135deg, #FEF2F2, #FEE2E2);
+            border: 1px solid rgba(239, 68, 68, 0.12);
         }
 
         .cash-badge {
             color: #059669;
-            background: rgba(209, 250, 229, 0.8);
-            border: 1px solid rgba(16, 185, 129, 0.3);
+            background: linear-gradient(135deg, #ECFDF5, #D1FAE5);
+            border: 1px solid rgba(16, 185, 129, 0.12);
         }
 
+        /* --- Udhaar Float Button --- */
         .udhaar-float-btn {
             position: fixed;
             bottom: 24px;
             right: 24px;
             z-index: 35;
-            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+            background: linear-gradient(135deg, #EF4444, #DC2626);
             color: white;
             border: none;
             border-radius: 16px;
-            padding: 14px 22px;
-            font-size: 15px;
+            padding: 12px 20px;
+            font-size: 14px;
             font-weight: 700;
             cursor: pointer;
-            box-shadow: 0 8px 24px rgba(220, 38, 38, 0.4);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 16px rgba(220, 38, 38, 0.25), 0 8px 32px rgba(220, 38, 38, 0.1);
+            transition: all 0.35s var(--transition-spring);
             display: flex;
             align-items: center;
             gap: 8px;
@@ -261,24 +999,155 @@
 
         .udhaar-float-btn:hover {
             transform: translateY(-3px) scale(1.03);
-            box-shadow: 0 12px 32px rgba(220, 38, 38, 0.5);
+            box-shadow: 0 8px 32px rgba(220, 38, 38, 0.35), 0 16px 48px rgba(220, 38, 38, 0.12);
         }
 
+        /* --- Receipt Card --- */
         .receipt-card {
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 16px;
-            padding: 16px;
-            margin-top: 12px;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-            animation: slideUp 0.4s ease-out;
+            background: #fff;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            border-radius: 18px;
+            padding: 20px;
+            margin-top: 16px;
+            box-shadow: var(--card-shadow);
+            animation: slideUp 0.4s var(--transition-spring);
         }
 
         @keyframes slideUp {
             from {
                 opacity: 0;
-                transform: translateY(20px);
+                transform: translateY(16px) scale(0.98);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        /* --- Dues Customer Row --- */
+        .dues-customer-row {
+            transition: all 0.25s var(--transition-smooth);
+            cursor: pointer;
+        }
+
+        .dues-customer-row:hover {
+            transform: translateX(4px);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+        }
+
+        /* --- Section Headings --- */
+        .section-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text-heading);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title i {
+            font-size: 0.85rem;
+        }
+
+        /* --- Gradient Button --- */
+        .btn-gradient {
+            background: var(--accent-gradient);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 10px 20px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.25s var(--transition-smooth);
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
+        }
+
+        .btn-gradient:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 16px rgba(16, 185, 129, 0.3);
+        }
+
+        /* --- Entrance Animations (Spring) --- */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px) scale(0.98);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .animate-in {
+            animation: fadeInUp 0.55s var(--transition-spring) both;
+        }
+
+        .animate-in-delay {
+            animation: fadeInUp 0.55s var(--transition-spring) 0.12s both;
+        }
+
+        .animate-in-delay-2 {
+            animation: fadeInUp 0.55s var(--transition-spring) 0.24s both;
+        }
+
+        /* ===== STARTUP POLISH ===== */
+
+        /* --- Gradient Text (for headings) --- */
+        .gradient-text {
+            background: linear-gradient(135deg, var(--accent-green), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* --- Hero Card Shimmer Sweep --- */
+        .hero-stat::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 60%;
+            height: 100%;
+            background: linear-gradient(90deg,
+                    transparent 0%,
+                    rgba(255, 255, 255, 0.08) 50%,
+                    transparent 100%);
+            /* Shimmer effect removed for performance */
+        }
+        }
+
+        /* --- Branded Header Accent Line --- */
+        .floating-header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg,
+                    transparent 0%,
+                    var(--accent-green) 20%,
+                    var(--accent-purple) 50%,
+                    var(--accent-blue) 80%,
+                    transparent 100%);
+            opacity: 0.4;
+        }
+
+        /* --- Voice Center Dot Grid Texture --- */
+        .voice-center {
+            background-image: radial-gradient(circle, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        /* --- Number Counter Animation --- */
+        @keyframes countUp {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
             }
 
             to {
@@ -287,54 +1156,123 @@
             }
         }
 
-        .dues-customer-row {
-            transition: all 0.2s;
-            cursor: pointer;
+        .stat-value {
+            animation: countUp 0.6s var(--transition-spring) 0.3s both;
         }
 
-        .dues-customer-row:hover {
-            transform: translateX(4px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        /* --- Toast / Notification Enhancements --- */
+        #toast-container .toast-msg {
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        /* --- Login Card Premium --- */
+        .login-card {
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04);
+        }
+
+        /* --- Expiry Badge Animation --- */
+        .expiry-badge {
+            animation: fadeInUp 0.3s var(--transition-spring) both;
+        }
+
+        /* --- Interactive Focus Ring --- */
+        button:focus-visible,
+        input:focus-visible {
+            outline: 2px solid var(--accent-purple);
+            outline-offset: 2px;
+        }
+
+        /* --- DARK MODE CALENDAR FIXES --- */
+        [data-theme="dark"] .calendar-day {
+            background: var(--card-bg);
+            border-color: var(--border-subtle);
+            color: var(--text-heading);
+        }
+
+        [data-theme="dark"] .calendar-day:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        [data-theme="dark"] .calendar-day.has-sales {
+            background: rgba(16, 185, 129, 0.1);
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+
+        /* Override inline green text in calendar */
+        [data-theme="dark"] .calendar-day span[style*="color: #059669"] {
+            color: #34D399 !important;
+        }
+
+        /* Total Revenue Pill Fix */
+        [data-theme="dark"] #calendar-total-rev {
+            background-color: rgba(16, 185, 129, 0.15) !important;
+            border-color: rgba(16, 185, 129, 0.2) !important;
+            color: #6EE7B7 !important;
         }
     </style>
 </head>
 
-<body class="bg-gradient-main min-h-screen relative">
+<body class="min-h-screen relative bg-gray-100 transition-colors duration-300">
 
     <!-- Toast Container -->
     <div id="toast-container" class="fixed top-4 right-4 z-[60] flex flex-col gap-2 max-w-sm"></div>
 
+    <!-- PUBLIC DEMO BANNER (Sticky Top) -->
+    <div id="demo-banner"
+        class="hidden fixed top-0 left-0 right-0 z-[100] bg-orange-500 text-white font-bold text-center py-2 px-4 shadow-md transition-transform duration-300">
+        <div class="container mx-auto flex items-center justify-center gap-2 text-sm md:text-base">
+            <i class="fas fa-exclamation-triangle"></i>
+            <span>You are in <span class="underline decoration-2 underline-offset-2">Public Demo Mode</span>. Data is
+                shared publicly.</span>
+            <button onclick="document.getElementById('auth-overlay').classList.remove('hidden')"
+                class="ml-4 bg-white text-orange-600 px-3 py-1 rounded-full text-xs font-bold hover:bg-orange-50 transition-colors uppercase tracking-wide shadow-sm">
+                Login to Create Private Store
+            </button>
+        </div>
+    </div>
+
     <!-- Shop Name Modal -->
     <div id="shop-name-modal"
-        class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="glass rounded-3xl shadow-2xl w-full max-w-md p-8 animate-bounce-in">
-            <h2 class="text-2xl font-bold text-slate-800 mb-2">Welcome! 👋</h2>
-            <p class="text-slate-500 mb-6">What is the name of your shop?</p>
+        class="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="fintech-card w-full max-w-md p-8">
+            <h2 class="text-2xl font-bold mb-2" style="color: var(--text-heading);">Welcome! 👋</h2>
+            <p style="color: var(--text-label);" class="mb-6">What is the name of your shop?</p>
             <form id="shop-name-form" class="space-y-4">
                 <input type="text" id="shop-name-input" required
-                    class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none transition-all"
+                    class="w-full px-5 py-3.5 rounded-2xl border border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none transition-all text-sm"
                     placeholder="e.g. Gupta General Store">
-                <button type="submit"
-                    class="w-full py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-semibold rounded-xl hover:from-emerald-600 hover:to-emerald-700 transition-all shadow-lg">
+                <button type="submit" class="btn-gradient w-full py-3.5 rounded-2xl text-base">
                     Save & Continue
                 </button>
             </form>
         </div>
     </div>
 
-    <!-- Auth Modal -->
+    <!-- Loading Overlay -->
+    <div id="loading-overlay"
+        class="fixed inset-0 bg-slate-900 z-[100] flex flex-col items-center justify-center transition-opacity duration-500">
+        <div class="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 shadow-lg animate-pulse"
+            style="background: var(--accent-gradient);">
+            <i class="fas fa-shopping-cart text-white text-2xl"></i>
+        </div>
+        <h2 class="text-white text-xl font-bold animate-pulse">AutoBill Buddy</h2>
+        <p class="text-slate-400 text-sm mt-2">Starting Store...</p>
+    </div>
+
+    <!-- Auth Modal (Hidden by default) -->
     <div id="auth-overlay"
-        class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-40 flex items-center justify-center p-4">
-        <div class="glass rounded-3xl shadow-2xl w-full max-w-md p-8">
+        class="hidden fixed inset-0 bg-slate-900/70 backdrop-blur-md z-40 flex items-center justify-center p-4">
+        <div class="fintech-card w-full max-w-md p-8">
             <div class="text-center mb-8">
-                <div
-                    class="w-16 h-16 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                <div class="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg"
+                    style="background: var(--accent-gradient);">
                     <i class="fas fa-shopping-cart text-white text-2xl"></i>
                 </div>
-                <h1 class="text-2xl font-bold text-slate-800">AutoBill Buddy</h1>
-                <p class="text-slate-500 mt-1">Voice-Powered Grocery Billing</p>
+                <h1 class="text-2xl font-bold" style="color: var(--text-heading);">AutoBill Buddy</h1>
+                <p style="color: var(--text-label);" class="mt-1 text-sm">Voice-Powered Grocery Billing</p>
             </div>
-            <div class="flex bg-slate-100 rounded-xl p-1 mb-6">
+            <div class="flex bg-gray-100 rounded-2xl p-1 mb-6">
                 <button type="button" id="tab-login"
                     class="flex-1 py-2 px-4 rounded-lg font-medium transition-all bg-white shadow text-emerald-600">Login</button>
                 <button type="button" id="tab-signup"
@@ -342,13 +1280,13 @@
             </div>
             <form id="auth-form" class="space-y-4">
                 <input type="email" id="auth-email" required
-                    class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-emerald-500 outline-none"
+                    class="w-full px-5 py-3.5 rounded-2xl border border-gray-200 focus:border-emerald-500 outline-none transition-all text-sm"
                     placeholder="Email">
                 <input type="password" id="auth-password" required minlength="6"
-                    class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-emerald-500 outline-none"
+                    class="w-full px-5 py-3.5 rounded-2xl border border-gray-200 focus:border-emerald-500 outline-none transition-all text-sm"
                     placeholder="Password (min 6 chars)">
                 <button type="submit" id="auth-submit-btn"
-                    class="w-full py-3 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700 transition-all flex justify-center items-center gap-2">
+                    class="btn-gradient w-full py-3.5 rounded-2xl flex justify-center items-center gap-2 text-base">
                     <span id="auth-btn-text">Login</span>
                 </button>
             </form>
@@ -358,154 +1296,181 @@
     </div>
 
     <!-- MAIN DASHBOARD -->
-    <div id="dashboard" class="hidden min-h-screen flex flex-col pb-6">
-        <!-- Header -->
-        <header class="glass-dark text-white px-4 py-4 shadow-xl sticky top-0 z-30">
+    <div id="dashboard" class="min-h-screen flex flex-col pb-6">
+
+        <!-- ===== FLOATING HEADER ===== -->
+        <header class="floating-header px-4 py-3 sticky top-0 z-30">
             <div class="max-w-7xl mx-auto flex items-center justify-between">
-                <div>
-                    <h1 id="header-shop-name"
-                        class="font-bold text-xl sm:text-2xl cursor-pointer hover:underline decoration-dashed underline-offset-4"
-                        title="Click to rename">AutoBill Buddy</h1>
-                    <p class="text-emerald-200 text-xs flex items-center gap-1"><span
-                            class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></span> Connected</p>
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl flex items-center justify-center shadow-sm"
+                        style="background: var(--accent-gradient);">
+                        <i class="fas fa-shopping-cart text-white text-sm"></i>
+                    </div>
+                    <div>
+                        <h1 id="header-shop-name"
+                            class="font-bold text-lg sm:text-xl cursor-pointer hover:opacity-70 transition-opacity"
+                            style="color: var(--text-heading);" title="Click to rename">AutoBill Buddy</h1>
+                        <p class="text-xs flex items-center gap-1" style="color: var(--text-label);">
+                            <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span> Connected
+                        </p>
+                    </div>
                 </div>
                 <div class="flex items-center gap-3">
-                    <span id="user-email" class="text-sm text-emerald-100 hidden sm:block"></span>
-                    <button id="logout-btn"
-                        class="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-sm transition-all">Logout</button>
+                    <span id="user-email" class="text-xs hidden sm:block" style="color: var(--text-label);"></span>
+                    <div class="profile-pill" id="header-profile-pill">
+                        <div class="avatar-circle"><i class="fas fa-user" style="font-size: 11px;"></i></div>
+                        <span id="header-profile-name" class="hidden sm:inline">Store ▾</span>
+                    </div>
+                    <button id="theme-toggle" class="theme-toggle" title="Toggle dark mode">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                    <button id="auth-btn"
+                        class="px-4 py-2 bg-green-500 text-white rounded-lg font-bold hover:bg-green-600 transition">Login
+                        / Sign Up</button>
                 </div>
             </div>
         </header>
 
         <main class="flex-1 max-w-7xl mx-auto w-full p-4 sm:p-6 space-y-6">
 
-            <!-- 1. Stats Grid (4 Cards) -->
-            <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
-                <!-- Revenue (Starts with Today's Revenue) -->
-                <div class="glass rounded-2xl p-4 shadow-lg flex items-center justify-between cursor-pointer hover:bg-white/40 transition-all"
-                    onclick="toggleRevenueProfit()" id="revenue-card">
-                    <div>
-                        <p class="text-slate-500 text-xs uppercase font-bold tracking-wider" id="rev-card-title">Today's
-                            Rev</p>
-                        <p id="stat-revenue" class="text-2xl font-bold text-emerald-600 mt-1">₹0</p>
-                    </div>
-                    <div
-                        class="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600">
+            <!-- ===== 1. BENTO GRID STATS ===== -->
+            <div class="grid grid-cols-2 lg:grid-cols-6 gap-4 animate-in">
+
+                <!-- Revenue HERO (2x width) -->
+                <div class="fintech-card hero-stat stat-widget cursor-pointer" onclick="toggleRevenueProfit()"
+                    id="revenue-card">
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #10B981, #059669); color: #fff;">
                         <i class="fas fa-indian-rupee-sign"></i>
                     </div>
-                </div>
-                <!-- Monthly Revenue -->
-                <div class="glass rounded-2xl p-4 shadow-lg flex items-center justify-between cursor-pointer hover:bg-white/40 transition-all"
-                    onclick="openMonthlyDashboard()">
                     <div>
-                        <p class="text-slate-500 text-xs uppercase font-bold tracking-wider">Monthly Rev</p>
-                        <p id="stat-month-revenue" class="text-2xl font-bold text-indigo-600 mt-1">₹0</p>
+                        <p class="stat-label" id="rev-card-title">Today's Revenue</p>
+                        <p id="stat-revenue" class="stat-value" style="color: #059669;">₹0</p>
                     </div>
-                    <div class="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600">
+                </div>
+
+                <!-- Monthly Revenue -->
+                <div class="fintech-card stat-widget cursor-pointer" onclick="openMonthlyDashboard()">
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #818CF8, #6366F1); color: #fff;">
                         <i class="fas fa-calendar-alt"></i>
                     </div>
+                    <div>
+                        <p class="stat-label">Monthly Rev</p>
+                        <p id="stat-month-revenue" class="stat-value" style="color: #6366f1;">₹0</p>
+                    </div>
                 </div>
+
                 <!-- Items Sold -->
-                <div class="glass rounded-2xl p-4 shadow-lg flex items-center justify-between">
-                    <div>
-                        <p class="text-slate-500 text-xs uppercase font-bold tracking-wider">Items Sold</p>
-                        <p id="stat-items" class="text-2xl font-bold text-blue-600 mt-1">0</p>
+                <div class="fintech-card stat-widget">
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #60A5FA, #3B82F6); color: #fff;">
+                        <i class="fas fa-box"></i>
                     </div>
-                    <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600"><i
-                            class="fas fa-box"></i></div>
+                    <div>
+                        <p class="stat-label">Items Sold</p>
+                        <p id="stat-items" class="stat-value" style="color: #3b82f6;">0</p>
+                    </div>
                 </div>
+
                 <!-- Total Orders -->
-                <div class="glass rounded-2xl p-4 shadow-lg flex items-center justify-between">
-                    <div>
-                        <p class="text-slate-500 text-xs uppercase font-bold tracking-wider">Orders</p>
-                        <p id="stat-orders" class="text-2xl font-bold text-purple-600 mt-1">0</p>
-                    </div>
-                    <div class="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center text-purple-600">
+                <div class="fintech-card stat-widget">
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #C084FC, #A855F7); color: #fff;">
                         <i class="fas fa-receipt"></i>
                     </div>
-                </div>
-                <!-- Udhaar Outstanding -->
-                <div class="glass rounded-2xl p-4 shadow-lg flex items-center justify-between cursor-pointer hover:bg-white/40 transition-all"
-                    onclick="openUdhaarDashboard()">
                     <div>
-                        <p class="text-slate-500 text-xs uppercase font-bold tracking-wider">Udhaar</p>
-                        <p id="stat-udhaar" class="text-2xl font-bold text-red-600 mt-1">₹0</p>
+                        <p class="stat-label">Orders</p>
+                        <p id="stat-orders" class="stat-value" style="color: #a855f7;">0</p>
                     </div>
-                    <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center text-red-600">
+                </div>
+
+                <!-- Udhaar Outstanding -->
+                <div class="fintech-card stat-widget cursor-pointer" onclick="openUdhaarDashboard()">
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #F87171, #EF4444); color: #fff;">
                         <i class="fas fa-book"></i>
                     </div>
+                    <div>
+                        <p class="stat-label">Udhaar</p>
+                        <p id="stat-udhaar" class="stat-value" style="color: #ef4444;">₹0</p>
+                    </div>
                 </div>
             </div>
 
-            <!-- 2. Voice Command Center (Big Focus) -->
-            <div class="glass rounded-3xl p-8 shadow-xl text-center relative overflow-hidden">
-                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-400 to-teal-500"></div>
-                <h2 class="text-2xl font-bold text-slate-800 mb-2">Voice Command Center</h2>
-                <p class="text-slate-500 mb-8">Tap & Speak: "Sold 2 milk, 5 bread and 1 kg sugar"</p>
+            <!-- ===== 2. VOICE COMMAND CENTER (Glassmorphism) ===== -->
+            <div class="voice-center glass rounded-3xl p-8 sm:p-10 text-center relative animate-in-delay">
+                <h2 class="text-xl sm:text-2xl font-bold mb-1" style="color: var(--text-heading);">Voice Command Center
+                </h2>
+                <p class="text-sm mb-8" style="color: var(--text-label);">Tap & Speak: "Sold 2 milk, 5 bread and 1 kg
+                    sugar"</p>
 
-                <button id="mic-btn"
-                    class="mic-button relative w-24 h-24 sm:w-32 sm:h-32 mx-auto rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 shadow-2xl hover:shadow-emerald-500/50 transition-all hover:scale-105 flex items-center justify-center group">
-                    <i
-                        class="fas fa-microphone text-white text-3xl sm:text-5xl group-hover:scale-110 transition-transform"></i>
-                </button>
+                <!-- Mic Button with Pulse Rings -->
+                <div class="relative flex items-center justify-center mx-auto" style="width: 120px; height: 120px;">
+                    <button id="mic-btn" class="mic-button">
+                        <i class="fas fa-microphone text-white text-3xl"></i>
+                    </button>
+                    <div class="mic-pulse-ring"></div>
+                    <div class="mic-pulse-ring"></div>
+                    <div class="mic-pulse-ring"></div>
+                </div>
 
-                <!-- Live Transcript & Interaction -->
+                <!-- Live Transcript -->
                 <div id="transcript-container" class="mt-6 mb-4 hidden">
-                    <p class="text-sm text-emerald-600 font-medium animate-pulse">Listening...</p>
-                    <p id="live-transcript" class="text-slate-700 text-lg font-medium italic mt-2">"..."</p>
+                    <p class="text-sm font-semibold animate-pulse" style="color: #059669;">Listening...</p>
+                    <p id="live-transcript" class="text-lg font-medium italic mt-2" style="color: var(--text-heading);">
+                        "..."</p>
                 </div>
 
-                <!-- Manual Input (Subtle) -->
-                <div class="mt-8 max-w-lg mx-auto flex gap-2">
-                    <input type="text" id="text-input" placeholder="Or type here..."
-                        class="flex-1 px-4 py-2 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none">
-                    <button id="send-text-btn" class="w-12 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl"><i
-                            class="fas fa-paper-plane"></i></button>
+                <!-- Floating Pill Input -->
+                <div class="mt-8 max-w-lg mx-auto">
+                    <div class="pill-input">
+                        <input type="text" id="text-input" placeholder="Or type your order here...">
+                        <button id="send-text-btn"><i class="fas fa-paper-plane text-sm"></i></button>
+                    </div>
                 </div>
             </div>
 
-            <!-- 3. Bottom Grid: Inventory & Transactions -->
-            <div class="grid md:grid-cols-2 gap-6">
+            <!-- ===== 3. BOTTOM GRID: Inventory & Transactions ===== -->
+            <div class="grid md:grid-cols-2 gap-6 animate-in-delay-2">
 
-                <!-- Inventory Status (Sorted, Color Coded) -->
-                <div class="glass rounded-2xl p-0 overflow-hidden shadow-xl flex flex-col h-[400px]">
-                    <div class="p-4 border-b border-slate-100 bg-white/50 flex flex-col gap-2 sticky top-0 z-10">
+                <!-- Inventory (Floating Cards) -->
+                <div class="fintech-card p-0 overflow-hidden flex flex-col h-[420px]">
+                    <div class="p-5 border-b border-gray-100 flex flex-col gap-3 sticky top-0 z-10 bg-white"
+                        style="border-radius: 24px 24px 0 0;">
                         <div class="flex justify-between items-center">
-                            <h3 class="font-bold text-slate-800 flex items-center gap-2"><i
-                                    class="fas fa-warehouse text-emerald-600"></i> Inventory Status</h3>
+                            <h3 class="section-title"><i class="fas fa-warehouse text-emerald-500"></i> Inventory Status
+                            </h3>
                             <div class="flex gap-2">
                                 <button onclick="document.getElementById('add-stock-modal').classList.remove('hidden')"
-                                    class="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded hover:bg-emerald-200">
-                                    <i class="fas fa-plus"></i> Add
+                                    class="text-xs font-semibold px-3 py-1.5 rounded-xl transition-all"
+                                    style="background: rgba(16,185,129,0.08); color: #059669;">
+                                    <i class="fas fa-plus mr-1"></i> Add
                                 </button>
-                                <button id="refresh-inventory-btn" class="text-slate-400 hover:text-emerald-600"><i
-                                        class="fas fa-refresh"></i></button>
+                                <button id="refresh-inventory-btn"
+                                    class="text-gray-400 hover:text-emerald-600 transition-colors">
+                                    <i class="fas fa-refresh"></i>
+                                </button>
                             </div>
                         </div>
                         <!-- Search Bar -->
                         <div class="relative">
-                            <i
-                                class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 text-xs"></i>
+                            <i class="fas fa-search absolute left-3.5 top-1/2 transform -translate-y-1/2 text-xs"
+                                style="color: var(--text-muted);"></i>
                             <input type="text" id="inventory-search" placeholder="Search items..."
-                                class="w-full pl-8 pr-3 py-1.5 text-sm bg-white/60 border border-slate-200 rounded-lg focus:border-emerald-500 focus:ring-1 focus:ring-emerald-200 outline-none transition-all">
+                                class="w-full pl-9 pr-3 py-2 text-sm bg-gray-50 border border-gray-100 rounded-xl focus:border-emerald-500 focus:ring-1 focus:ring-emerald-100 outline-none transition-all">
                         </div>
                     </div>
-                    <div class="overflow-y-auto flex-1 p-2" id="inventory-list">
-                        <!-- Items injected here -->
-                        <div class="text-center py-10 text-slate-400">Loading inventory...</div>
+                    <div class="overflow-y-auto flex-1 p-3" id="inventory-list">
+                        <div class="text-center py-10" style="color: var(--text-muted);">Loading inventory...</div>
                     </div>
                 </div>
 
-                <!-- Recent Transactions -->
-                <div class="glass rounded-2xl p-0 overflow-hidden shadow-xl flex flex-col h-[400px]">
-                    <div
-                        class="p-4 border-b border-slate-100 bg-white/50 flex justify-between items-center sticky top-0">
-                        <h3 class="font-bold text-slate-800 flex items-center gap-2"><i
-                                class="fas fa-history text-blue-600"></i> Recent Sales</h3>
-                        <button id="refresh-sales-btn" class="text-slate-400 hover:text-blue-600"><i
-                                class="fas fa-refresh"></i></button>
+                <!-- Recent Transactions (Bank Style) -->
+                <div class="fintech-card p-0 overflow-hidden flex flex-col h-[420px]">
+                    <div class="p-5 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white"
+                        style="border-radius: 24px 24px 0 0;">
+                        <h3 class="section-title"><i class="fas fa-history text-blue-500"></i> Recent Sales</h3>
+                        <button id="refresh-sales-btn" class="text-gray-400 hover:text-blue-600 transition-colors">
+                            <i class="fas fa-refresh"></i>
+                        </button>
                     </div>
-                    <div class="overflow-y-auto flex-1 p-2 space-y-2" id="transactions-list">
+                    <div class="overflow-y-auto flex-1 p-3 space-y-1" id="transactions-list">
                         <!-- Transactions injected here -->
                     </div>
                 </div>
@@ -519,184 +1484,90 @@
         📒 Udhaar Khata
     </button>
 
-    <!-- Udhaar Dashboard Modal -->
-    <div id="udhaar-dashboard-modal"
-        class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div
-            class="glass bg-white rounded-3xl shadow-2xl w-full max-w-2xl h-[80vh] flex flex-col relative overflow-hidden transition-all">
-            <!-- Header -->
-            <div
-                class="p-6 border-b border-slate-100 flex justify-between items-center bg-white/80 backdrop-blur shrink-0">
-                <div>
-                    <h2 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
-                        📒 <span class="text-red-600">Udhaar</span> Khata
-                    </h2>
-                    <p class="text-slate-500 text-sm" id="udhaar-subtitle">Outstanding Dues</p>
-                </div>
-                <button onclick="document.getElementById('udhaar-dashboard-modal').classList.add('hidden')"
-                    class="w-10 h-10 rounded-full bg-slate-100 text-slate-500 hover:bg-red-50 hover:text-red-500 transition-all flex items-center justify-center">
-                    <i class="fas fa-times text-lg"></i>
-                </button>
-            </div>
-
-            <!-- VIEW 1: SUMMARY (All customers) -->
-            <div id="udhaar-view-summary" class="flex-1 overflow-y-auto p-6">
-                <div id="udhaar-total-banner"
-                    class="bg-red-50 text-red-700 px-4 py-3 rounded-xl border border-red-100 font-bold shadow-sm mb-6 flex justify-between items-center">
-                    <span>Total Outstanding</span>
-                    <span id="udhaar-total-amount">₹0</span>
-                </div>
-                <div id="udhaar-customers-list" class="space-y-3">
-                    <div class="text-center py-10 text-slate-400">Loading...</div>
-                </div>
-            </div>
-
-            <!-- VIEW 2: DRILL-DOWN (Per customer) -->
-            <div id="udhaar-view-detail" class="flex-1 overflow-y-auto p-6 hidden">
-                <button onclick="showUdhaarSummary()"
-                    class="mb-4 text-slate-500 hover:text-red-600 flex items-center gap-2 font-medium w-fit">
-                    <i class="fas fa-arrow-left"></i> Back to Summary
-                </button>
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-xl font-bold text-slate-800" id="udhaar-customer-title">Customer</h3>
-                    <div class="flex items-center gap-2">
-                        <span class="text-lg font-bold text-red-600 mr-2" id="udhaar-customer-total">₹0</span>
-                        <div class="flex items-center bg-slate-100 rounded-xl p-1 border border-slate-200">
-                            <input type="number" id="settle-amount-input"
-                                class="w-20 bg-transparent outline-none px-2 text-sm font-bold text-slate-700"
-                                placeholder="Amount">
-                            <button id="settle-dues-btn" onclick="settleDues()"
-                                class="px-4 py-1.5 bg-emerald-600 text-white text-sm font-bold rounded-lg hover:bg-emerald-700 transition-all shadow-sm flex items-center gap-2">
-                                <i class="fas fa-check-circle"></i> Settle
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-sm">
-                        <thead>
-                            <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
-                                <th class="px-4 py-3 text-left rounded-l-lg">Date/Time</th>
-                                <th class="px-4 py-3 text-left">Item</th>
-                                <th class="px-4 py-3 text-center">Qty</th>
-                                <th class="px-4 py-3 text-right rounded-r-lg">Cost</th>
-                            </tr>
-                        </thead>
-                        <tbody id="udhaar-detail-tbody" class="divide-y divide-slate-100">
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Add Stock Modal (Hidden default) -->
-    <div id="add-stock-modal"
-        class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="glass bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 relative">
-            <button onclick="document.getElementById('add-stock-modal').classList.add('hidden')"
-                class="absolute top-4 right-4 text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
-            <h3 class="font-bold text-lg mb-4 text-slate-800">Add Stock</h3>
-            <form id="add-stock-form" class="space-y-3">
-                <input type="text" id="stock-item" required
-                    class="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none focus:border-emerald-500"
-                    placeholder="Item Name (e.g. Milk)">
-                <input type="number" id="stock-qty" required step="0.1"
-                    class="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none focus:border-emerald-500"
-                    placeholder="Quantity">
-                <input type="number" id="stock-price" step="0.01"
-                    class="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none focus:border-emerald-500"
-                    placeholder="Sell Price">
-                <input type="number" id="stock-cost" step="0.01"
-                    class="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none focus:border-emerald-500"
-                    placeholder="Cost Price">
-                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Expiry Date (Optional)</label>
-                <input type="date" id="stock-expiry"
-                    class="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none focus:border-emerald-500">
-                <button type="submit"
-                    class="w-full py-2 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-700">Add
-                    Stock</button>
-            </form>
-            <div class="mt-4 pt-4 border-t border-slate-100">
-                <button id="seed-btn"
-                    class="w-full py-2 bg-slate-100 text-slate-600 rounded-xl text-sm hover:bg-slate-200">Seed Default
-                    Items</button>
-            </div>
-        </div>
-    </div>
-
     <!-- Monthly Dashboard Modal -->
     <div id="monthly-dashboard-modal"
-        class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div
-            class="glass bg-white rounded-3xl shadow-2xl w-full max-w-2xl h-[80vh] flex flex-col relative overflow-hidden transition-all">
-
+        class="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="fintech-card w-full max-w-2xl h-[80vh] flex flex-col relative overflow-hidden transition-all">
             <!-- Header -->
-            <div
-                class="p-6 border-b border-slate-100 flex justify-between items-center bg-white/80 backdrop-blur shrink-0">
+            <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-white shrink-0"
+                style="border-radius: 24px 24px 0 0;">
                 <div>
-                    <h2 class="text-2xl font-bold text-slate-800" id="calendar-month-title">Monthly Dashboard</h2>
-                    <p class="text-slate-500 text-sm" id="calendar-subtitle">Overview</p>
+                    <h2 class="text-xl font-bold" style="color: var(--text-heading);" id="calendar-month-title">Monthly
+                    </h2>
+                    <p class="text-xs mt-0.5" style="color: var(--text-label);" id="calendar-subtitle">Overview</p>
                 </div>
                 <button onclick="document.getElementById('monthly-dashboard-modal').classList.add('hidden')"
-                    class="w-10 h-10 rounded-full bg-slate-100 text-slate-500 hover:bg-red-50 hover:text-red-500 transition-all flex items-center justify-center">
-                    <i class="fas fa-times text-lg"></i>
+                    class="w-9 h-9 rounded-full bg-gray-50 hover:bg-red-50 hover:text-red-500 transition-all flex items-center justify-center"
+                    style="color: var(--text-muted);">
+                    <i class="fas fa-times"></i>
                 </button>
             </div>
 
             <!-- VIEW 1: CALENDAR -->
             <div id="view-calendar" class="flex-1 overflow-y-auto p-6">
-                <div class="flex justify-between items-center mb-6">
-                    <div class="bg-emerald-50 text-emerald-700 px-4 py-2 rounded-xl border border-emerald-100 font-bold shadow-sm"
-                        id="calendar-total-rev">Total: ₹0</div>
+                <div id="calendar-total-rev"
+                    class="bg-emerald-50 text-emerald-700 px-5 py-3.5 rounded-2xl border border-emerald-100 font-bold mb-6 flex gap-4 items-center text-sm">
+                    <span>Rev: ₹0</span>
+                    <span>Profit: ₹0</span>
                 </div>
 
-                <!-- Weekday Headers -->
-                <div
-                    class="grid grid-cols-7 gap-2 mb-2 text-center text-xs font-bold text-slate-400 uppercase tracking-wider">
-                    <div>Sun</div>
-                    <div>Mon</div>
-                    <div>Tue</div>
-                    <div>Wed</div>
-                    <div>Thu</div>
-                    <div>Fri</div>
-                    <div>Sat</div>
+                <!-- Day Headers -->
+                <div class="grid grid-cols-7 gap-1 mb-2 text-center">
+                    <div class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-muted);">SUN</div>
+                    <div class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-muted);">MON</div>
+                    <div class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-muted);">TUE</div>
+                    <div class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-muted);">WED</div>
+                    <div class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-muted);">THU</div>
+                    <div class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-muted);">FRI</div>
+                    <div class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-muted);">SAT</div>
                 </div>
 
-                <!-- Days Grid -->
-                <div id="calendar-grid" class="calendar-grid"></div>
+                <!-- Calendar Grid -->
+                <div id="calendar-grid" class="calendar-grid grid grid-cols-7 gap-1">
+                    <!-- Days injected by JS -->
+                </div>
             </div>
 
             <!-- VIEW 2: DAILY DETAILS (Drill Down) -->
-            <div id="view-day-details" class="flex-1 overflow-y-auto p-6 hidden flex flex-col bg-slate-50">
+            <div id="view-day-details" class="flex-1 overflow-y-auto p-6 hidden flex flex-col bg-gray-50">
                 <button onclick="showCalendarView()"
-                    class="mb-4 text-slate-500 hover:text-emerald-600 flex items-center gap-2 font-medium w-fit">
+                    class="mb-4 hover:text-emerald-600 flex items-center gap-2 font-semibold w-fit text-sm transition-colors"
+                    style="color: var(--text-label);">
                     <i class="fas fa-arrow-left"></i> Back to Month
                 </button>
 
                 <div id="day-details-content" class="flex-1 flex flex-col">
                     <div class="flex items-center justify-between mb-6">
-                        <h3 class="text-2xl font-bold text-slate-800" id="day-title">Date</h3>
+                        <h3 class="text-xl font-bold" style="color: var(--text-heading);" id="day-title">Date</h3>
                     </div>
 
                     <!-- Mini Stats -->
-                    <div class="grid grid-cols-3 gap-3 mb-6">
-                        <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
-                            <p class="text-xs text-slate-500 uppercase font-bold">Revenue</p>
-                            <p class="text-xl font-bold text-emerald-600" id="day-rev">₹0</p>
+                    <div class="grid grid-cols-4 gap-3 mb-6">
+                        <div class="bg-white p-4 rounded-2xl border border-gray-100"
+                            style="box-shadow: var(--card-shadow);">
+                            <p class="stat-label">Revenue</p>
+                            <p class="text-lg font-bold" style="color: #059669;" id="day-rev">₹0</p>
                         </div>
-                        <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
-                            <p class="text-xs text-slate-500 uppercase font-bold">Orders</p>
-                            <p class="text-xl font-bold text-indigo-600" id="day-orders">0</p>
+                        <div class="bg-white p-4 rounded-2xl border border-gray-100"
+                            style="box-shadow: var(--card-shadow);">
+                            <p class="stat-label">Profit</p>
+                            <p class="text-lg font-bold" style="color: #8b5cf6;" id="day-profit">₹0</p>
                         </div>
-                        <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
-                            <p class="text-xs text-slate-500 uppercase font-bold">Items</p>
-                            <p class="text-xl font-bold text-blue-600" id="day-items">0</p>
+                        <div class="bg-white p-4 rounded-2xl border border-gray-100"
+                            style="box-shadow: var(--card-shadow);">
+                            <p class="stat-label">Orders</p>
+                            <p class="text-lg font-bold" style="color: #6366f1;" id="day-orders">0</p>
+                        </div>
+                        <div class="bg-white p-4 rounded-2xl border border-gray-100"
+                            style="box-shadow: var(--card-shadow);">
+                            <p class="stat-label">Items</p>
+                            <p class="text-lg font-bold" style="color: #3b82f6;" id="day-items">0</p>
                         </div>
                     </div>
 
-                    <h4 class="font-bold text-slate-700 mb-3 text-sm flex items-center gap-2 uppercase tracking-wide">
-                        <i class="fas fa-receipt text-slate-400"></i> Transactions
+                    <h4 class="font-bold text-sm flex items-center gap-2 uppercase tracking-wide mb-3"
+                        style="color: var(--text-label);">
+                        <i class="fas fa-receipt" style="color: var(--text-muted);"></i> Transactions
                     </h4>
 
                     <div class="flex-1 overflow-y-auto pr-2 space-y-2" id="day-transactions-list">
@@ -707,22 +1578,134 @@
         </div>
     </div>
 
+    <!-- Udhaar Dashboard Modal -->
+    <div id="udhaar-dashboard-modal"
+        class="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="fintech-card w-full max-w-2xl h-[80vh] flex flex-col relative overflow-hidden transition-all">
+            <!-- Header -->
+            <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-white shrink-0"
+                style="border-radius: 24px 24px 0 0;">
+                <div>
+                    <h2 class="text-xl font-bold flex items-center gap-2" style="color: var(--text-heading);">
+                        📒 <span class="text-red-500">Udhaar</span> Khata
+                    </h2>
+                    <p class="text-xs mt-0.5" style="color: var(--text-label);" id="udhaar-subtitle">Outstanding Dues
+                    </p>
+                </div>
+                <button onclick="document.getElementById('udhaar-dashboard-modal').classList.add('hidden')"
+                    class="w-9 h-9 rounded-full bg-gray-50 hover:bg-red-50 hover:text-red-500 transition-all flex items-center justify-center"
+                    style="color: var(--text-muted);">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
 
+            <!-- VIEW 1: SUMMARY (All customers) -->
+            <div id="udhaar-view-summary" class="flex-1 overflow-y-auto p-6">
+                <div id="udhaar-total-banner"
+                    class="bg-red-50 text-red-600 px-5 py-3.5 rounded-2xl border border-red-100 font-bold mb-6 flex justify-between items-center text-sm">
+                    <span>Total Outstanding</span>
+                    <span id="udhaar-total-amount" class="text-lg">₹0</span>
+                </div>
+                <div id="udhaar-customers-list" class="space-y-3">
+                    <div class="text-center py-10" style="color: var(--text-muted);">Loading...</div>
+                </div>
+            </div>
+
+            <!-- VIEW 2: DRILL-DOWN (Per customer) -->
+            <div id="udhaar-view-detail" class="flex-1 overflow-y-auto p-6 hidden">
+                <button onclick="showUdhaarSummary()"
+                    class="mb-4 hover:text-red-500 flex items-center gap-2 font-semibold w-fit text-sm transition-colors"
+                    style="color: var(--text-label);">
+                    <i class="fas fa-arrow-left"></i> Back to Summary
+                </button>
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-bold" style="color: var(--text-heading);" id="udhaar-customer-title">
+                        Customer</h3>
+                    <div class="flex items-center gap-2">
+                        <span class="text-lg font-bold text-red-500 mr-2" id="udhaar-customer-total">₹0</span>
+                        <div class="flex items-center bg-gray-50 rounded-2xl p-1.5 border border-gray-100">
+                            <input type="number" id="settle-amount-input"
+                                class="w-20 bg-transparent outline-none px-2 text-sm font-bold"
+                                style="color: var(--text-heading);" placeholder="Amount">
+                            <button id="settle-dues-btn" onclick="settleDues()"
+                                class="btn-gradient px-4 py-1.5 text-xs rounded-xl flex items-center gap-2">
+                                <i class="fas fa-check-circle"></i> Settle
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="text-xs uppercase tracking-wider" style="color: var(--text-muted);">
+                                <th class="px-4 py-3 text-left rounded-l-2xl bg-gray-50">Date/Time</th>
+                                <th class="px-4 py-3 text-left bg-gray-50">Item</th>
+                                <th class="px-4 py-3 text-center bg-gray-50">Qty</th>
+                                <th class="px-4 py-3 text-right rounded-r-2xl bg-gray-50">Cost</th>
+                            </tr>
+                        </thead>
+                        <tbody id="udhaar-detail-tbody" class="divide-y divide-gray-50">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- LANDING PAGE REMOVED FOR AUTO-GUEST MODE -->
+
+    <!-- Add Stock Modal (Hidden default) -->
+    <div id="add-stock-modal"
+        class="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="fintech-card w-full max-w-md p-7 relative">
+            <button onclick="document.getElementById('add-stock-modal').classList.add('hidden')"
+                class="absolute top-5 right-5 w-8 h-8 rounded-full bg-gray-50 hover:bg-gray-100 flex items-center justify-center transition-all"
+                style="color: var(--text-muted);"><i class="fas fa-times text-sm"></i></button>
+            <h3 class="font-bold text-lg mb-5" style="color: var(--text-heading);">Add Stock</h3>
+            <form id="add-stock-form" class="space-y-3">
+                <input type="text" id="stock-item" required
+                    class="w-full px-5 py-3 rounded-2xl border border-gray-200 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-100 text-sm transition-all"
+                    placeholder="Item Name (e.g. Milk)">
+                <input type="number" id="stock-qty" required step="0.1"
+                    class="w-full px-5 py-3 rounded-2xl border border-gray-200 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-100 text-sm transition-all"
+                    placeholder="Quantity">
+                <input type="number" id="stock-price" step="0.01"
+                    class="w-full px-5 py-3 rounded-2xl border border-gray-200 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-100 text-sm transition-all"
+                    placeholder="Sell Price">
+                <input type="number" id="stock-cost" step="0.01"
+                    class="w-full px-5 py-3 rounded-2xl border border-gray-200 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-100 text-sm transition-all"
+                    placeholder="Cost Price">
+                <label class="block text-xs font-bold uppercase mb-1" style="color: var(--text-muted);">Expiry Date
+                    (Optional)</label>
+                <input type="date" id="stock-expiry"
+                    class="w-full px-5 py-3 rounded-2xl border border-gray-200 outline-none focus:border-emerald-500 text-sm transition-all">
+                <button type="submit" class="btn-gradient w-full py-3 rounded-2xl text-sm">Add Stock</button>
+            </form>
+            <div class="mt-4 pt-4 border-t border-gray-50">
+                <button id="seed-btn"
+                    class="w-full py-2.5 bg-gray-50 rounded-2xl text-xs font-semibold hover:bg-gray-100 transition-all"
+                    style="color: var(--text-label);">Seed Default
+                    Items</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Order Confirmation Modal -->
     <div id="order-confirm-modal"
-        class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div
-            class="glass bg-white rounded-3xl shadow-2xl w-full max-w-2xl flex flex-col relative overflow-hidden transition-all max-h-[80vh]">
-            <div
-                class="p-6 border-b border-slate-100 flex justify-between items-center bg-white/80 backdrop-blur shrink-0">
+        class="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="fintech-card w-full max-w-2xl flex flex-col relative overflow-hidden transition-all max-h-[80vh]">
+            <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-white shrink-0"
+                style="border-radius: 24px 24px 0 0;">
                 <div>
-                    <h2 class="text-2xl font-bold text-slate-800">Review Order</h2>
-                    <p class="text-slate-500 text-sm">Please verify items before confirming.</p>
+                    <h2 class="text-xl font-bold" style="color: var(--text-heading);">Review Order</h2>
+                    <p class="text-xs mt-0.5" style="color: var(--text-label);">Please verify items before confirming.
+                    </p>
                 </div>
                 <button onclick="closeOrderModal()"
-                    class="w-10 h-10 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition-all flex items-center justify-center">
-                    <i class="fas fa-times text-lg"></i>
+                    class="w-9 h-9 rounded-full bg-gray-50 hover:bg-gray-100 transition-all flex items-center justify-center"
+                    style="color: var(--text-muted);">
+                    <i class="fas fa-times"></i>
                 </button>
             </div>
 
@@ -730,18 +1713,21 @@
                 <!-- Customer & Mode Selection -->
                 <div class="flex flex-col sm:flex-row gap-4 mb-6">
                     <div class="flex-1">
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Customer Name</label>
+                        <label class="block text-xs font-bold uppercase mb-1.5"
+                            style="color: var(--text-muted);">Customer Name</label>
                         <input type="text" id="confirm-customer"
-                            class="w-full px-4 py-2 rounded-xl border border-slate-200 outline-none focus:border-emerald-500"
+                            class="w-full px-5 py-3 rounded-2xl border border-gray-200 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-100 text-sm transition-all"
                             placeholder="Walk-in">
                     </div>
                     <div class="flex-1">
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Payment Mode</label>
-                        <div class="flex bg-slate-100 rounded-xl p-1">
+                        <label class="block text-xs font-bold uppercase mb-1.5"
+                            style="color: var(--text-muted);">Payment Mode</label>
+                        <div class="flex bg-gray-50 rounded-2xl p-1 border border-gray-100">
                             <button type="button" id="mode-cash" onclick="setPaymentMode('Cash')"
-                                class="flex-1 py-1.5 px-3 rounded-lg font-medium transition-all bg-white shadow text-emerald-600">Cash</button>
+                                class="flex-1 py-2 px-3 rounded-xl font-semibold transition-all bg-white shadow-sm text-emerald-600 text-sm">Cash</button>
                             <button type="button" id="mode-udhaar" onclick="setPaymentMode('Udhaar')"
-                                class="flex-1 py-1.5 px-3 rounded-lg font-medium transition-all text-slate-500">Udhaar</button>
+                                class="flex-1 py-2 px-3 rounded-xl font-semibold transition-all text-sm"
+                                style="color: var(--text-label);">Udhaar</button>
                         </div>
                     </div>
                 </div>
@@ -749,32 +1735,34 @@
                 <!-- Items Table -->
                 <table class="w-full text-sm mb-4">
                     <thead>
-                        <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
-                            <th class="px-3 py-2 text-left rounded-l-lg">Item</th>
-                            <th class="px-3 py-2 text-center w-24">Qty</th>
-                            <th class="px-3 py-2 text-right">Price</th>
-                            <th class="px-3 py-2 text-center w-10 rounded-r-lg"></th>
+                        <tr class="text-xs uppercase tracking-wider" style="color: var(--text-muted);">
+                            <th class="px-3 py-2.5 text-left rounded-l-2xl bg-gray-50">Item</th>
+                            <th class="px-3 py-2.5 text-center w-24 bg-gray-50">Qty</th>
+                            <th class="px-3 py-2.5 text-right bg-gray-50">Price</th>
+                            <th class="px-3 py-2.5 text-center w-10 rounded-r-2xl bg-gray-50"></th>
                         </tr>
                     </thead>
-                    <tbody id="confirm-items-tbody" class="divide-y divide-slate-100">
+                    <tbody id="confirm-items-tbody" class="divide-y divide-gray-50">
                         <!-- Items injected here -->
                     </tbody>
                 </table>
 
                 <button onclick="addEmptyRow()"
-                    class="w-full py-2 border border-dashed border-slate-300 rounded-xl text-slate-500 hover:bg-slate-50 hover:text-emerald-600 transition-all text-sm font-medium">
+                    class="w-full py-2.5 border border-dashed border-gray-200 rounded-2xl hover:bg-gray-50 transition-all text-sm font-semibold"
+                    style="color: var(--text-label);">
                     <i class="fas fa-plus mr-1"></i> Add Manual Item
                 </button>
             </div>
 
             <!-- Footer -->
-            <div class="p-6 border-t border-slate-100 bg-slate-50 flex justify-between items-center shrink-0">
+            <div class="p-6 border-t border-gray-100 flex justify-between items-center shrink-0 bg-gray-50"
+                style="border-radius: 0 0 24px 24px;">
                 <div>
-                    <p class="text-xs text-slate-500 font-bold uppercase">Total</p>
-                    <p class="text-2xl font-bold text-slate-800" id="confirm-total-price">₹0</p>
+                    <p class="stat-label">Total</p>
+                    <p class="text-2xl font-bold" style="color: var(--text-heading);" id="confirm-total-price">₹0</p>
                 </div>
                 <button onclick="confirmOrder()"
-                    class="px-8 py-3 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-all shadow-lg flex items-center gap-2">
+                    class="btn-gradient px-8 py-3 rounded-2xl text-sm flex items-center gap-2">
                     <i class="fas fa-check"></i> Confirm Sale
                 </button>
             </div>
@@ -819,27 +1807,163 @@
         };
 
         // --- AUTH & INIT ---
-        async function init() {
-            const { data } = await supabase.auth.getSession();
-            if (data.session) {
-                handleLoginSuccess(data.session);
+        async function initApp() {
+            // Safety: Auto-fade loading overlay after 4 seconds no matter what
+            setTimeout(() => {
+                const loader = document.getElementById('loading-overlay');
+                if (loader) loader.classList.add('opacity-0', 'pointer-events-none');
+            }, 4000);
+
+            let token = localStorage.getItem('token');
+            const GUEST_MAGIC = 'GUEST_MODE_NO_AUTH';
+
+            // 1. If no token, get a Guest Token immediately
+            if (!token) {
+                try {
+                    const res = await fetch('/get-guest-token', { method: 'POST' });
+                    if (res.ok) {
+                        const data = await res.json();
+                        token = data.access_token;
+                        localStorage.setItem('token', token);
+                        localStorage.setItem('user_email', 'public_guest@autobill.com');
+                        console.log("Guest Mode Activated");
+                    } else {
+                        console.warn("Guest token endpoint returned", res.status);
+                    }
+                } catch (err) {
+                    console.error("Guest login failed", err);
+                }
             }
 
+            // 2. Set up session
+            if (token) {
+                if (token === GUEST_MAGIC) {
+                    // Guest mode bypass — create synthetic session (no Supabase Auth needed)
+                    console.log("[initApp] Using guest magic token — skipping Supabase auth");
+                    const guestSession = {
+                        access_token: GUEST_MAGIC,
+                        user: {
+                            email: 'public_guest@autobill.com',
+                            id: 'guest',
+                            user_metadata: { shop_name: 'Demo Store' }
+                        }
+                    };
+                    handleLoginSuccess(guestSession);
+                } else {
+                    // Real user — set Supabase session
+                    try {
+                        const { data, error } = await supabase.auth.setSession({
+                            access_token: token,
+                            refresh_token: token
+                        });
+                        if (data && data.session) {
+                            handleLoginSuccess(data.session);
+                        } else {
+                            // Token is expired/invalid - get a fresh guest token
+                            console.log("Stored token invalid, switching to guest mode...");
+                            localStorage.removeItem('token');
+                            try {
+                                const res = await fetch('/get-guest-token', { method: 'POST' });
+                                if (res.ok) {
+                                    const freshData = await res.json();
+                                    token = freshData.access_token;
+                                    localStorage.setItem('token', token);
+                                    localStorage.setItem('user_email', 'public_guest@autobill.com');
+                                    const guestSession = {
+                                        access_token: token,
+                                        user: {
+                                            email: 'public_guest@autobill.com',
+                                            id: 'guest',
+                                            user_metadata: { shop_name: 'Demo Store' }
+                                        }
+                                    };
+                                    handleLoginSuccess(guestSession);
+                                }
+                            } catch (retryErr) {
+                                console.error("Fresh guest token also failed:", retryErr);
+                            }
+                        }
+                    } catch (e) {
+                        console.error("Session setup error:", e);
+                        localStorage.removeItem('token');
+                    }
+                }
+            }
+
+            // 3. Hide loading overlay — dashboard is already visible
+            const loader = document.getElementById('loading-overlay');
+            if (loader) loader.classList.add('opacity-0', 'pointer-events-none');
+
+            // 4. Update header button based on current state
+            updateUI();
+
             supabase.auth.onAuthStateChange((event, _session) => {
-                if (event === 'SIGNED_OUT') window.location.reload();
-                if (event === 'SIGNED_IN' && _session) handleLoginSuccess(_session);
+                if (event === 'SIGNED_OUT') {
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user_email');
+                    window.location.reload();
+                }
+                if (event === 'SIGNED_IN' && _session) {
+                    localStorage.setItem('token', _session.access_token);
+                    localStorage.setItem('user_email', _session.user.email);
+                    handleLoginSuccess(_session);
+                }
+                if (event == 'TOKEN_REFRESHED' && _session) {
+                    session = _session;
+                    localStorage.setItem('token', _session.access_token);
+                }
             });
 
             initSpeech();
         }
 
+        // ===== STEP 1: updateUI — Guest vs Private header button =====
+        function updateUI() {
+            const email = localStorage.getItem('user_email');
+            const authBtn = document.getElementById('auth-btn');
+            const profileName = document.getElementById('header-profile-name');
+            if (!authBtn) return;
+
+            if (!email || email === 'demo@autobill.com' || email === 'public_guest@autobill.com') {
+                // GUEST MODE
+                authBtn.innerText = 'Login / Sign Up';
+                authBtn.className = 'px-4 py-2 bg-green-500 text-white rounded-lg font-bold hover:bg-green-600 transition';
+                authBtn.onclick = () => {
+                    document.getElementById('auth-overlay').classList.remove('hidden');
+                };
+                if (profileName) profileName.innerText = 'Guest Mode (Public)';
+            } else {
+                // PRIVATE MODE
+                authBtn.innerText = 'Logout';
+                authBtn.className = 'px-4 py-2 bg-red-500 text-white rounded-lg font-bold hover:bg-red-600 transition';
+                authBtn.onclick = logout;
+                if (profileName) profileName.innerText = email.split('@')[0];
+            }
+        }
+
+        // ===== STEP 2: logout — Clear & reload (no login page redirect) =====
+        function logout() {
+            // 1. Destroy Private Data Access
+            localStorage.removeItem('token');
+            localStorage.removeItem('user_email');
+            // 2. Sign out from Supabase
+            supabase.auth.signOut();
+            // 3. Reload to trigger Auto-Guest Logic
+            window.location.reload();
+        }
+
         async function handleLoginSuccess(s) {
             session = s; // Keep session for UI logic (shop name), but Backend is now open.
-            // IMPORTANT: With backend reverted to no-auth, we don't strictly need session for API calls, 
-            // but we keep it for Shop Name personalization.
+
+            // Hide loading overlay
+            const loader = document.getElementById('loading-overlay');
+            if (loader) loader.classList.add('opacity-0', 'pointer-events-none');
 
             els.authOverlay.classList.add('hidden');
-            els.dashboard.classList.remove('hidden');
+            // Reset UI state
+            // document.getElementById('landing-page').classList.add('hidden'); // Removed element
+            els.authOverlay.classList.add('hidden'); // Ensure auth overlay is hidden
+            els.dashboard.classList.remove('hidden'); // Show dashboard
             document.getElementById('user-email').textContent = session.user.email;
             document.getElementById('udhaar-float-btn').classList.remove('hidden');
 
@@ -847,11 +1971,27 @@
             const meta = session.user.user_metadata || {};
             if (meta.shop_name) {
                 els.headerShopName.textContent = meta.shop_name;
+                const profileEl = document.getElementById('header-profile-name');
+                if (profileEl) profileEl.textContent = meta.shop_name + ' ▾';
             } else {
-                els.shopNameModal.classList.remove('hidden');
+                // If demo user, don't ask for shop name aggressively
+                if (session.user.email !== 'public_guest@autobill.com') {
+                    els.shopNameModal.classList.remove('hidden');
+                }
             }
-
+            // Start fetching data
             refreshAllData();
+
+            // Check for Demo User
+            if (session.user.email === 'public_guest@autobill.com' || session.user.email === 'demo@autobill.com') {
+                document.getElementById('demo-banner').classList.remove('hidden');
+                document.body.style.paddingTop = '48px';
+            } else {
+                document.getElementById('demo-banner').classList.add('hidden');
+                document.body.style.paddingTop = '0';
+            }
+            // Update header button (Guest vs Private)
+            updateUI();
         }
 
         // --- SHOP NAME ---
@@ -863,6 +2003,8 @@
             const { error } = await supabase.auth.updateUser({ data: { shop_name: name } });
             if (!error) {
                 els.headerShopName.textContent = name;
+                const profileEl = document.getElementById('header-profile-name');
+                if (profileEl) profileEl.textContent = name + ' ▾';
                 els.shopNameModal.classList.add('hidden');
                 showToast('Shop name saved!', 'success');
             } else {
@@ -972,6 +2114,7 @@
             const items = await api('/inventory');
             if (!items || items.error) {
                 const errMsg = items && items.detail ? items.detail : "Failed to load";
+                console.error('[fetchInventory] Error:', errMsg, items);
                 els.invList.innerHTML = `<div class="text-red-500 text-center p-4">
                     <p class="font-bold">Error Loading Inventory</p>
                     <p class="text-xs mt-1 text-red-400">${errMsg}</p>
@@ -985,7 +2128,8 @@
 
         function renderInventory(items) {
             if (items.length === 0) {
-                els.invList.innerHTML = '<p class="text-slate-400 text-center py-4">No items found</p>';
+                console.warn('[renderInventory] Inventory is empty for this user.');
+                els.invList.innerHTML = '<p class="text-slate-400 text-center py-4">No items found. Say \'Add 10 Milk\' to start!</p>';
                 return;
             }
 
@@ -1020,28 +2164,26 @@
                     statusClass = 'stock-low';
                 }
 
+                const pillClass = qty <= 0 ? 'stock-critical' : (qty < 5 ? 'stock-low' : 'stock-good');
                 return `
-                <div class="flex items-center justify-between p-3 mb-2 rounded-xl transition-all hover:shadow-sm border border-slate-50 ${statusClass}">
-                    <div class="flex-1">
-                        <p class="font-bold text-slate-800 flex items-center">
+                <div class="floating-item ${statusClass}">
+                    <div class="flex-1 min-w-0">
+                        <p class="font-semibold text-sm flex items-center gap-1" style="color: var(--text-heading);">
                             ${item.item_name}
                             ${expiryHTML}
                         </p>
-                        <p class="text-xs opacity-75">₹${item.price || 0}/unit</p>
+                        <p class="text-xs mt-0.5" style="color: var(--text-muted);">₹${item.price || 0}/unit</p>
                     </div>
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-2 flex-shrink-0">
                         <button onclick="reduceStockPrompt('${item.item_name}')" title="Reduce Stock" 
-                            class="w-7 h-7 flex items-center justify-center rounded-full bg-amber-100 text-amber-600 hover:bg-amber-200 transition-all">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path></svg>
+                            class="w-7 h-7 flex items-center justify-center rounded-full bg-amber-50 text-amber-500 hover:bg-amber-100 transition-all">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path></svg>
                         </button>
                         <button onclick="deleteItemPrompt('${item.item_name}')" title="Delete Item"
-                            class="w-7 h-7 flex items-center justify-center rounded-full bg-red-100 text-red-600 hover:bg-red-200 transition-all">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            class="w-7 h-7 flex items-center justify-center rounded-full bg-red-50 text-red-400 hover:bg-red-100 transition-all">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                         </button>
-                        <div class="text-right min-w-[50px]">
-                            <span class="font-bold text-lg ${qty <= 0 ? 'text-red-600' : 'text-slate-700'}">${qty}</span>
-                            <p class="text-[10px] uppercase font-bold opacity-60">Stock</p>
-                        </div>
+                        <span class="stock-pill ${pillClass}">${qty}</span>
                     </div>
                 </div>`;
             }).join('');
@@ -1096,29 +2238,35 @@
                 els.transList.innerHTML = '<p class="text-slate-400 text-center py-4">No sales today</p>';
                 return;
             }
-            els.transList.innerHTML = txs.map(t => `
-                <div class="flex items-center justify-between p-3 bg-white border border-slate-100 rounded-xl hover:shadow-sm transition-all">
-                    <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center font-bold text-xs">#${t.order}</div>
-                        <div>
-                            <p class="font-medium text-slate-700 text-sm truncate max-w-[120px]" title="${t.item}">${t.item}</p>
-                            <p class="text-xs text-slate-400 flex items-center gap-1"><i class="far fa-clock"></i> ${t.time || 'Just now'}</p>
-                        </div>
+            const icons = ['🛒', '🥛', '🍞', '📦', '🧈', '🥚', '🍚', '🧴', '🫘', '☕'];
+            els.transList.innerHTML = txs.map((t, i) => {
+                const icon = icons[i % icons.length];
+                const bgColor = t.payment_mode === 'Udhaar' ? 'rgba(239,68,68,0.06)' : 'rgba(59,130,246,0.06)';
+                return `
+                <div class="txn-row">
+                    <div class="txn-avatar" style="background: ${bgColor};">${icon}</div>
+                    <div class="flex-1 min-w-0">
+                        <p class="font-semibold text-sm truncate" style="color: var(--text-heading);" title="${t.item}">${t.item}</p>
+                        <p class="text-xs flex items-center gap-2 mt-0.5" style="color: var(--text-muted);">
+                            <span>#${t.order}</span>
+                            <span>•</span>
+                            <span>${t.time || 'Just now'}</span>
+                            ${t.payment_mode === 'Udhaar' && t.customer_name && t.customer_name !== 'Walk-in' ? `<span class="text-red-400 font-medium">${t.customer_name}</span>` : ''}
+                        </p>
                     </div>
-                    <div class="flex items-center gap-2">
-                        <span class="text-xs px-2 py-0.5 rounded-full font-semibold ${t.payment_mode === 'Udhaar' ? 'udhaar-badge' : 'cash-badge'}">
-                            ${t.payment_mode === 'Udhaar' ? '🔴 Udhaar' : '🟢 Cash'}
+                    <div class="flex items-center gap-2 flex-shrink-0">
+                        <span class="text-[10px] px-2 py-0.5 rounded-full font-bold ${t.payment_mode === 'Udhaar' ? 'udhaar-badge' : 'cash-badge'}">
+                            ${t.payment_mode === 'Udhaar' ? 'UDHAAR' : 'CASH'}
                         </span>
-                        ${t.payment_mode === 'Udhaar' && t.customer_name && t.customer_name !== 'Walk-in' ? `<span class="text-xs text-red-500 font-medium">${t.customer_name}</span>` : ''}
                         <button onclick="printInvoice('${t.order}', '${t.item.replace(/'/g, "\\'")}', ${t.price}, '${t.time || 'Just now'}')" 
                             title="Print Invoice" 
-                            class="w-7 h-7 flex items-center justify-center rounded-full bg-blue-100 text-blue-600 hover:bg-blue-200 transition-all">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                            class="w-7 h-7 flex items-center justify-center rounded-full bg-gray-50 hover:bg-gray-100 transition-all" style="color: var(--text-muted);">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
                         </button>
-                        <span class="font-bold text-emerald-600">₹${t.price}</span>
+                        <span class="font-bold text-sm" style="color: #059669;">₹${t.price}</span>
                     </div>
-                </div>
-            `).join('');
+                </div>`;
+            }).join('');
         }
 
         // Print Invoice Function - exposed to window for onclick
@@ -1207,10 +2355,27 @@
         els.refreshInv.onclick = fetchInventory;
         els.refreshSales.onclick = fetchStats;
 
-        document.getElementById('logout-btn').onclick = async () => {
-            await supabase.auth.signOut();
-            window.location.reload();
+        // Dark Mode Toggle
+        const themeToggle = document.getElementById('theme-toggle');
+        const savedTheme = localStorage.getItem('autobill-theme');
+        if (savedTheme === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+        }
+        themeToggle.onclick = () => {
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            if (isDark) {
+                document.documentElement.removeAttribute('data-theme');
+                themeToggle.innerHTML = '<i class="fas fa-moon"></i>';
+                localStorage.setItem('autobill-theme', 'light');
+            } else {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+                localStorage.setItem('autobill-theme', 'dark');
+            }
         };
+
+        // Auth button onclick is now managed by updateUI(), no override needed here.
 
         // Auth Form
         const authForm = document.getElementById('auth-form');
@@ -1423,7 +2588,7 @@
             // 1. Header Totals
             document.getElementById('calendar-month-title').innerText = `Monthly: ${monthlyData.month}`;
             document.getElementById('calendar-total-rev').innerHTML =
-                `Rev: ₹${monthlyData.month_revenue} <span class="text-emerald-600 ml-2 border-l border-emerald-200 pl-2">Profit: ₹${monthlyData.month_profit}</span>`;
+                `<span style="font-size: 13px;">Rev: ₹${monthlyData.month_revenue}</span> <span style="font-size: 13px;">Profit: ₹${monthlyData.month_profit || 0}</span>`;
 
             // 2. Calendar Grid
             const grid = document.getElementById('calendar-grid');
@@ -1452,12 +2617,16 @@
                     fetchDayDetails(dateStr);
                 };
 
+                const formatCalRev = (v) => {
+                    if (v >= 100000) return `₹${(v / 100000).toFixed(1)}L`;
+                    if (v >= 1000) return `₹${(v / 1000).toFixed(1)}K`;
+                    return `₹${v}`;
+                };
+
                 el.innerHTML = `
-                    <span class="font-bold mb-1">${d}</span>
-                    <div class="flex flex-col items-center leading-none">
-                        ${dayData ? `<span class="text-[10px] font-bold text-slate-700">₹${dayData.revenue}</span>` : ''}
-                        ${dayData ? `<span class="text-[8px] font-bold text-emerald-600">P:${dayData.profit || 0}</span>` : ''}
-                    </div>
+                    <span class="font-bold" style="font-size: 13px; line-height: 1.2;">${d}</span>
+                    ${dayData ? `<span style="font-size: 9px; font-weight: 700; color: #059669; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;">${formatCalRev(dayData.revenue)}</span>` : ''}
+                    ${dayData && dayData.profit !== undefined ? `<span style="font-size: 8px; font-weight: 600; color: #8b5cf6; white-space: nowrap;">P:${formatCalRev(dayData.profit)}</span>` : ''}
                  `;
 
                 grid.appendChild(el);
@@ -1479,25 +2648,26 @@
             if (res) {
                 document.getElementById('day-title').innerText = res.display_date;
                 document.getElementById('day-rev').innerText = `₹${res.revenue}`;
+                document.getElementById('day-profit').innerText = `₹${res.profit || 0}`;
                 document.getElementById('day-orders').innerText = res.orders;
                 document.getElementById('day-items').innerText = res.quantity;
 
                 const list = document.getElementById('day-transactions-list');
                 if (res.items_sold.length === 0) {
-                    list.innerHTML = '<p class="text-slate-400 text-center py-4">No sales recorded.</p>';
+                    list.innerHTML = '<p class="text-center py-4" style="color: var(--text-muted);">No sales recorded.</p>';
                 } else {
                     list.innerHTML = res.items_sold.map(i => `
-                        <div class="flex justify-between items-center p-3 bg-white border border-slate-100 rounded-xl mb-2">
-                            <span class="text-slate-700 font-medium">${i.name}</span>
-                            <span class="text-sm bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full border border-emerald-100">${i.qty} sold</span>
+                        <div class="floating-item">
+                            <span class="font-semibold text-sm" style="color: var(--text-heading);">${i.name}</span>
+                            <span class="stock-pill stock-good">${i.qty} sold</span>
                         </div>
                      `).join('');
                 }
             }
         };
 
-        // Init
-        init();
+        // Run the app — all functions are defined above
+        initApp();
 
         // --- RECEIPT CARD ---
         function showReceiptCard(res) {
@@ -1820,6 +2990,68 @@
             } catch (e) {
                 console.error(e);
                 showToast("Network Error", "error");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+
+        function showLogin() {
+            document.getElementById('auth-overlay').classList.remove('hidden');
+        }
+
+        // Add Close/Back button to Auth Overlay
+        // Since we can't easily modify the auth-overlay HTML structure from here without replacing huge chunks,
+        // we'll inject a back button dynamically if it doesn't exist.
+        function injectAuthBackButton() {
+            const overlay = document.getElementById('auth-overlay');
+            if (!overlay.querySelector('.auth-back-btn')) {
+                const btn = document.createElement('button');
+                btn.className = 'auth-back-btn absolute top-6 left-6 text-slate-400 hover:text-white transition-colors flex items-center gap-2 font-semibold text-sm z-50';
+                btn.innerHTML = '<i class="fas fa-arrow-left"></i> Back';
+                btn.onclick = () => {
+                    document.getElementById('auth-overlay').classList.add('hidden');
+                };
+                overlay.appendChild(btn);
+            }
+        }
+
+        // Call this on init to ensure button is there
+        injectAuthBackButton();
+
+        async function startDemo() {
+            const btn = document.getElementById('demo-btn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = `<i class="fas fa-circle-notch fa-spin"></i> Entering Demo...`;
+            btn.disabled = true;
+
+            try {
+                // Call server-side guest login endpoint
+                const res = await fetch('/login/guest', { method: 'POST' });
+
+                if (!res.ok) {
+                    const errText = await res.text();
+                    throw new Error(errText || "Backend login failed");
+                }
+
+                const sessionData = await res.json();
+
+                if (sessionData) {
+                    // Set session in Supabase client manually
+                    const { data, error } = await supabase.auth.setSession(sessionData);
+
+                    if (error) throw error;
+
+                    // Trigger login success manually since state change listener handles it
+                    // But setSession triggers onAuthStateChange usually
+                    showToast("Welcome to Public Demo Mode!", "success");
+                } else {
+                    throw new Error("No session returned from server");
+                }
+
+            } catch (e) {
+                console.error("Demo Logic Error:", e);
+                showToast("Could not enter demo mode. Backend might be restarting.", "error");
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = originalText;

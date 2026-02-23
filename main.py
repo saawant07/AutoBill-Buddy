@@ -1,6 +1,8 @@
 import os
 import json
 import re
+from datetime import datetime, timedelta
+import asyncio
 from typing import Optional
 from fastapi import FastAPI, HTTPException, Header, Depends, BackgroundTasks
 from fastapi.responses import RedirectResponse
@@ -15,12 +17,17 @@ load_dotenv()
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY", "")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 # Global client for public operations only
 supabase_anon: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel('gemini-2.0-flash')
+
+# Guest mode bypass — uses anon client directly (RLS is disabled)
+GUEST_MAGIC_TOKEN = "GUEST_MODE_NO_AUTH"
+GUEST_USER_ID = "933fc862-30f9-45ef-b83f-c9d57f1ebfc6"
 
 app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
@@ -38,12 +45,18 @@ def get_user_client(authorization: Optional[str] = Header(None)) -> tuple[Client
     """
     Creates a fresh Supabase client for each request using the user's JWT token.
     This ensures Row Level Security (RLS) policies are applied correctly.
+    For guest mode (GUEST_MAGIC_TOKEN), bypasses auth and uses anon client.
     Returns: (supabase_client, user_id)
     """
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
     
     token = authorization.replace("Bearer ", "")
+    
+    # Guest mode bypass — no Supabase Auth needed
+    if token == GUEST_MAGIC_TOKEN:
+        guest_client: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+        return guest_client, GUEST_USER_ID
     
     # Create a new client with the user's token
     user_client: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
@@ -682,6 +695,7 @@ class AddStockRequest(BaseModel):
 async def add_stock(req: AddStockRequest, background_tasks: BackgroundTasks, auth: tuple = Depends(get_user_client)):
     try:
         db, user_id = auth
+        print(f"[add-stock] User {user_id} is adding item: {req.item_name}, qty: {req.quantity}, price: {req.price}")
         item = req.item_name.strip().title()
         qty = req.quantity
         expiry = req.expiry_date if req.expiry_date else None
@@ -881,7 +895,8 @@ async def get_monthly_sales(auth: tuple = Depends(get_user_client)):
         month_start_utc = month_start - timedelta(hours=5, minutes=30)
         
         response = db.table("sales").select("*").eq("user_id", user_id).gte("created_at", month_start_utc.isoformat()).execute()
-        sales = response.data
+        all_sales = response.data
+        sales = [s for s in all_sales if s.get("item_name") != "Payment Received"]
         
         daily_totals = {}
         for s in sales:
@@ -915,7 +930,6 @@ async def get_monthly_sales(auth: tuple = Depends(get_user_client)):
             if date in daily_totals:
                 daily_totals[date]["orders"] = len(orders)
         
-        # Calculate daily profit
         for s in sales:
             created = s.get("created_at", "")
             if created:
@@ -924,13 +938,11 @@ async def get_monthly_sales(auth: tuple = Depends(get_user_client)):
                     ist_date = (dt + timedelta(hours=5, minutes=30)).strftime("%Y-%m-%d")
                     if ist_date in daily_totals:
                         current_profit = daily_totals[ist_date].get("profit", 0)
-                        # Add (Price - Cost)
                         sale_profit = s.get("total_price", 0) - (s.get("total_cost", 0) or 0)
                         daily_totals[ist_date]["profit"] = current_profit + sale_profit
                 except:
                     pass
 
-        # Calculate totals directly from sales (not from daily_totals) to avoid any rounding/grouping issues
         month_revenue = sum(s.get("total_price", 0) for s in sales)
         month_cost = sum(s.get("total_cost", 0) or 0 for s in sales)
         month_profit = month_revenue - month_cost
@@ -969,9 +981,12 @@ async def get_date_sales(date: str, auth: tuple = Depends(get_user_client)):
         utc_end = ist_end - timedelta(hours=5, minutes=30)
         
         response = db.table("sales").select("*").eq("user_id", user_id).gte("created_at", utc_start.isoformat()).lte("created_at", utc_end.isoformat()).execute()
-        sales = response.data
+        all_sales = response.data
+        sales = [s for s in all_sales if s.get("item_name") != "Payment Received"]
         
         total_revenue = sum(s.get("total_price", 0) for s in sales)
+        total_cost = sum(s.get("total_cost", 0) or 0 for s in sales)
+        total_profit = total_revenue - total_cost
         total_quantity = sum(s.get("quantity", 0) for s in sales)
         
         item_summary = {}
@@ -991,6 +1006,7 @@ async def get_date_sales(date: str, auth: tuple = Depends(get_user_client)):
             "date": date,
             "display_date": target_date.strftime("%d %b %Y"),
             "revenue": round(total_revenue, 2),
+            "profit": round(total_profit, 2),
             "orders": len(order_keys),
             "quantity": round(total_quantity, 2),
             "items_sold": [{"name": k, "qty": round(v, 2)} for k, v in item_summary.items()]
@@ -1000,6 +1016,245 @@ async def get_date_sales(date: str, auth: tuple = Depends(get_user_client)):
         traceback.print_exc()
         print(f"Date Sales Error: {e}")
         return {"date": date, "display_date": date, "revenue": 0, "orders": 0, "quantity": 0, "items_sold": []}
+
+# ============================================================================
+# GUEST DEMO MODE LOGIC
+# ============================================================================
+DEMO_CREDENTIALS = [
+    ("guest@autobill.com", "guest1234"),
+    ("demo@autobill.com", "demo123"),
+]
+DEMO_EMAIL = DEMO_CREDENTIALS[0][0]
+DEMO_PASSWORD = DEMO_CREDENTIALS[0][1]
+
+# Cached token from startup — avoids repeated auth calls
+DEMO_ACCESS_TOKEN = None
+
+
+async def setup_demo_user():
+    """
+    Ensures the demo user exists AND is confirmed in Supabase Auth.
+    Uses service role key (admin API) if available — this bypasses email confirmation.
+    Falls back to regular signup if no service key.
+    """
+    global DEMO_ACCESS_TOKEN
+    print("--- Setting up Demo User ---")
+
+    # STRATEGY 1: Use Admin API (service role key) — creates user with confirmed email
+    if SUPABASE_SERVICE_KEY:
+        print("[setup] Using Admin API (service role key)...")
+        try:
+            admin_client: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+            
+            # Try to create user via admin API — auto-confirms email
+            try:
+                admin_user = admin_client.auth.admin.create_user({
+                    "email": DEMO_EMAIL,
+                    "password": DEMO_PASSWORD,
+                    "email_confirm": True,
+                    "user_metadata": {"full_name": "Demo Store"}
+                })
+                print(f"[setup] ✅ Demo user CREATED via admin: {admin_user.user.id}")
+            except Exception as create_err:
+                err_str = str(create_err)
+                if "already been registered" in err_str or "already exists" in err_str:
+                    print("[setup] User already exists, updating to confirm email...")
+                    # List users to find the demo user and confirm their email
+                    try:
+                        users = admin_client.auth.admin.list_users()
+                        demo_user = None
+                        for u in users:
+                            if hasattr(u, 'email') and u.email == DEMO_EMAIL:
+                                demo_user = u
+                                break
+                        if demo_user:
+                            # Update user to confirm email and set password
+                            admin_client.auth.admin.update_user_by_id(
+                                demo_user.id,
+                                {"email_confirm": True, "password": DEMO_PASSWORD}
+                            )
+                            print(f"[setup] ✅ Demo user CONFIRMED via admin: {demo_user.id}")
+                        else:
+                            print("[setup] ⚠ Could not find demo user in user list")
+                    except Exception as list_err:
+                        print(f"[setup] ⚠ Admin list/update error: {list_err}")
+                else:
+                    print(f"[setup] ⚠ Admin create error: {create_err}")
+            
+            # Now login normally to get a session token
+            anon_client: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+            try:
+                auth_response = anon_client.auth.sign_in_with_password({
+                    "email": DEMO_EMAIL, "password": DEMO_PASSWORD
+                })
+                if auth_response.session:
+                    DEMO_ACCESS_TOKEN = auth_response.session.access_token
+                    print(f"[setup] ✅ Demo token cached! User ID: {auth_response.user.id}")
+                    
+                    # Populate inventory if empty
+                    await _seed_demo_inventory(anon_client, auth_response.user.id)
+                    return
+            except Exception as login_err:
+                print(f"[setup] Login after admin setup failed: {login_err}")
+                
+        except Exception as e:
+            print(f"[setup] Admin API error: {e}")
+    else:
+        print("[setup] No SUPABASE_SERVICE_KEY found — skipping admin API")
+
+    # STRATEGY 2: Fallback — regular signup + login (requires email confirmation disabled in Supabase)
+    print("[setup] Trying regular signup/login flow...")
+    anon_client: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+    
+    # Try login first
+    try:
+        auth_response = anon_client.auth.sign_in_with_password({
+            "email": DEMO_EMAIL, "password": DEMO_PASSWORD
+        })
+        if auth_response.session:
+            DEMO_ACCESS_TOKEN = auth_response.session.access_token
+            print(f"[setup] ✅ Demo user logged in: {auth_response.user.id}")
+            await _seed_demo_inventory(anon_client, auth_response.user.id)
+            return
+    except Exception as e:
+        print(f"[setup] Login failed: {e}")
+    
+    # Try signup
+    try:
+        auth_response = anon_client.auth.sign_up({
+            "email": DEMO_EMAIL, "password": DEMO_PASSWORD,
+            "options": {"data": {"full_name": "Demo Store"}}
+        })
+        if auth_response.session:
+            DEMO_ACCESS_TOKEN = auth_response.session.access_token
+            print(f"[setup] ✅ Demo user created & logged in: {auth_response.user.id}")
+            await _seed_demo_inventory(anon_client, auth_response.user.id)
+            return
+        elif auth_response.user:
+            print(f"[setup] ⚠ User created but email not confirmed. ID: {auth_response.user.id}")
+            print("[setup] >> Add SUPABASE_SERVICE_KEY to .env to fix this! <<")
+    except Exception as e:
+        print(f"[setup] Signup failed: {e}")
+    
+    print("[setup] ❌ Could not setup demo user. Guest mode will not work.")
+    print("[setup] >> To fix: Add SUPABASE_SERVICE_KEY=<your-service-role-key> to .env <<")
+
+
+async def _seed_demo_inventory(client: Client, user_id: str):
+    """Seeds demo inventory if empty."""
+    try:
+        res = client.table("inventory").select("id", count="exact").eq("user_id", user_id).limit(1).execute()
+        count = res.count if res.count is not None else len(res.data)
+        
+        if count == 0:
+            print("[setup] Seeding demo inventory...")
+            now = datetime.now()
+            items = [
+                {"item_name": "Amul Milk",        "stock_quantity": 50,  "price": 30.0,  "cost_price": 25.0,  "expiry_date": (now + timedelta(days=5)).strftime('%Y-%m-%d'),   "user_id": user_id},
+                {"item_name": "Maggi",             "stock_quantity": 100, "price": 14.0,  "cost_price": 11.0,  "expiry_date": (now + timedelta(days=180)).strftime('%Y-%m-%d'), "user_id": user_id},
+                {"item_name": "Coca Cola",         "stock_quantity": 25,  "price": 40.0,  "cost_price": 32.0,  "expiry_date": (now + timedelta(days=365)).strftime('%Y-%m-%d'), "user_id": user_id},
+                {"item_name": "Aashirvaad Atta",   "stock_quantity": 10,  "price": 450.0, "cost_price": 400.0, "expiry_date": (now + timedelta(days=60)).strftime('%Y-%m-%d'),  "user_id": user_id},
+                {"item_name": "Britannia Bread",   "stock_quantity": 20,  "price": 50.0,  "cost_price": 40.0,  "expiry_date": (now + timedelta(days=3)).strftime('%Y-%m-%d'),   "user_id": user_id},
+            ]
+            client.table("inventory").insert(items).execute()
+            print("[setup] ✅ Demo inventory seeded with 5 items!")
+        else:
+            print(f"[setup] Inventory already has {count} items.")
+    except Exception as e:
+        print(f"[setup] Inventory seed error: {e}")
+
+
+@app.on_event("startup")
+async def startup_event():
+    asyncio.create_task(setup_demo_user())
+
+
+@app.post("/login/guest")
+async def guest_login_endpoint():
+    global DEMO_ACCESS_TOKEN
+    # Return cached session if available
+    if DEMO_ACCESS_TOKEN:
+        client: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+        try:
+            response = client.auth.sign_in_with_password({
+                "email": DEMO_EMAIL, "password": DEMO_PASSWORD
+            })
+            if response.session:
+                DEMO_ACCESS_TOKEN = response.session.access_token
+                return response.session
+        except Exception as e:
+            print(f"Guest Login Endpoint Error: {e}")
+    
+    # Fallback: try fresh login
+    client: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+    try:
+        response = client.auth.sign_in_with_password({
+            "email": DEMO_EMAIL, "password": DEMO_PASSWORD
+        })
+        if response.session:
+            DEMO_ACCESS_TOKEN = response.session.access_token
+        return response.session
+    except Exception as e:
+        print(f"Guest Login Endpoint Error: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="Demo Mode Unavailable")
+
+
+@app.post("/get-guest-token")
+async def get_guest_token():
+    """
+    Zero-friction guest token. Returns the magic guest token that
+    bypasses Supabase Auth entirely (RLS is disabled).
+    Also seeds inventory if empty.
+    """
+    print("[get-guest-token] Returning guest magic token (auth bypass)")
+    
+    # Seed inventory if empty
+    client: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+    await _seed_demo_inventory(client, GUEST_USER_ID)
+    
+    return {"access_token": GUEST_MAGIC_TOKEN}
+
+
+@app.post("/reset-demo-inventory")
+async def reset_demo_inventory():
+    """
+    Force-resets the demo user's inventory.
+    Clears existing items and inserts fresh demo stock.
+    Uses anon client directly (RLS disabled).
+    """
+    print("[reset-demo-inventory] Starting...")
+    
+    client: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+    user_id = GUEST_USER_ID
+    
+    # Clear existing inventory
+    try:
+        client.table("inventory").delete().eq("user_id", user_id).execute()
+        print("[reset-demo-inventory] Cleared existing inventory")
+    except Exception as e:
+        print(f"[reset-demo-inventory] Clear error: {e}")
+    
+    # Insert fresh items
+    try:
+        now = datetime.now()
+        items = [
+            {"item_name": "Amul Milk",        "stock_quantity": 50,  "price": 30.0,  "cost_price": 25.0,  "expiry_date": (now + timedelta(days=5)).strftime('%Y-%m-%d'),   "user_id": user_id},
+            {"item_name": "Maggi",             "stock_quantity": 100, "price": 14.0,  "cost_price": 11.0,  "expiry_date": (now + timedelta(days=180)).strftime('%Y-%m-%d'), "user_id": user_id},
+            {"item_name": "Coca Cola",         "stock_quantity": 25,  "price": 40.0,  "cost_price": 32.0,  "expiry_date": (now + timedelta(days=365)).strftime('%Y-%m-%d'), "user_id": user_id},
+            {"item_name": "Aashirvaad Atta",   "stock_quantity": 10,  "price": 450.0, "cost_price": 400.0, "expiry_date": (now + timedelta(days=60)).strftime('%Y-%m-%d'),  "user_id": user_id},
+            {"item_name": "Britannia Bread",   "stock_quantity": 20,  "price": 50.0,  "cost_price": 40.0,  "expiry_date": (now + timedelta(days=3)).strftime('%Y-%m-%d'),   "user_id": user_id},
+        ]
+        client.table("inventory").insert(items).execute()
+        print("[reset-demo-inventory] ✅ Inventory restocked!")
+        return {"success": True, "message": "Inventory Restocked!", "items_added": len(items)}
+    except Exception as e:
+        print(f"[reset-demo-inventory] Insert error: {e}")
+        import traceback
+        traceback.print_exc()
+        return {"success": False, "error": f"Insert failed: {str(e)}"}
+
 
 if __name__ == "__main__":
     import uvicorn
