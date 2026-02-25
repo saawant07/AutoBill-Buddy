@@ -2351,13 +2351,16 @@
             <div class="flex-1 overflow-y-auto p-6">
                 <!-- Customer & Mode Selection -->
                 <div class="flex flex-col sm:flex-row gap-4 mb-6">
-                    <div class="flex-1">
+                    <div class="flex-1 relative">
                         <label class="block text-xs font-bold uppercase mb-1.5"
                             style="color: var(--text-muted);">Customer Name</label>
-                        <input type="text" id="confirm-customer" list="customer-list"
+                        <input type="text" id="confirm-customer" autocomplete="off"
                             class="w-full px-5 py-3 rounded-2xl border border-gray-200 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-100 text-sm transition-all"
-                            placeholder="Walk-in">
-                        <datalist id="customer-list"></datalist>
+                            placeholder="Walk-in" onfocus="showCustomerDropdown()" onkeyup="filterCustomerDropdown()"
+                            onblur="setTimeout(hideCustomerDropdown, 200)">
+                        <ul id="customer-dropdown"
+                            class="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto hidden">
+                        </ul>
                     </div>
                     <div class="flex-1">
                         <label class="block text-xs font-bold uppercase mb-1.5"
@@ -3605,25 +3608,49 @@
             }
         };
 
-        // --- UDHAAR STATS ---
+        // --- UDHAAR STATS & CUSTOMER DROPDOWN ---
+        let allCustomers = [];
+
         async function fetchUdhaarStats() {
             const res = await api('/dues');
             if (res && res.dues) {
                 const totalDue = res.dues.reduce((sum, d) => sum + (d.total_due || 0), 0);
                 document.getElementById('stat-udhaar').textContent = `₹${Math.round(totalDue)}`;
 
-                // Populate Customer Autocomplete
-                const dataList = document.getElementById('customer-list');
-                if (dataList) {
-                    dataList.innerHTML = '';
-                    const uniqueCustomers = [...new Set(res.dues.map(d => d.customer_name))].filter(Boolean);
-                    uniqueCustomers.forEach(customer => {
-                        const option = document.createElement('option');
-                        option.value = customer;
-                        dataList.appendChild(option);
-                    });
-                }
+                allCustomers = [...new Set(res.dues.map(d => d.customer_name))].filter(Boolean);
             }
+        }
+
+        window.showCustomerDropdown = function () {
+            filterCustomerDropdown();
+            document.getElementById('customer-dropdown').classList.remove('hidden');
+        }
+
+        window.hideCustomerDropdown = function () {
+            document.getElementById('customer-dropdown').classList.add('hidden');
+        }
+
+        window.filterCustomerDropdown = function () {
+            const input = document.getElementById('confirm-customer');
+            const dropdown = document.getElementById('customer-dropdown');
+            const term = input.value.toLowerCase();
+
+            const filtered = allCustomers.filter(c => c.toLowerCase().includes(term));
+
+            if (filtered.length === 0) {
+                dropdown.innerHTML = `<li class="px-4 py-3 text-sm text-slate-400 italic">No historical matches</li>`;
+            } else {
+                dropdown.innerHTML = filtered.map(c => `
+                    <li onclick="selectCustomer('${c.replace(/'/g, "\\'")}')" class="px-4 py-3 text-sm text-slate-700 hover:bg-emerald-50 cursor-pointer font-medium transition-colors border-b border-gray-50 last:border-0">
+                        <i class="fas fa-user-circle text-emerald-400 mr-2"></i> ${c}
+                    </li>
+                `).join('');
+            }
+        }
+
+        window.selectCustomer = function (name) {
+            document.getElementById('confirm-customer').value = name;
+            hideCustomerDropdown();
         }
 
         // --- ORDER CONFIRMATION LOGIC ---
