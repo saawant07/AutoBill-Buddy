@@ -3630,7 +3630,15 @@
                             <button onclick="updateQty(${index}, 0.5)" class="w-5 h-5 flex items-center justify-center text-slate-400 hover:text-emerald-500 rounded text-xs"><i class="fas fa-plus"></i></button>
                         </div>
                     </td>
-                    <td class="px-3 py-2 text-right font-mono text-slate-600">₹${Math.round(itemTotal)}</td>
+                    <td class="px-3 py-2 text-right">
+                        <div class="flex items-center justify-end gap-1">
+                            <span class="text-slate-400 text-sm">₹</span>
+                            <input type="number" min="0" value="${item.unit_price}" 
+                                onchange="updateItemPrice(${index}, this.value)"
+                                class="w-14 bg-transparent outline-none border-b border-slate-200 focus:border-emerald-500 text-right font-mono text-slate-700 font-bold transition-colors">
+                        </div>
+                        <div class="text-[10px] text-slate-400 mt-1 uppercase tracking-wider font-semibold">Tot: ₹${Math.round(itemTotal)}</div>
+                    </td>
                     <td class="px-3 py-2 text-center">
                         <button onclick="deleteOrderItem(${index})" class="text-slate-300 hover:text-red-500 transition-colors"><i class="fas fa-trash-alt"></i></button>
                     </td>
@@ -3645,6 +3653,14 @@
             const newQty = currentOrderItems[index].quantity + change;
             if (newQty > 0) {
                 currentOrderItems[index].quantity = newQty;
+                renderOrderItems();
+            }
+        }
+
+        window.updateItemPrice = function (index, newPrice) {
+            const price = parseFloat(newPrice);
+            if (!isNaN(price) && price >= 0) {
+                currentOrderItems[index].unit_price = price;
                 renderOrderItems();
             }
         }
