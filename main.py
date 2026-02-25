@@ -99,6 +99,7 @@ async def get_inventory(auth: tuple = Depends(get_user_client)):
                     "item_name": name,
                     "stock_quantity": 0,
                     "price": row['price'],
+                    "cost_price": row.get('cost_price', 0),
                     "expiry_date": None, # Start with None to avoid picking up 0-stock dates
                     "ids": []
                 }
@@ -106,6 +107,17 @@ async def get_inventory(auth: tuple = Depends(get_user_client)):
             agg = aggregated[name]
             agg["stock_quantity"] += row['stock_quantity']
             agg["ids"].append(row['id'])
+            
+            # Prefer a non-zero price if available across batches
+            if row['price'] is not None and row['price'] > 0:
+                if agg['price'] is None or agg['price'] == 0:
+                    agg['price'] = row['price']
+                    
+            # Prefer a non-zero cost_price if available across batches
+            row_cp = row.get('cost_price', 0)
+            if row_cp is not None and row_cp > 0:
+                if agg['cost_price'] is None or agg['cost_price'] == 0:
+                    agg['cost_price'] = row_cp
             
             # Keep earliest non-null expiry from ACTIVE batches
             if row['stock_quantity'] > 0:
@@ -186,6 +198,7 @@ def fuzzy_match_item(word, available_items):
         'biskit': 'biscuits', 'biscuit': 'biscuits',
         'chiips': 'chips', 'chip': 'chips',
         'noodle': 'noodles',
+        'maggie': 'maggi', 'maagi': 'maggi',
     }
     
     word_lower = word.lower().strip()
@@ -252,7 +265,7 @@ def parse_message_locally(message, available_items, custom_aliases=None):
         'maida': 'maida', 'mayda': 'maida',
         'biskut': 'biscuits', 'biscut': 'biscuits', 'biskoot': 'biscuits', 'biskit': 'biscuits',
         'sabun': 'soap', 'saabun': 'soap',
-        'maggi': 'noodles', 'maagi': 'noodles', 'noodle': 'noodles',
+        'maggie': 'maggi', 'maagi': 'maggi', 'noodle': 'noodles',
         'tooothpaste': 'toothpaste', 'toothpast': 'toothpaste', 'colgate': 'toothpaste',
         'tee': 'tea', 'chai': 'tea', 'patti': 'tea',
         'coffe': 'coffee', 'koffee': 'coffee', 'cofee': 'coffee',
@@ -312,28 +325,110 @@ def parse_message_locally(message, available_items, custom_aliases=None):
     text = ' '.join(text.split())
 
     items_found = []
-    used_positions = set()
+    words = text.split()
+    consumed_indices = set()  # track which word positions are already matched
     
-    # Pattern 1: "2 milk"
-    for match in re.finditer(r'(\d+(?:\.\d+)?)\s*([a-zA-Z]+)', text):
-        qty_str, item_word = match.groups()
-        matched_item = fuzzy_match_item(item_word, available_items)
-        if matched_item and match.start() not in used_positions:
-            items_found.append({"item": matched_item, "qty": float(qty_str)})
-            used_positions.add(match.start())
+    # Pattern 1: "2 amul milk" or "2 milk" (number followed by item words)
+    # Try matching number + next 2 words first, then number + next 1 word
+    i = 0
+    while i < len(words):
+        # Check if current word is a number
+        num_match = re.match(r'^(\d+(?:\.\d+)?)$', words[i])
+        if num_match and i not in consumed_indices:
+            qty = float(num_match.group(1))
+            matched = False
             
-    # Pattern 2: "milk 2"
-    for match in re.finditer(r'([a-zA-Z]+)\s+(\d+(?:\.\d+)?)', text):
-        item_word, qty_str = match.groups()
-        matched_item = fuzzy_match_item(item_word, available_items)
-        if matched_item and not any(i["item"] == matched_item for i in items_found):
-            items_found.append({"item": matched_item, "qty": float(qty_str)})
+            # Try 2-word item: "2 amul milk" (skip if either word is a digit)
+            if (i + 2 < len(words) and (i+1) not in consumed_indices and (i+2) not in consumed_indices
+                    and not words[i+1].replace('.','').isdigit() and not words[i+2].replace('.','').isdigit()):
+                combo2 = f"{words[i+1]} {words[i+2]}"
+                match2 = fuzzy_match_item(combo2, available_items)
+                if match2 and not any(it["item"] == match2 for it in items_found):
+                    items_found.append({"item": match2, "qty": qty})
+                    consumed_indices.update({i, i+1, i+2})
+                    i += 3
+                    matched = True
+            
+            # Try 1-word item: "2 milk"
+            if not matched and i + 1 < len(words) and (i+1) not in consumed_indices:
+                match1 = fuzzy_match_item(words[i+1], available_items)
+                if match1 and not any(it["item"] == match1 for it in items_found):
+                    items_found.append({"item": match1, "qty": qty})
+                    consumed_indices.update({i, i+1})
+                    i += 2
+                    matched = True
+            
+            if not matched:
+                i += 1
+        else:
+            i += 1
+    
+    # Pattern 2: "amul milk 2" or "milk 2" (item words followed by number)
+    i = 0
+    while i < len(words):
+        if i in consumed_indices:
+            i += 1
+            continue
+        
+        # Try 2-word item + number: "amul milk 2"
+        if i + 2 < len(words) and (i+1) not in consumed_indices and (i+2) not in consumed_indices:
+            num_match = re.match(r'^(\d+(?:\.\d+)?)$', words[i+2])
+            if num_match:
+                combo = f"{words[i]} {words[i+1]}"
+                match2 = fuzzy_match_item(combo, available_items)
+                if match2 and not any(it["item"] == match2 for it in items_found):
+                    items_found.append({"item": match2, "qty": float(num_match.group(1))})
+                    consumed_indices.update({i, i+1, i+2})
+                    i += 3
+                    continue
+        
+        # Try 1-word item + number: "milk 2"
+        if i + 1 < len(words) and (i+1) not in consumed_indices:
+            num_match = re.match(r'^(\d+(?:\.\d+)?)$', words[i+1])
+            if num_match and not words[i].replace('.', '').isdigit():
+                match1 = fuzzy_match_item(words[i], available_items)
+                if match1 and not any(it["item"] == match1 for it in items_found):
+                    items_found.append({"item": match1, "qty": float(num_match.group(1))})
+                    consumed_indices.update({i, i+1})
+                    i += 2
+                    continue
+        
+        i += 1
 
-    # Pattern 3: Standalone items
-    for word in text.split():
+    # Pattern 3: Standalone items — try multi-word matches first to avoid duplicates
+    # e.g. "britannia bread" should match "Britannia Bread" only, not also "Bread"
+    
+    # 3a: Try 3-word combinations
+    for i in range(len(words) - 2):
+        if i in consumed_indices or (i+1) in consumed_indices or (i+2) in consumed_indices:
+            continue
+        combo = f"{words[i]} {words[i+1]} {words[i+2]}"
+        if combo.replace('.', '').replace(' ', '').isdigit():
+            continue
+        matched_item = fuzzy_match_item(combo, available_items)
+        if matched_item and not any(it["item"] == matched_item for it in items_found):
+            items_found.append({"item": matched_item, "qty": 1.0})
+            consumed_indices.update({i, i+1, i+2})
+    
+    # 3b: Try 2-word combinations (e.g. "britannia bread", "amul milk", "toor dal")
+    for i in range(len(words) - 1):
+        if i in consumed_indices or (i+1) in consumed_indices:
+            continue
+        combo = f"{words[i]} {words[i+1]}"
+        if combo.replace('.', '').replace(' ', '').isdigit():
+            continue
+        matched_item = fuzzy_match_item(combo, available_items)
+        if matched_item and not any(it["item"] == matched_item for it in items_found):
+            items_found.append({"item": matched_item, "qty": 1.0})
+            consumed_indices.update({i, i+1})
+    
+    # 3c: Single-word fallback for unconsumed words
+    for i, word in enumerate(words):
+        if i in consumed_indices:
+            continue
         if not word.replace('.', '').isdigit():
             matched_item = fuzzy_match_item(word, available_items)
-            if matched_item and not any(i["item"] == matched_item for i in items_found):
+            if matched_item and not any(it["item"] == matched_item for it in items_found):
                 items_found.append({"item": matched_item, "qty": 1.0})
                 
     return items_found, detected_mode, detected_customer
@@ -347,8 +442,18 @@ async def parse_order_endpoint(req: ChatRequest, auth: tuple = Depends(get_user_
         ITEM_PRICES, user_inventory = get_user_inventory_data(db, user_id)
         available_items = list(ITEM_PRICES.keys())
         
+        # Fetch custom aliases from DB (Global for all users)
+        custom_aliases = {}
+        try:
+            alias_res = db.table("item_aliases").select("item_name, alias").execute()
+            if alias_res.data:
+                for row in alias_res.data:
+                    custom_aliases[row['alias'].lower()] = row['item_name']
+        except Exception as e:
+            print(f"[PARSE] Error fetching aliases: {e}")
+        
         # 1. Try Local Parsing First
-        items_to_sell, payment_mode, customer_name = parse_message_locally(req.message, available_items)
+        items_to_sell, payment_mode, customer_name = parse_message_locally(req.message, available_items, custom_aliases)
         
         # 2. AI Fallback if Local finds nothing
         if not items_to_sell:
@@ -426,10 +531,18 @@ async def confirm_order_endpoint(req: ConfirmOrderRequest, auth: tuple = Depends
         item = item_data["item_name"].strip().title()
         qty = float(item_data["quantity"])
         
-        # Determine price (trust backend price over frontend)
-        # However, if frontend sends price, we could use it, but safer to lookup
-        unit_price = ITEM_PRICES.get(item, 0)
-        price = qty * unit_price
+        # Determine price (trust frontend price since user explicitly confirms it)
+        # Fallback to backend price if missing
+        fallback_unit_price = ITEM_PRICES.get(item, 0)
+        unit_price = item_data.get("unit_price", fallback_unit_price)
+        price = item_data.get("total_price", qty * unit_price)
+        
+        # If backend price was 0, learn the new price from this transaction
+        if fallback_unit_price == 0 and unit_price > 0:
+            try:
+                db.table("inventory").update({"price": unit_price}).eq("user_id", user_id).eq("item_name", item).execute()
+            except:
+                pass
         
         # Check Stock (Aggregate)
         batches = db.table("inventory").select("id, stock_quantity, cost_price").eq("user_id", user_id).eq("item_name", item).order("expiry_date", desc=False).execute().data
@@ -602,14 +715,27 @@ async def get_todays_sales(auth: tuple = Depends(get_user_client)):
                 
                 orders[oid] = {
                     "items": [],
+                    "detailed_items": [],
                     "total_price": 0,
                     "order_id": oid,
                     "time": time_str,
                     "payment_mode": s.get("payment_mode", "Cash"),
                     "customer_name": s.get("customer_name", "Walk-in")
                 }
-            orders[oid]["items"].append(f"{s.get('quantity', 0)} {s.get('item_name', '?')}")
-            orders[oid]["total_price"] += s.get("total_price", 0)
+            
+            qty = s.get('quantity', 0)
+            name = s.get('item_name', '?')
+            total = s.get('total_price', 0)
+            unit_price = total / qty if qty > 0 else 0
+            
+            orders[oid]["items"].append(f"{qty} {name}")
+            orders[oid]["detailed_items"].append({
+                "qty": qty,
+                "name": name,
+                "unit_price": round(unit_price, 2),
+                "total": round(total, 2)
+            })
+            orders[oid]["total_price"] += total
         
         transactions = []
         order_num = len(orders)
@@ -617,6 +743,7 @@ async def get_todays_sales(auth: tuple = Depends(get_user_client)):
             transactions.append({
                 "order": f"{order_num:04d}",
                 "item": ", ".join(data["items"]),
+                "detailed_items": data["detailed_items"],
                 "qty": len(data["items"]),
                 "price": round(data["total_price"], 2),
                 "time": data["time"],
@@ -652,7 +779,7 @@ from fastapi import FastAPI, HTTPException, Header, Depends, BackgroundTasks
 async def generate_aliases_task(item_name: str, user_id: str, db: Client):
     try:
         print(f"Generating aliases for: {item_name}")
-        model = genai.GenerativeModel('gemini-2.0-flash-exp')
+        model = genai.GenerativeModel('gemini-2.5-flash')
         prompt = f"""
         Generate 5-10 common voice-to-text typos, phonetic misspellings, and Hindi/Hinglish synonyms for the grocery item '{item_name}'.
         Return ONLY a JSON array of lowercase strings.
@@ -672,10 +799,10 @@ async def generate_aliases_task(item_name: str, user_id: str, db: Client):
         aliases = json.loads(text)
         
         if aliases and isinstance(aliases, list):
-            data = [{"item_name": item_name, "alias": a.lower(), "user_id": user_id} for a in aliases]
+            data = [{"item_name": item_name, "alias": a.lower()} for a in aliases]
             # Add exact name too if not present, to be safe
             if item_name.lower() not in aliases:
-                data.append({"item_name": item_name, "alias": item_name.lower(), "user_id": user_id})
+                data.append({"item_name": item_name, "alias": item_name.lower()})
                 
             # Insert into item_aliases
             db.table("item_aliases").insert(data).execute()
@@ -1018,126 +1145,12 @@ async def get_date_sales(date: str, auth: tuple = Depends(get_user_client)):
         return {"date": date, "display_date": date, "revenue": 0, "orders": 0, "quantity": 0, "items_sold": []}
 
 # ============================================================================
-# GUEST DEMO MODE LOGIC
+# GUEST DEMO MODE — Simple, No Supabase Auth Required
 # ============================================================================
-DEMO_CREDENTIALS = [
-    ("guest@autobill.com", "guest1234"),
-    ("demo@autobill.com", "demo123"),
-]
-DEMO_EMAIL = DEMO_CREDENTIALS[0][0]
-DEMO_PASSWORD = DEMO_CREDENTIALS[0][1]
-
-# Cached token from startup — avoids repeated auth calls
-DEMO_ACCESS_TOKEN = None
-
-
-async def setup_demo_user():
-    """
-    Ensures the demo user exists AND is confirmed in Supabase Auth.
-    Uses service role key (admin API) if available — this bypasses email confirmation.
-    Falls back to regular signup if no service key.
-    """
-    global DEMO_ACCESS_TOKEN
-    print("--- Setting up Demo User ---")
-
-    # STRATEGY 1: Use Admin API (service role key) — creates user with confirmed email
-    if SUPABASE_SERVICE_KEY:
-        print("[setup] Using Admin API (service role key)...")
-        try:
-            admin_client: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
-            
-            # Try to create user via admin API — auto-confirms email
-            try:
-                admin_user = admin_client.auth.admin.create_user({
-                    "email": DEMO_EMAIL,
-                    "password": DEMO_PASSWORD,
-                    "email_confirm": True,
-                    "user_metadata": {"full_name": "Demo Store"}
-                })
-                print(f"[setup] ✅ Demo user CREATED via admin: {admin_user.user.id}")
-            except Exception as create_err:
-                err_str = str(create_err)
-                if "already been registered" in err_str or "already exists" in err_str:
-                    print("[setup] User already exists, updating to confirm email...")
-                    # List users to find the demo user and confirm their email
-                    try:
-                        users = admin_client.auth.admin.list_users()
-                        demo_user = None
-                        for u in users:
-                            if hasattr(u, 'email') and u.email == DEMO_EMAIL:
-                                demo_user = u
-                                break
-                        if demo_user:
-                            # Update user to confirm email and set password
-                            admin_client.auth.admin.update_user_by_id(
-                                demo_user.id,
-                                {"email_confirm": True, "password": DEMO_PASSWORD}
-                            )
-                            print(f"[setup] ✅ Demo user CONFIRMED via admin: {demo_user.id}")
-                        else:
-                            print("[setup] ⚠ Could not find demo user in user list")
-                    except Exception as list_err:
-                        print(f"[setup] ⚠ Admin list/update error: {list_err}")
-                else:
-                    print(f"[setup] ⚠ Admin create error: {create_err}")
-            
-            # Now login normally to get a session token
-            anon_client: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-            try:
-                auth_response = anon_client.auth.sign_in_with_password({
-                    "email": DEMO_EMAIL, "password": DEMO_PASSWORD
-                })
-                if auth_response.session:
-                    DEMO_ACCESS_TOKEN = auth_response.session.access_token
-                    print(f"[setup] ✅ Demo token cached! User ID: {auth_response.user.id}")
-                    
-                    # Populate inventory if empty
-                    await _seed_demo_inventory(anon_client, auth_response.user.id)
-                    return
-            except Exception as login_err:
-                print(f"[setup] Login after admin setup failed: {login_err}")
-                
-        except Exception as e:
-            print(f"[setup] Admin API error: {e}")
-    else:
-        print("[setup] No SUPABASE_SERVICE_KEY found — skipping admin API")
-
-    # STRATEGY 2: Fallback — regular signup + login (requires email confirmation disabled in Supabase)
-    print("[setup] Trying regular signup/login flow...")
-    anon_client: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-    
-    # Try login first
-    try:
-        auth_response = anon_client.auth.sign_in_with_password({
-            "email": DEMO_EMAIL, "password": DEMO_PASSWORD
-        })
-        if auth_response.session:
-            DEMO_ACCESS_TOKEN = auth_response.session.access_token
-            print(f"[setup] ✅ Demo user logged in: {auth_response.user.id}")
-            await _seed_demo_inventory(anon_client, auth_response.user.id)
-            return
-    except Exception as e:
-        print(f"[setup] Login failed: {e}")
-    
-    # Try signup
-    try:
-        auth_response = anon_client.auth.sign_up({
-            "email": DEMO_EMAIL, "password": DEMO_PASSWORD,
-            "options": {"data": {"full_name": "Demo Store"}}
-        })
-        if auth_response.session:
-            DEMO_ACCESS_TOKEN = auth_response.session.access_token
-            print(f"[setup] ✅ Demo user created & logged in: {auth_response.user.id}")
-            await _seed_demo_inventory(anon_client, auth_response.user.id)
-            return
-        elif auth_response.user:
-            print(f"[setup] ⚠ User created but email not confirmed. ID: {auth_response.user.id}")
-            print("[setup] >> Add SUPABASE_SERVICE_KEY to .env to fix this! <<")
-    except Exception as e:
-        print(f"[setup] Signup failed: {e}")
-    
-    print("[setup] ❌ Could not setup demo user. Guest mode will not work.")
-    print("[setup] >> To fix: Add SUPABASE_SERVICE_KEY=<your-service-role-key> to .env <<")
+# Demo mode uses GUEST_MAGIC_TOKEN (defined at top) + GUEST_USER_ID.
+# No email/password, no service key, no Supabase Auth at all.
+# Logged-in users get isolated data via their own user_id + RLS.
+# ============================================================================
 
 
 async def _seed_demo_inventory(client: Client, user_id: str):
@@ -1147,7 +1160,7 @@ async def _seed_demo_inventory(client: Client, user_id: str):
         count = res.count if res.count is not None else len(res.data)
         
         if count == 0:
-            print("[setup] Seeding demo inventory...")
+            print("[demo] Seeding demo inventory...")
             now = datetime.now()
             items = [
                 {"item_name": "Amul Milk",        "stock_quantity": 50,  "price": 30.0,  "cost_price": 25.0,  "expiry_date": (now + timedelta(days=5)).strftime('%Y-%m-%d'),   "user_id": user_id},
@@ -1157,48 +1170,20 @@ async def _seed_demo_inventory(client: Client, user_id: str):
                 {"item_name": "Britannia Bread",   "stock_quantity": 20,  "price": 50.0,  "cost_price": 40.0,  "expiry_date": (now + timedelta(days=3)).strftime('%Y-%m-%d'),   "user_id": user_id},
             ]
             client.table("inventory").insert(items).execute()
-            print("[setup] ✅ Demo inventory seeded with 5 items!")
+            print("[demo] ✅ Demo inventory seeded with 5 items!")
         else:
-            print(f"[setup] Inventory already has {count} items.")
+            print(f"[demo] Demo inventory already has {count} items — skipping seed.")
     except Exception as e:
-        print(f"[setup] Inventory seed error: {e}")
+        print(f"[demo] Inventory seed error: {e}")
 
 
 @app.on_event("startup")
 async def startup_event():
-    asyncio.create_task(setup_demo_user())
-
-
-@app.post("/login/guest")
-async def guest_login_endpoint():
-    global DEMO_ACCESS_TOKEN
-    # Return cached session if available
-    if DEMO_ACCESS_TOKEN:
-        client: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-        try:
-            response = client.auth.sign_in_with_password({
-                "email": DEMO_EMAIL, "password": DEMO_PASSWORD
-            })
-            if response.session:
-                DEMO_ACCESS_TOKEN = response.session.access_token
-                return response.session
-        except Exception as e:
-            print(f"Guest Login Endpoint Error: {e}")
-    
-    # Fallback: try fresh login
+    """Seeds demo inventory at startup using anon client — no Supabase Auth needed."""
+    print("--- Demo Mode Setup (No Auth Required) ---")
     client: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-    try:
-        response = client.auth.sign_in_with_password({
-            "email": DEMO_EMAIL, "password": DEMO_PASSWORD
-        })
-        if response.session:
-            DEMO_ACCESS_TOKEN = response.session.access_token
-        return response.session
-    except Exception as e:
-        print(f"Guest Login Endpoint Error: {e}")
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail="Demo Mode Unavailable")
+    await _seed_demo_inventory(client, GUEST_USER_ID)
+    print("[demo] ✅ Ready! Demo uses shared GUEST_USER_ID, logged-in users get isolated data.")
 
 
 @app.post("/get-guest-token")
