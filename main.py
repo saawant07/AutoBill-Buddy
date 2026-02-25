@@ -1012,6 +1012,56 @@ async def settle_dues(req: SettleDuesRequest, auth: tuple = Depends(get_user_cli
         traceback.print_exc()
         return {"message": f"❌ Error: {str(e)}", "success": False}
 
+@app.get("/analytics/weekly")
+async def get_weekly_analytics(auth: tuple = Depends(get_user_client)):
+    from datetime import datetime, timezone, timedelta
+    try:
+        db, user_id = auth
+        ist_now = datetime.now(timezone.utc) + timedelta(hours=5, minutes=30)
+        
+        # Get last 7 days including today (oldest first)
+        dates = [(ist_now - timedelta(days=i)).strftime("%Y-%m-%d") for i in range(6, -1, -1)]
+        
+        weekly_data = {
+            "dates": [d[5:] for d in dates], # Just MM-DD for label
+            "cash": [0] * 7,
+            "udhaar": [0] * 7
+        }
+        
+        start_date = ist_now.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=6)
+        start_date_utc = start_date - timedelta(hours=5, minutes=30)
+        
+        response = db.table("sales").select("*").eq("user_id", user_id).gte("created_at", start_date_utc.isoformat()).execute()
+        sales = [s for s in response.data if s.get("item_name") != "Payment Received"]
+        
+        for s in sales:
+            created = s.get("created_at", "")
+            if created:
+                try:
+                    dt = datetime.fromisoformat(created.replace("Z", "+00:00"))
+                    ist_date = (dt + timedelta(hours=5, minutes=30)).strftime("%Y-%m-%d")
+                    
+                    if ist_date in dates:
+                        idx = dates.index(ist_date)
+                        mode = s.get("payment_mode", "Cash")
+                        price = s.get("total_price", 0)
+                        if mode == "Udhaar":
+                            weekly_data["udhaar"][idx] += price
+                        else:
+                            weekly_data["cash"][idx] += price
+                except Exception:
+                    pass
+        
+        # Round the final data
+        weekly_data["cash"] = [round(v) for v in weekly_data["cash"]]
+        weekly_data["udhaar"] = [round(v) for v in weekly_data["udhaar"]]
+        
+        return {"success": True, "data": weekly_data}
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"success": False, "message": str(e)}
+
 @app.get("/sales/month")
 async def get_monthly_sales(auth: tuple = Depends(get_user_client)):
     from datetime import datetime, timezone, timedelta

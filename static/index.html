@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AutoBill Buddy - Voice-Powered Billing</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
         rel="stylesheet">
@@ -2089,6 +2090,11 @@
 
             <!-- VIEW 1: CALENDAR -->
             <div id="view-calendar" class="flex-1 overflow-y-auto p-6">
+                <!-- CHART CONTAINER -->
+                <div class="mb-8 w-full h-48">
+                    <canvas id="revenueChart"></canvas>
+                </div>
+
                 <div id="calendar-total-rev"
                     class="bg-emerald-50 text-emerald-700 px-5 py-3.5 rounded-2xl border border-emerald-100 font-bold mb-6 flex gap-4 items-center text-sm">
                     <span>Rev: ₹0</span>
@@ -2348,9 +2354,10 @@
                     <div class="flex-1">
                         <label class="block text-xs font-bold uppercase mb-1.5"
                             style="color: var(--text-muted);">Customer Name</label>
-                        <input type="text" id="confirm-customer"
+                        <input type="text" id="confirm-customer" list="customer-list"
                             class="w-full px-5 py-3 rounded-2xl border border-gray-200 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-100 text-sm transition-all"
                             placeholder="Walk-in">
+                        <datalist id="customer-list"></datalist>
                     </div>
                     <div class="flex-1">
                         <label class="block text-xs font-bold uppercase mb-1.5"
@@ -3297,12 +3304,50 @@
         let monthlyData = null;
         let selectedDateStr = null;
 
+        let revenueChartInstance = null;
+
+        async function loadRevenueChart() {
+            try {
+                const res = await api('/analytics/weekly');
+                if (res && res.data) {
+                    const ctx = document.getElementById('revenueChart').getContext('2d');
+                    if (revenueChartInstance) revenueChartInstance.destroy();
+
+                    revenueChartInstance = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: res.data.dates,
+                            datasets: [
+                                { label: 'Cash', data: res.data.cash, backgroundColor: '#10B981', borderRadius: 4 },
+                                { label: 'Udhaar', data: res.data.udhaar, backgroundColor: '#F59E0B', borderRadius: 4 }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                x: { stacked: true, grid: { display: false } },
+                                y: { stacked: true, beginAtZero: true, border: { dash: [4, 4] }, grid: { color: '#E2E8F0' } }
+                            },
+                            plugins: {
+                                legend: { display: true, position: 'top', labels: { usePointStyle: true, boxWidth: 8, font: { family: "'Plus Jakarta Sans', sans-serif" } } },
+                                tooltip: { backgroundColor: '#1E293B', titleFont: { family: "'Plus Jakarta Sans', sans-serif" }, bodyFont: { family: "'Plus Jakarta Sans', sans-serif" } }
+                            }
+                        }
+                    });
+                }
+            } catch (e) {
+                console.error("Failed to load chart", e);
+            }
+        }
+
         window.openMonthlyDashboard = async function () {
             const modal = document.getElementById('monthly-dashboard-modal');
             modal.classList.remove('hidden');
             showCalendarView(); // Reset to calendar view
 
             // Show loading...
+            loadRevenueChart(); // Load Weekly Trends Chart
 
             const res = await api('/sales/month');
             if (res) {
@@ -3566,6 +3611,18 @@
             if (res && res.dues) {
                 const totalDue = res.dues.reduce((sum, d) => sum + (d.total_due || 0), 0);
                 document.getElementById('stat-udhaar').textContent = `₹${Math.round(totalDue)}`;
+
+                // Populate Customer Autocomplete
+                const dataList = document.getElementById('customer-list');
+                if (dataList) {
+                    dataList.innerHTML = '';
+                    const uniqueCustomers = [...new Set(res.dues.map(d => d.customer_name))].filter(Boolean);
+                    uniqueCustomers.forEach(customer => {
+                        const option = document.createElement('option');
+                        option.value = customer;
+                        dataList.appendChild(option);
+                    });
+                }
             }
         }
 
