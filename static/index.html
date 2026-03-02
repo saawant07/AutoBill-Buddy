@@ -2417,7 +2417,8 @@
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
         // --- CONFIG ---
-        const SUPABASE_URL = 'https://mhnueaafadnlweezmemc.supabase.co';
+        // Proxy URL instead of raw Supabase URL to bypass ISP blocks
+        const SUPABASE_URL = window.location.origin + '/supabase-proxy';
         // Note: In production, use env vars. For prototype, anon key is fine if RLS is set.
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1obnVlYWFmYWRubHdlZXptZW1jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA1Mzc3OTcsImV4cCI6MjA4NjExMzc5N30.IuweIlK8DP0VY3y9a7DMuftn-XnuovKa39_2pcuj6ow';
         const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:8000' : '';

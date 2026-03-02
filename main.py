@@ -1,11 +1,14 @@
 import os
 import json
 import re
+import difflib
+from deep_translator import GoogleTranslator
 from datetime import datetime, timedelta
 import asyncio
 from typing import Optional
-from fastapi import FastAPI, HTTPException, Header, Depends, BackgroundTasks
-from fastapi.responses import RedirectResponse
+import httpx
+from fastapi import FastAPI, HTTPException, Header, Depends, BackgroundTasks, Request, Response
+from fastapi.responses import RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -37,6 +40,85 @@ async def root():
     return RedirectResponse(url="/static/index.html")
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# ============================================================================
+# SUPABASE PROXY (Bypass Indian ISP Block)
+# ============================================================================
+@app.api_route("/supabase-proxy/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"])
+async def supabase_proxy(path: str, request: Request):
+    if not SUPABASE_URL:
+        return Response(status_code=500, content="SUPABASE_URL not configured")
+
+    # Construct the target URL
+    target_url = f"{SUPABASE_URL.rstrip('/')}/{path}"
+    
+    # Forward all query params
+    query_string = request.url.query.encode("utf-8")
+    if query_string:
+        target_url = f"{target_url}?{query_string.decode('utf-8')}"
+
+    # Prepare headers: forward all except host to avoid SNI/host mismatches
+    headers = dict(request.headers)
+    headers.pop("host", None)
+    
+    # Read the body
+    body = await request.body()
+    
+    async def request_streamer():
+        async with httpx.AsyncClient() as client:
+            try:
+                # Use stream to handle streaming responses if any
+                async with client.stream(
+                    method=request.method,
+                    url=target_url,
+                    headers=headers,
+                    content=body,
+                    timeout=30.0 # generous timeout for proxy
+                ) as response:
+                    
+                    # Prepare response headers, carefully removing hop-by-hop headers
+                    response_headers = dict(response.headers)
+                    hop_by_hop = ['connection', 'keep-alive', 'proxy-authenticate', 'proxy-authorization', 'te', 'trailers', 'transfer-encoding', 'upgrade']
+                    for h in hop_by_hop:
+                        response_headers.pop(h, None)
+                    
+                    # Yield chunks as they arrive
+                    async for chunk in response.aiter_bytes():
+                        yield chunk
+            except httpx.RequestError as e:
+                # In case of connection failure from proxy to Supabase
+                print(f"Proxy request error to {target_url}: {e}")
+                raise HTTPException(status_code=502, detail="Bad Gateway: Error connecting to Supabase from Proxy")
+
+    # If it's a small short-lived request we can just use normal Response, but StreamingResponse is safer for long-running or large payloads
+    # Let's use a simpler regular Request for the proxy to avoid hanging issues with StreamingResponse in some FastAPI setups if we dont really need it
+    
+    async with httpx.AsyncClient() as client:
+        try:
+            proxy_response = await client.request(
+                method=request.method,
+                url=target_url,
+                headers=headers,
+                content=body,
+                timeout=30.0
+            )
+            
+            # Filter response headers
+            response_headers = dict(proxy_response.headers)
+            hop_by_hop = ['connection', 'keep-alive', 'proxy-authenticate', 'proxy-authorization', 'te', 'trailers', 'transfer-encoding', 'upgrade', 'content-encoding', 'content-length']
+            for h in hop_by_hop:
+                response_headers.pop(h, None)
+                
+            return Response(
+                content=proxy_response.content,
+                status_code=proxy_response.status_code,
+                headers=response_headers,
+                media_type=proxy_response.headers.get("content-type")
+            )
+            
+        except httpx.RequestError as e:
+            print(f"Proxy connection error: {e}")
+            return Response(status_code=502, content=f"Proxy error connecting to Supabase: {str(e)}")
 
 # ============================================================================
 # PER-REQUEST SUPABASE CLIENT (For RLS to work)
@@ -180,18 +262,57 @@ def get_user_inventory_data(db, user_id):
     
     return ITEM_PRICES, user_inventory
 
-# Helper for fuzzy matching
-def fuzzy_match_item(word, available_items):
-    # Dictionaries for fuzzy matching (moved outside to save space/recreation, but defined here for closure)
+# ============================================================================
+# MULTILINGUAL ALIAS GENERATOR — Hindi, Bengali, Hinglish + Phonetic Variations
+# ============================================================================
+def generate_multilingual_aliases(word):
+    word = word.lower().strip()
+    aliases = set([word])
+    
+    try:
+        # 1. Fetch Native Scripts
+        hindi_word = GoogleTranslator(source='en', target='hi').translate(word)
+        bengali_word = GoogleTranslator(source='en', target='bn').translate(word)
+        
+        if hindi_word: aliases.add(hindi_word)
+        if bengali_word: aliases.add(bengali_word)
+        
+        # 2. Hardcoded common Kirana Hinglish mappings (Safety Net for Romanized Speech-to-Text)
+        kirana_dict = {
+            "milk": ["doodh", "dudh"],
+            "sugar": ["cheeni", "chini", "shakkar"],
+            "water": ["pani", "jol"],
+            "rice": ["chawal", "chal"],
+            "wheat": ["atta", "gehu"],
+            "salt": ["namak", "noon"],
+            "tea": ["chai", "cha"],
+            "potato": ["aloo", "alu"],
+            "onion": ["pyaaz", "piyaj"]
+        }
+        
+        if word in kirana_dict:
+            aliases.update(kirana_dict[word])
+            
+    except Exception as e:
+        print(f"Translation failed for {word}: {e}")
+        
+    # Return as comma-separated string, limited to 10 variations to keep DB clean
+    return ",".join(list(aliases)[:10])
+
+
+# ============================================================================
+# STEP 4: FUZZY MATCHING — Searches BOTH inventory names AND DB aliases
+# ============================================================================
+def fuzzy_match_item(word, available_items, custom_aliases=None):
     VOICE_TYPOS = {
-        'keji': 'kg', 'kaji': 'kg', 'kaji': 'kg', 'kilo': 'kg', 'kilos': 'kg', 'kilogram': 'kg',
+        'keji': 'kg', 'kaji': 'kg', 'kilo': 'kg', 'kilos': 'kg', 'kilogram': 'kg',
         'rise': 'rice', 'rais': 'rice', 'raice': 'rice',
         'tee': 'tea', 'chai': 'tea',
         'melk': 'milk', 'melku': 'milk',
         'suger': 'sugar', 'sugur': 'sugar',
         'flor': 'flour', 'flower': 'flour',
         'bred': 'bread', 'brad': 'bread',
-        'ags': 'eggs', 'ags': 'eggs', 'aggs': 'eggs',
+        'ags': 'eggs', 'aggs': 'eggs',
         'ghea': 'ghee', 'ghi': 'ghee',
         'panir': 'paneer', 'paner': 'paneer',
         'coffe': 'coffee', 'koffee': 'coffee', 'cofee': 'coffee',
@@ -201,11 +322,21 @@ def fuzzy_match_item(word, available_items):
         'maggie': 'maggi', 'maagi': 'maggi',
     }
     
+    if custom_aliases is None:
+        custom_aliases = {}
+    
     word_lower = word.lower().strip()
     if word_lower in VOICE_TYPOS:
         word_lower = VOICE_TYPOS[word_lower].lower()
     
-    # Exact match
+    # Check DB aliases (exact match: alias -> item_name)
+    if word_lower in custom_aliases:
+        mapped_name = custom_aliases[word_lower]
+        for item in available_items:
+            if item.lower() == mapped_name.lower():
+                return item
+    
+    # Exact match against inventory names
     for item in available_items:
         if item.lower() == word_lower:
             return item
@@ -220,6 +351,26 @@ def fuzzy_match_item(word, available_items):
         for item in available_items:
             if item.lower().startswith(word_lower[:3]) or word_lower.startswith(item.lower()[:3]):
                 return item
+    
+    # difflib fuzzy fallback — search BOTH item names AND alias strings
+    if len(word_lower) >= 3:
+        inventory_lower = [it.lower() for it in available_items]
+        alias_strings = list(custom_aliases.keys())
+        all_candidates = inventory_lower + alias_strings
+        
+        matches = difflib.get_close_matches(word_lower, all_candidates, n=1, cutoff=0.6)
+        if matches:
+            match = matches[0]
+            # Check if matched an inventory name
+            for item in available_items:
+                if item.lower() == match:
+                    return item
+            # Check if matched an alias — resolve to actual item
+            if match in custom_aliases:
+                mapped_name = custom_aliases[match]
+                for item in available_items:
+                    if item.lower() == mapped_name.lower():
+                        return item
     return None
 
 def parse_message_locally(message, available_items, custom_aliases=None):
@@ -230,17 +381,64 @@ def parse_message_locally(message, available_items, custom_aliases=None):
     
     # Typos and Numbers dictionaries
     WORD_TO_NUM = {
-        'zero': 0, 'one': 1, 'won': 1, 'two': 2, 'too': 2, 'to': 2, 'tu': 2,
-        'three': 3, 'tree': 3, 'free': 3, 'four': 4, 'for': 4, 'ford': 4, 'fore': 4,
-        'five': 5, 'fife': 5, 'six': 6, 'sex': 6, 'sax': 6, 'seven': 7, 'saven': 7,
-        'eight': 8, 'ate': 8, 'ait': 8, 'nine': 9, 'nain': 9, 'ten': 10, 'tan': 10,
-        'eleven': 11, 'twelve': 12, 'half': 0.5, 'quarter': 0.25,
-        'ek': 1, 'do': 2, 'teen': 3, 'char': 4, 'paanch': 5, 'panch': 5,
-        'chhe': 6, 'chay': 6, 'saat': 7, 'aath': 8, 'nau': 9, 'das': 10,
-        'gyarah': 11, 'barah': 12, 'terah': 13, 'chaudah': 14, 'pandrah': 15,
-        'dhai': 2.5, 'adha': 0.5, 'dedh': 1.5, 'paune': 0.75,
-        'aadha': 0.5, 'adhaa': 0.5, 'pav': 0.25, 'paav': 0.25, 'sawa': 1.25,
+        # ── English Numbers + Common STT Mishearings ──────────────────
+        'zero': 0, 'nil': 0, 'nill': 0, 'nothing': 0,
+        'one': 1, 'won': 1, 'wan': 1, 'wun': 1, 'on': 1, 'onne': 1,
+        'two': 2, 'too': 2, 'to': 2, 'tu': 2, 'tow': 2, 'tuo': 2, 'twoo': 2,
+        'three': 3, 'tree': 3, 'free': 3, 'thee': 3, 'thre': 3, 'tri': 3, 'thr': 3,
+        'four': 4, 'for': 4, 'fore': 4, 'ford': 4, 'phor': 4, 'foor': 4, 'fo': 4, 'faur': 4, 'fuar': 4,
+        'five': 5, 'fife': 5, 'fiv': 5, 'faiv': 5, 'phive': 5, 'fve': 5,
+        'six': 6, 'sex': 6, 'sax': 6, 'siks': 6, 'sic': 6, 'sicks': 6, 'sx': 6,
+        'seven': 7, 'saven': 7, 'svan': 7, 'sevan': 7, 'sevn': 7, 'svn': 7, 'sebhen': 7,
+        'eight': 8, 'ate': 8, 'ait': 8, 'eit': 8, 'aight': 8, 'eght': 8, 'aat': 8,
+        'nine': 9, 'nain': 9, 'nein': 9, 'nayn': 9, 'nin': 9, 'nyne': 9,
+        'ten': 10, 'tan': 10, 'tun': 10, 'tenn': 10,
+        'eleven': 11, 'twelv': 12, 'twelve': 12,
+        'thirteen': 13, 'fourteen': 14, 'fifteen': 15,
+        'twenty': 20, 'thirty': 30, 'forty': 40, 'fifty': 50,
+        'hundred': 100, 'sou': 100, 'sau': 100,
+
+        # ── Hindi Numbers + ALL Spelling Variants ─────────────────────
+        'ek': 1, 'ekk': 1, 'aek': 1, 'ak': 1, 'ikk': 1, 'eck': 1,
+        'do': 2, 'doo': 2, 'doe': 2, 'doh': 2,
+        'teen': 3, 'tin': 3, 'tiin': 3, 'theen': 3,
+        'char': 4, 'chaar': 4, 'chhar': 4, 'chr': 4, 'cahr': 4,
+        'paanch': 5, 'panch': 5, 'paach': 5, 'panc': 5, 'punch': 5, 'paanchh': 5, 'pach': 5,
+        'chhe': 6, 'chay': 6, 'che': 6, 'chhay': 6, 'cheh': 6, 'chhai': 6, 'chai6': 6,
+        'saat': 7, 'saath': 7, 'sat': 7, 'saaat': 7,
+        'aath': 8, 'aat': 8, 'aaath': 8, 'aathh': 8, 'ath': 8,
+        'nau': 9, 'now': 9, 'naw': 9, 'naoo': 9, 'nao': 9,
+        'das': 10, 'dass': 10, 'daas': 10, 'duss': 10, 'dus': 10,
+        'gyarah': 11, 'gyara': 11, 'giyarah': 11, 'gyaarah': 11,
+        'barah': 12, 'bara': 12, 'baarah': 12, 'baara': 12,
+        'terah': 13, 'tera': 13, 'tairah': 13,
+        'chaudah': 14, 'chauda': 14, 'chodah': 14,
+        'pandrah': 15, 'pandra': 15, 'pandara': 15,
+        'solah': 16, 'sola': 16,
+        'satrah': 17, 'satra': 17,
+        'atharah': 18, 'athara': 18,
+        'unnis': 19, 'unnees': 19,
+        'bees': 20, 'bis': 20, 'biis': 20,
+        'pacchees': 25, 'pacchis': 25, 'pachis': 25,
+        'tees': 30, 'tiis': 30,
+        'chaalees': 40, 'chalees': 40, 'chalis': 40,
+        'pachaas': 50, 'pachas': 50, 'pachis50': 50,
+
+        # ── Marathi Numbers ───────────────────────────────────────────
+        'don': 2, 'tiin_m': 3,
+        'chaar_m': 4,
+
+        # ── Fractions & Multipliers (Hindi) ───────────────────────────
+        'half': 0.5, 'quarter': 0.25,
+        'adha': 0.5, 'aadha': 0.5, 'adhaa': 0.5, 'aadhi': 0.5, 'adhi': 0.5,
+        'dhai': 2.5, 'dhaai': 2.5, 'dhi': 2.5, 'dhhai': 2.5, 'dai': 2.5,
+        'dedh': 1.5, 'dedd': 1.5, 'dedha': 1.5, 'ded': 1.5,
+        'paune': 0.75, 'pauna': 0.75, 'paunay': 0.75, 'pawne': 0.75,
+        'pav': 0.25, 'paav': 0.25, 'paaw': 0.25,
+        'sawa': 1.25, 'saawa': 1.25, 'sava': 1.25, 'savaa': 1.25,
         'double': 2, 'triple': 3, 'single': 1,
+        'pair': 2, 'jodi': 2, 'jori': 2,
+        'dozen': 12, 'darjan': 12, 'darzan': 12, 'darjen': 12,
     }
 
     # Expanded typos including Hindi
@@ -309,7 +507,7 @@ def parse_message_locally(message, available_items, custom_aliases=None):
         text = re.sub(rf'\b{re.escape(detected_customer)}\b', ' ', text, flags=re.IGNORECASE)
     
     # NEW: Remove common Hindi stop words and general filler words
-    text = re.sub(r'\b(sold|sell|sale|selling|please|and|aur|the|a|an|some|of|also|give|add|more|i|want|need|get|me|us|becho|bech|do|de|dena|le|lo|lena|karo|nu|no|ko|ka|ki|ke|se|pe|p|par|on|for|to)\b', ' ', text, flags=re.IGNORECASE)
+    text = re.sub(r'\b(sold|sell|sale|selling|please|and|aur|the|a|an|some|of|also|give|add|more|i|want|need|get|me|us|becho|bech|de|dena|le|lo|lena|karo|nu|no|ko|ka|ki|ke|se|pe|p|par|on|for|to)\b', ' ', text, flags=re.IGNORECASE)
     
     # Separate stuck digits and text (e.g., "2tel" -> "2 tel")
     text = re.sub(r'(\d+)([a-zA-Z]+)', r'\1 \2', text)
@@ -876,11 +1074,18 @@ async def add_stock(req: AddStockRequest, background_tasks: BackgroundTasks, aut
             if req.cost_price is not None:
                 insert_data["cost_price"] = req.cost_price
             
-            db.table("inventory").insert(insert_data).execute()
-            
             # TRIGGER ALIAS GENERATION IF NEW
             if is_new_item:
+                try:
+                    insert_data["aliases"] = generate_multilingual_aliases(item)
+                except Exception as alias_err:
+                    print(f"Alias error (non-fatal): {alias_err}")
+                
+                # BACKGROUND Gemini enrichment — adds more creative aliases later
                 background_tasks.add_task(generate_aliases_task, item, user_id, db)
+
+            db.table("inventory").insert(insert_data).execute()
+
                 
             return {"message": f"✅ Created {item} (Exp: {expiry or 'None'}) with stock: {qty}", "success": True}
             

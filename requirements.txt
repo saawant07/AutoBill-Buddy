@@ -3,3 +3,5 @@ uvicorn
 supabase
 google-generativeai
 python-dotenv
+httpx
+deep-translator
