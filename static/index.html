@@ -2369,10 +2369,19 @@
                             <button type="button" id="mode-cash" onclick="setPaymentMode('Cash')"
                                 class="flex-1 py-2 px-3 rounded-xl font-semibold transition-all bg-white shadow-sm text-emerald-600 text-sm">Cash</button>
                             <button type="button" id="mode-udhaar" onclick="setPaymentMode('Udhaar')"
-                                class="flex-1 py-2 px-3 rounded-xl font-semibold transition-all text-sm"
-                                style="color: var(--text-label);">Udhaar</button>
+                                class="flex-1 py-2 px-3 rounded-xl font-semibold transition-all text-slate-500 text-sm hover:text-slate-700 hover:bg-slate-100/50">Udhaar</button>
                         </div>
                     </div>
+                </div>
+
+                <!-- Phone Number (Optional, for Udhaar WhatsApp Reminders) -->
+                <div id="confirm-phone-container" class="mb-6 hidden transition-all">
+                    <label class="block text-xs font-bold uppercase mb-1.5" style="color: var(--text-muted);">Phone
+                        Number <span class="text-[10px] font-normal lowercase">(optional, for whatsapp
+                            reminder)</span></label>
+                    <input type="tel" id="confirm-phone" autocomplete="off" value="+91 " maxlength="14"
+                        class="w-full px-5 py-3 rounded-2xl border border-gray-200 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-100 text-sm transition-all"
+                        placeholder="+91 9876543210">
                 </div>
 
                 <!-- Items Table -->
@@ -3513,9 +3522,12 @@
                     return;
                 }
 
-                listEl.innerHTML = res.dues.map(d => `
+                listEl.innerHTML = res.dues.map(d => {
+                    const amountStr = Math.round(d.total_due);
+                    const safeName = d.customer_name.replace(/'/g, "\\'");
+                    return `
                     <div class="dues-customer-row flex items-center justify-between p-4 bg-white border border-slate-100 rounded-xl"
-                         onclick="openCustomerDues('${d.customer_name.replace(/'/g, "\\'")}')">
+                         onclick="if(!event.target.closest('button')) openCustomerDues('${safeName}')">
                         <div class="flex items-center gap-3">
                             <div class="w-10 h-10 bg-red-50 text-red-600 rounded-full flex items-center justify-center font-bold text-sm">
                                 ${d.customer_name.charAt(0).toUpperCase()}
@@ -3525,15 +3537,50 @@
                                 <p class="text-xs text-slate-400">${d.last_updated ? new Date(d.last_updated).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : ''}</p>
                             </div>
                         </div>
-                        <div class="flex items-center gap-2">
-                            <span class="font-bold text-red-600 text-lg">₹${Math.round(d.total_due)}</span>
-                            <i class="fas fa-chevron-right text-slate-300 text-sm"></i>
+                        <div class="flex flex-col items-end gap-2 text-right cursor-pointer">
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold text-red-600 text-lg">₹${amountStr}</span>
+                                <i class="fas fa-chevron-right text-slate-300 text-sm"></i>
+                            </div>
+                            <button onclick="event.stopPropagation(); sendWhatsappReminder('${safeName}', ${amountStr})" class="text-[10px] font-bold px-2 py-1 rounded bg-green-50 text-green-600 border border-green-200 hover:bg-green-100 transition-colors flex items-center gap-1">
+                                <i class="fab fa-whatsapp"></i> Send Reminder
+                            </button>
                         </div>
                     </div>
-                `).join('');
+                `;
+                }).join('');
             } else {
                 listEl.innerHTML = '<div class="text-center py-10 text-red-400">Failed to load dues</div>';
             }
+        };
+
+        window.sendWhatsappReminder = function (customerName, amount) {
+            // Note: Since we are not modifying the DB schema, we save to/read from localStorage.
+            let phone = localStorage.getItem("phone_" + customerName);
+
+            if (!phone) {
+                const userEntered = prompt(`Enter WhatsApp number for ${customerName} (10 digits):`, "+91 ");
+                if (userEntered) {
+                    // Extract just the digits, assume +91 if exactly 10 digits are entered, otherwise use exactly what was parsed stripped of spaces/symbols
+                    let digits = userEntered.replace(/[^0-9]/g, '');
+                    if (digits.length === 10) {
+                        digits = "91" + digits;
+                    }
+                    phone = digits;
+                    localStorage.setItem("phone_" + customerName, phone);
+                }
+            }
+
+            if (!phone) {
+                alert("Customer phone number not available.");
+                return;
+            }
+
+            const message = `Hello ${customerName}, your outstanding amount of ₹${amount} is pending at ${document.getElementById('header-shop-name').textContent}. Kindly clear your dues. Thank you!`;
+            const encodedMessage = encodeURIComponent(message);
+            const whatsappUrl = `https://wa.me/${phone}?text=${encodedMessage}`;
+
+            window.open(whatsappUrl, '_blank');
         };
 
         window.showUdhaarSummary = function () {
@@ -3553,9 +3600,9 @@
             const tbody = document.getElementById('udhaar-detail-tbody');
             tbody.innerHTML = '<tr><td colspan="4" class="text-center py-6"><span class="spinner"></span></td></tr>';
 
-            const res = await api(`/dues/${encodeURIComponent(customerName)}`);
+            const res = await api(`/ dues / ${encodeURIComponent(customerName)} `);
             if (res) {
-                document.getElementById('udhaar-customer-total').textContent = `₹${Math.round(res.total_due)}`;
+                document.getElementById('udhaar-customer-total').textContent = `₹${Math.round(res.total_due)} `;
 
                 const settleBtn = document.getElementById('settle-dues-btn');
                 if (res.total_due <= 0) {
@@ -3570,12 +3617,12 @@
                 }
 
                 tbody.innerHTML = res.transactions.map(t => `
-                    <tr class="hover:bg-slate-50 transition-colors">
+                < tr class="hover:bg-slate-50 transition-colors" >
                         <td class="px-4 py-3 text-slate-500 whitespace-nowrap">${t.date_time}</td>
                         <td class="px-4 py-3 font-medium text-slate-700">${t.item_name}</td>
                         <td class="px-4 py-3 text-center text-slate-600">${t.quantity}</td>
                         <td class="px-4 py-3 text-right font-semibold text-red-600">₹${t.total_price}</td>
-                    </tr>
+                    </tr >
                 `).join('');
             }
         };
@@ -3588,11 +3635,11 @@
 
             if (!customerName) return;
 
-            let confirmMsg = `Settle all dues for "${customerName}"?`;
+            let confirmMsg = `Settle all dues for "${customerName}" ? `;
             let payload = { customer_name: customerName };
 
             if (!isNaN(partialAmount) && partialAmount > 0) {
-                confirmMsg = `Recognize a payment of ₹${partialAmount} from "${customerName}"?`;
+                confirmMsg = `Recognize a payment of ₹${partialAmount} from "${customerName}" ? `;
                 payload.amount = partialAmount;
             }
 
@@ -3616,7 +3663,7 @@
             const res = await api('/dues');
             if (res && res.dues) {
                 const totalDue = res.dues.reduce((sum, d) => sum + (d.total_due || 0), 0);
-                document.getElementById('stat-udhaar').textContent = `₹${Math.round(totalDue)}`;
+                document.getElementById('stat-udhaar').textContent = `₹${Math.round(totalDue)} `;
 
                 allCustomers = [...new Set(res.dues.map(d => d.customer_name))].filter(Boolean);
             }
@@ -3642,9 +3689,9 @@
                 dropdown.innerHTML = `<li class="px-4 py-3 text-sm text-slate-400 italic">No historical matches</li>`;
             } else {
                 dropdown.innerHTML = filtered.map(c => `
-                    <li onclick="selectCustomer('${c.replace(/'/g, "\\'")}')" class="px-4 py-3 text-sm text-slate-700 hover:bg-emerald-50 cursor-pointer font-medium transition-colors border-b border-gray-50 last:border-0">
-                        <i class="fas fa-user-circle text-emerald-400 mr-2"></i> ${c}
-                    </li>
+                <li onclick="selectCustomer('${c.replace(/'/g, "\\'")}')" class="px-4 py-3 text-sm text-slate-700 hover:bg-emerald-50 cursor-pointer font-medium transition-colors border-b border-gray-50 last:border-0">
+                    <i class="fas fa-user-circle text-emerald-400 mr-2"></i> ${c}
+                </li>
                 `).join('');
             }
         }
@@ -3681,13 +3728,16 @@
             currentPaymentMode = mode;
             const cashBtn = document.getElementById('mode-cash');
             const udhaarBtn = document.getElementById('mode-udhaar');
+            const phoneContainer = document.getElementById('confirm-phone-container');
 
             if (mode === 'Cash') {
                 cashBtn.className = "flex-1 py-1.5 px-3 rounded-lg font-medium transition-all bg-white shadow text-emerald-600";
                 udhaarBtn.className = "flex-1 py-1.5 px-3 rounded-lg font-medium transition-all text-slate-500";
+                if (phoneContainer) phoneContainer.classList.add('hidden');
             } else {
                 cashBtn.className = "flex-1 py-1.5 px-3 rounded-lg font-medium transition-all text-slate-500";
                 udhaarBtn.className = "flex-1 py-1.5 px-3 rounded-lg font-medium transition-all bg-white shadow text-red-600";
+                if (phoneContainer) phoneContainer.classList.remove('hidden');
             }
         }
 
@@ -3727,11 +3777,11 @@
                     <td class="px-3 py-2 text-center">
                         <button onclick="deleteOrderItem(${index})" class="text-slate-300 hover:text-red-500 transition-colors"><i class="fas fa-trash-alt"></i></button>
                     </td>
-                `;
+            `;
                 tbody.appendChild(tr);
             });
 
-            document.getElementById('confirm-total-price').textContent = `₹${Math.round(total)}`;
+            document.getElementById('confirm-total-price').textContent = `₹${Math.round(total)} `;
         }
 
         window.updateQty = function (index, change) {
@@ -3792,6 +3842,12 @@
 
         window.confirmOrder = async function () {
             const customer = document.getElementById('confirm-customer').value.trim() || "Walk-in";
+            let phone = null;
+
+            if (currentPaymentMode === 'Udhaar') {
+                const phoneInputEl = document.getElementById('confirm-phone');
+                phone = phoneInputEl ? phoneInputEl.value.trim() : null;
+            }
 
             if (currentOrderItems.length === 0) {
                 showToast("No items in order!", "error");
@@ -3803,6 +3859,18 @@
                 payment_mode: currentPaymentMode,
                 customer_name: customer
             };
+
+            if (currentPaymentMode === 'Udhaar' && phone) {
+                let digits = phone.replace(/[^0-9]/g, '');
+                // Since the placeholder starts with +91, the user might just type 10 digits
+                // Or if they erased +91 and typed exactly 10 digits, prepend 91.
+                if (digits.length === 10) {
+                    digits = "91" + digits;
+                } else if (digits.length === 12 && digits.startsWith('91')) {
+                    // It is already 91[10 digits]
+                }
+                localStorage.setItem("phone_" + customer, digits);
+            }
 
             const btn = document.querySelector('button[onclick="confirmOrder()"]');
             const originalText = btn.innerHTML;
@@ -3856,7 +3924,7 @@
         async function startDemo() {
             const btn = document.getElementById('demo-btn');
             const originalText = btn.innerHTML;
-            btn.innerHTML = `<i class="fas fa-circle-notch fa-spin"></i> Entering Demo...`;
+            btn.innerHTML = `< i class="fas fa-circle-notch fa-spin" ></i > Entering Demo...`;
             btn.disabled = true;
 
             try {
