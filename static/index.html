@@ -3984,8 +3984,8 @@
             const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
             recognition = new SR();
             recognition.continuous = false;
-            recognition.interimResults = false; // Set to false for higher reliability and no flickering
-            recognition.maxAlternatives = 1; // Only need the most confident result
+            recognition.interimResults = true; // MUST be true for silence detection and pendingTranscript
+            recognition.maxAlternatives = 3;
             recognition.lang = 'en-IN';
 
             // Smart corrections for common voice typos (subset for real-time display)
