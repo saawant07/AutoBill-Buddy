@@ -8,88 +8,106 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+    <link
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap"
         rel="stylesheet">
     <script>
         tailwind.config = {
             theme: {
                 extend: {
-                    fontFamily: { sans: ['Plus Jakarta Sans', 'sans-serif'] }
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif']
+                    }
                 }
             }
         }
     </script>
     <style>
-        /* ===== STITCH NEXT-GEN PROFESSIONAL DESIGN SYSTEM ===== */
+        /* ===== AUTO-BILL BUDDY LUXURY DESIGN SYSTEM ===== */
         :root {
-            /* Light Mode - Crisp, Refined, Finance Grade */
-            --bg-page: #F8FAFC;
+            /* Light Mode - Executive Elegance */
+            --bg-page: #FDFDFE;
+            /* Soft, almost-white pearl */
             --card-bg: #FFFFFF;
-            --card-radius: 24px;
-            --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.03);
-            --card-shadow-hover: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+            --card-radius: 28px;
+            /* Slightly softer curves */
+            --card-shadow: 0 10px 40px -10px rgba(15, 23, 42, 0.08), 0 4px 12px -5px rgba(15, 23, 42, 0.04);
+            --card-shadow-hover: 0 30px 60px -15px rgba(15, 23, 42, 0.12), 0 12px 24px -10px rgba(15, 23, 42, 0.08);
 
-            /* Professional Vibrant Accents */
-            --accent-green: #059669;
-            /* Deeper Emerald for text readability */
-            --accent-purple: #7C3AED;
-            --accent-blue: #2563EB;
-            --accent-gradient: linear-gradient(135deg, #10B981 0%, #047857 100%);
-            --purple-gradient: linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%);
+            /* Luxury Vibrant Accents — Deepened for Executive Polish */
+            --accent-green: #065F46;
+            /* Deep Jade instead of stark emerald */
+            --accent-purple: #5B21B6;
+            /* Deepened violet */
+            --accent-blue: #1E3A8A;
+            /* Navy instead of bright blue */
+            --accent-gradient: linear-gradient(135deg, #059669 0%, #064E3B 100%);
+            /* Softer, richer green gradient */
+            --purple-gradient: linear-gradient(135deg, #7C3AED 0%, #4C1D95 100%);
+            --gold-gradient: linear-gradient(135deg, #D97706 0%, #92400E 100%);
+            /* Deeper gold/bronze */
 
-            /* Typography Scale */
+            /* Sophisticated Typography Scale */
             --text-heading: #0F172A;
-            --text-label: #475569;
+            /* Slate 900 */
+            --text-label: #334155;
+            /* Slate 700 */
             --text-muted: #64748B;
+            /* Slate 500 */
 
-            /* Glassmorphism */
-            --glass-bg: rgba(255, 255, 255, 0.85);
-            --glass-border: rgba(255, 255, 255, 0.6);
-            --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.04);
+            /* Premium Glassmorphism */
+            --glass-bg: rgba(255, 255, 255, 0.65);
+            /* Softer white */
+            --glass-border: rgba(255, 255, 255, 0.4);
+            --glass-shadow: 0 12px 40px rgba(15, 23, 42, 0.04);
+            /* Wider, softer shadow */
 
             /* Physics */
-            --transition-spring: cubic-bezier(0.175, 0.885, 0.32, 1.15);
+            --transition-spring: cubic-bezier(0.25, 1, 0.5, 1);
             --transition-smooth: cubic-bezier(0.4, 0, 0.2, 1);
 
             /* Inputs */
-            --input-bg: #F1F5F9;
+            --input-bg: #F8FAFC;
             --input-border: #E2E8F0;
-            --border-subtle: rgba(15, 23, 42, 0.06);
+            --border-subtle: rgba(15, 23, 42, 0.04);
         }
 
-        /* === DARK MODE — Deep Obsidian Fintech === */
+        /* === DARK MODE — High-End Obsidian & Neon === */
         [data-theme="dark"] {
-            /* Deep, OLED-friendly rich backgrounds */
-            --bg-page: #030712;
-            /* Very dark slate */
-            --card-bg: #0B0F19;
-            /* Obsidian surface */
-            --card-bg-elevated: #111827;
-            /* Raised surface */
+            /* Ultra-deep space backgrounds */
+            --bg-page: #020617;
+            /* Slate 950 */
+            --card-bg: rgba(15, 23, 42, 0.6);
+            /* Slate 900 with transparency for glass effect */
+            --card-bg-elevated: rgba(30, 41, 59, 0.8);
+            /* Slate 800 */
 
-            /* Enhanced layered shadows for depth in dark mode */
-            --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -2px rgba(0, 0, 0, 0.4), inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
-            --card-shadow-hover: 0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+            /* Enhanced cinematic shadows */
+            --card-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.8), inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+            --card-shadow-hover: 0 30px 60px -15px rgba(0, 0, 0, 0.9), 0 0 40px rgba(16, 185, 129, 0.05), inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
 
             /* Crisp contrast text */
             --text-heading: #F8FAFC;
             --text-label: #CBD5E1;
-            --text-muted: #94A3B8;
+            --text-muted: #64748B;
 
             /* Refined Glassmorphism */
-            --glass-bg: rgba(11, 15, 25, 0.85);
+            --glass-bg: rgba(15, 23, 42, 0.55);
             --glass-border: rgba(255, 255, 255, 0.05);
-            --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            /* Extremely subtle border */
+            --glass-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
 
             /* Inputs */
             --input-bg: rgba(255, 255, 255, 0.03);
             --input-border: rgba(255, 255, 255, 0.06);
             --border-subtle: rgba(255, 255, 255, 0.04);
 
-            /* Soft Glows */
-            --glow-emerald: rgba(16, 185, 129, 0.15);
-            --glow-indigo: rgba(99, 102, 241, 0.12);
-            --glow-violet: rgba(139, 92, 246, 0.12);
+            /* Muted Cinematic Glows (Midnight Mist) */
+            --glow-emerald: rgba(5, 150, 105, 0.15);
+            /* Significantly reduced opacity */
+            --glow-indigo: rgba(79, 70, 229, 0.12);
+            --glow-violet: rgba(124, 58, 237, 0.1);
         }
 
         [data-theme="dark"] body {
@@ -97,55 +115,71 @@
             color: var(--text-heading);
         }
 
-        /* Animated ambient gradient blobs — Ultra-refined */
+        /* Animated ambient gradient blobs — Ultra-refined Luxury */
         [data-theme="dark"] body::before {
             content: '';
             position: fixed;
             inset: 0;
             z-index: -1;
             background:
-                radial-gradient(ellipse 55% 40% at 10% 0%, rgba(99, 102, 241, 0.14) 0%, transparent 55%),
-                radial-gradient(ellipse 45% 35% at 90% 5%, rgba(16, 185, 129, 0.10) 0%, transparent 50%),
-                radial-gradient(ellipse 50% 40% at 50% 100%, rgba(59, 130, 246, 0.06) 0%, transparent 45%),
-                radial-gradient(ellipse 30% 30% at 65% 45%, rgba(139, 92, 246, 0.04) 0%, transparent 45%);
-            animation: ambientShift 25s ease-in-out infinite alternate;
+                radial-gradient(ellipse 60% 50% at 10% 0%, rgba(99, 102, 241, 0.15) 0%, transparent 60%),
+                radial-gradient(ellipse 50% 40% at 90% 5%, rgba(16, 185, 129, 0.12) 0%, transparent 50%),
+                radial-gradient(ellipse 55% 45% at 50% 100%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse 35% 35% at 65% 45%, rgba(139, 92, 246, 0.06) 0%, transparent 45%);
+            animation: ambientShift 30s ease-in-out infinite alternate;
             pointer-events: none;
         }
 
         @keyframes ambientShift {
             0% {
-                opacity: 1;
+                opacity: 0.8;
                 transform: scale(1) rotate(0deg);
             }
 
             50% {
-                opacity: 0.8;
-                transform: scale(1.03) translateX(-0.5%) rotate(0.3deg);
+                opacity: 1;
+                transform: scale(1.05) translateX(-1%) rotate(0.5deg);
             }
 
             100% {
-                opacity: 1;
-                transform: scale(1) translateX(0.5%) rotate(-0.3deg);
+                opacity: 0.8;
+                transform: scale(1) translateX(1%) rotate(-0.5deg);
             }
         }
 
-        /* Cards & Header — Deep Obsidian */
+        /* Cards & Header — Deep Obsidian Luxury */
         [data-theme="dark"] .fintech-card {
             background: var(--card-bg);
-            border-color: var(--border-subtle);
+            backdrop-filter: blur(40px) saturate(160%);
+            -webkit-backdrop-filter: blur(40px) saturate(160%);
+            border: 1px solid var(--glass-border);
             box-shadow: var(--card-shadow);
+            position: relative;
+        }
+
+        /* Subtle noise texture overlay on cards */
+        [data-theme="dark"] .fintech-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.02'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 0;
         }
 
         [data-theme="dark"] .fintech-card:hover {
-            border-color: rgba(99, 102, 241, 0.12);
-            box-shadow: var(--card-shadow-hover), 0 0 30px rgba(99, 102, 241, 0.03);
+            border-color: rgba(16, 185, 129, 0.2);
+            box-shadow: var(--card-shadow-hover), 0 0 40px rgba(16, 185, 129, 0.08);
+            transform: translateY(-4px);
         }
 
         [data-theme="dark"] .floating-header {
-            background: rgba(3, 7, 18, 0.92);
+            background: rgba(2, 6, 23, 0.85);
+            /* Slate 950 glass */
             backdrop-filter: blur(32px) saturate(200%);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-            box-shadow: 0 1px 0 rgba(255, 255, 255, 0.02), 0 8px 32px rgba(0, 0, 0, 0.5);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 1px 0 rgba(255, 255, 255, 0.02), 0 10px 40px rgba(0, 0, 0, 0.6);
         }
 
         /* Voice Center */
@@ -197,43 +231,51 @@
             border-color: var(--border-subtle);
         }
 
-        /* Stock Status Pills — dark variants */
+        /* Stock Status Pills — dark luxury variants */
         [data-theme="dark"] .stock-good {
-            color: #6EE7B7;
-            background: rgba(16, 185, 129, 0.15);
-            border-color: rgba(16, 185, 129, 0.2);
+            color: #10B981;
+            /* Sharper emerald */
+            background: rgba(16, 185, 129, 0.1);
+            border-color: rgba(16, 185, 129, 0.3);
+            box-shadow: inset 0 0 10px rgba(16, 185, 129, 0.05);
         }
 
         [data-theme="dark"] .stock-low {
-            color: #FCD34D;
-            background: rgba(245, 158, 11, 0.15);
-            border-color: rgba(245, 158, 11, 0.2);
+            color: #F59E0B;
+            background: rgba(245, 158, 11, 0.1);
+            border-color: rgba(245, 158, 11, 0.3);
+            box-shadow: inset 0 0 10px rgba(245, 158, 11, 0.05);
         }
 
         [data-theme="dark"] .stock-critical {
-            color: #FCA5A5;
-            background: rgba(239, 68, 68, 0.15);
-            border-color: rgba(239, 68, 68, 0.2);
+            color: #EF4444;
+            background: rgba(239, 68, 68, 0.1);
+            border-color: rgba(239, 68, 68, 0.3);
+            box-shadow: inset 0 0 10px rgba(239, 68, 68, 0.05);
         }
 
         /* Inventory Action Buttons */
         [data-theme="dark"] .floating-item button[title="Reduce Stock"] {
-            background: rgba(245, 158, 11, 0.15) !important;
+            background: rgba(245, 158, 11, 0.1) !important;
             color: #FBBF24 !important;
+            border: 1px solid rgba(245, 158, 11, 0.2);
         }
 
         [data-theme="dark"] .floating-item button[title="Increase Stock"] {
-            background: rgba(16, 185, 129, 0.15) !important;
+            background: rgba(16, 185, 129, 0.1) !important;
             color: #34D399 !important;
+            border: 1px solid rgba(16, 185, 129, 0.2);
         }
 
         [data-theme="dark"] .floating-item button[title="Delete Item"] {
-            background: rgba(239, 68, 68, 0.15) !important;
+            background: rgba(239, 68, 68, 0.1) !important;
             color: #F87171 !important;
+            border: 1px solid rgba(239, 68, 68, 0.2);
         }
 
         [data-theme="dark"] .floating-item button:hover {
-            opacity: 0.85;
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         }
 
         /* Profile & Auth */
@@ -828,36 +870,47 @@
             background: var(--card-bg);
             border-radius: var(--card-radius);
             box-shadow: var(--card-shadow);
-            border: 1px solid rgba(15, 23, 42, 0.06);
-            transition: all 0.35s var(--transition-smooth);
-            will-change: transform, box-shadow;
+            border: 1px solid var(--border-subtle);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+            will-change: transform, box-shadow, border-color;
         }
 
         .fintech-card:hover {
             box-shadow: var(--card-shadow-hover);
-            transform: translateY(-3px);
-            border-color: rgba(99, 102, 241, 0.08);
+            transform: translateY(-4px) scale(1.005);
+            border-color: rgba(16, 185, 129, 0.15);
+            /* Subtle emerald glow on hover */
         }
 
         /* --- Hero Stat (Revenue Card) — Rich Premium Gradient --- */
         .hero-stat {
             grid-column: span 2;
-            background: linear-gradient(135deg, #047857 0%, #059669 35%, #10B981 70%, #34D399 100%) !important;
+            background: linear-gradient(135deg, #065F46 0%, #059669 40%, #10B981 80%, #34D399 100%) !important;
+            box-shadow: 0 20px 40px -10px rgba(5, 150, 105, 0.4) !important;
             color: white !important;
-            border: none !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
             position: relative;
             overflow: hidden;
+            transform-origin: center bottom;
+        }
+
+        .hero-stat:hover {
+            transform: translateY(-6px) scale(1.02);
+            box-shadow: 0 30px 60px -15px rgba(5, 150, 105, 0.5) !important;
         }
 
         .hero-stat::before {
             content: '';
             position: absolute;
-            top: -60%;
-            right: -20%;
-            width: 200px;
-            height: 200px;
-            background: radial-gradient(circle, rgba(255, 255, 255, 0.12) 0%, transparent 70%);
+            top: -50%;
+            right: -10%;
+            width: 250px;
+            height: 250px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, transparent 70%);
             border-radius: 50%;
+            pointer-events: none;
         }
 
         .hero-stat::after {
@@ -909,14 +962,16 @@
             }
         }
 
-        /* --- Stat Widget — Stitch Premium --- */
+        /* --- Stat Widget — Executive Premium --- */
         .stat-widget {
             display: flex;
             align-items: center;
-            gap: 14px;
-            padding: 20px 18px;
+            gap: 16px;
+            padding: 22px 20px;
             position: relative;
             overflow: hidden;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.02) 0%, transparent 100%);
+            border-top: 1px solid rgba(255, 255, 255, 0.8);
         }
 
         /* Inner glow ring for stat cards */
@@ -935,18 +990,19 @@
         }
 
         .stat-icon {
-            width: 48px;
-            height: 48px;
-            border-radius: 14px;
+            width: 52px;
+            height: 52px;
+            border-radius: 16px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 19px;
+            font-size: 20px;
             flex-shrink: 0;
             position: relative;
             z-index: 1;
-            transition: transform 0.35s var(--transition-spring), box-shadow 0.35s ease;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            transition: transform 0.4s var(--transition-spring), box-shadow 0.4s ease;
+            box-shadow: 0 8px 24px -6px rgba(15, 23, 42, 0.15), inset 0 2px 4px rgba(255, 255, 255, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
         /* Animated glow ring on hover */
@@ -965,15 +1021,19 @@
         }
 
         .fintech-card:hover .stat-icon {
-            transform: scale(1.12) rotate(-4deg);
+            transform: scale(1.15) rotate(-6deg);
+            box-shadow: 0 12px 32px -8px rgba(15, 23, 42, 0.25), inset 0 2px 4px rgba(255, 255, 255, 0.6);
         }
 
         .stat-value {
-            font-size: 1.6rem;
+            font-size: 1.7rem;
             font-weight: 800;
             line-height: 1.1;
-            letter-spacing: -0.035em;
+            letter-spacing: -0.04em;
             white-space: nowrap;
+            background: linear-gradient(180deg, var(--text-heading) 0%, var(--text-label) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
         .stat-label {
@@ -985,29 +1045,34 @@
             margin-bottom: 3px;
         }
 
-        /* --- Dark Mode Stat Card Accent Glows — Enhanced --- */
+        /* --- Dark Mode Stat Card Accent Glows — Luxury cinematic --- */
+        [data-theme="dark"] .hero-stat {
+            border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+            background: linear-gradient(135deg, #022C22 0%, #064E3B 50%, #047857 100%) !important;
+        }
+
         [data-theme="dark"] .hero-stat:hover {
-            box-shadow: 0 12px 48px rgba(16, 185, 129, 0.25), 0 0 80px rgba(16, 185, 129, 0.06) !important;
+            box-shadow: 0 20px 60px rgba(16, 185, 129, 0.3), 0 0 100px rgba(16, 185, 129, 0.1) !important;
         }
 
         [data-theme="dark"] .stat-widget:nth-child(2):hover {
-            border-color: rgba(99, 102, 241, 0.18) !important;
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), 0 0 30px rgba(99, 102, 241, 0.06) !important;
+            border-color: rgba(99, 102, 241, 0.25) !important;
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.6), 0 0 40px rgba(99, 102, 241, 0.1) !important;
         }
 
         [data-theme="dark"] .stat-widget:nth-child(3):hover {
-            border-color: rgba(59, 130, 246, 0.18) !important;
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), 0 0 30px rgba(59, 130, 246, 0.06) !important;
+            border-color: rgba(59, 130, 246, 0.25) !important;
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.6), 0 0 40px rgba(59, 130, 246, 0.1) !important;
         }
 
         [data-theme="dark"] .stat-widget:nth-child(4):hover {
-            border-color: rgba(168, 85, 247, 0.18) !important;
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), 0 0 30px rgba(168, 85, 247, 0.06) !important;
+            border-color: rgba(168, 85, 247, 0.25) !important;
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.6), 0 0 40px rgba(168, 85, 247, 0.1) !important;
         }
 
         [data-theme="dark"] .stat-widget:nth-child(5):hover {
-            border-color: rgba(234, 88, 12, 0.18) !important;
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), 0 0 30px rgba(234, 88, 12, 0.06) !important;
+            border-color: rgba(234, 88, 12, 0.25) !important;
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.6), 0 0 40px rgba(234, 88, 12, 0.1) !important;
         }
 
         /* --- Voice Command Center — Stitch Premium Glass --- */
@@ -1035,24 +1100,27 @@
             z-index: -1;
         }
 
-        /* --- Mic Button (Premium Glow) --- */
+        /* --- Mic Button (Executive Jewel Centerpiece) --- */
         .mic-button {
-            width: 72px;
-            height: 72px;
+            width: 80px;
+            height: 80px;
             border-radius: 50%;
-            background: var(--accent-gradient);
-            border: none;
+            background: linear-gradient(135deg, #059669 0%, #065F46 100%);
+            border: 2px solid rgba(255, 255, 255, 0.2);
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
             position: relative;
             z-index: 1;
-            transition: transform 0.3s var(--transition-spring), box-shadow 0.4s ease;
+            transition: transform 0.5s var(--transition-spring), box-shadow 0.5s ease;
             box-shadow:
-                0 4px 20px rgba(16, 185, 129, 0.35),
-                0 8px 40px rgba(16, 185, 129, 0.15);
-            animation: micBreathe 4s ease-in-out infinite;
+                inset 0 4px 12px rgba(255, 255, 255, 0.3),
+                0 10px 30px rgba(5, 150, 105, 0.4),
+                0 0 60px rgba(5, 150, 105, 0.2);
+            font-size: 28px;
+            /* Slightly larger icon */
+            animation: micBreathe 5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
         }
 
         @keyframes micBreathe {
@@ -1060,22 +1128,28 @@
             0%,
             100% {
                 transform: scale(1);
-                box-shadow: 0 4px 20px rgba(16, 185, 129, 0.35), 0 8px 40px rgba(16, 185, 129, 0.15);
+                box-shadow:
+                    inset 0 4px 12px rgba(255, 255, 255, 0.3),
+                    0 10px 30px rgba(5, 150, 105, 0.4),
+                    0 0 60px rgba(5, 150, 105, 0.2);
             }
 
             50% {
-                transform: scale(1.04);
-                box-shadow: 0 6px 28px rgba(16, 185, 129, 0.45), 0 12px 48px rgba(16, 185, 129, 0.2);
+                transform: scale(1.05);
+                box-shadow:
+                    inset 0 4px 12px rgba(255, 255, 255, 0.4),
+                    0 15px 40px rgba(5, 150, 105, 0.5),
+                    0 0 80px rgba(5, 150, 105, 0.3);
             }
         }
 
         .mic-button:hover {
-            transform: scale(1.1) !important;
+            transform: scale(1.15) !important;
             animation: none;
             box-shadow:
-                0 6px 28px rgba(16, 185, 129, 0.5),
-                0 12px 56px rgba(16, 185, 129, 0.25),
-                0 0 80px rgba(16, 185, 129, 0.1);
+                inset 0 6px 16px rgba(255, 255, 255, 0.5),
+                0 20px 50px rgba(5, 150, 105, 0.6),
+                0 0 100px rgba(5, 150, 105, 0.4);
         }
 
         /* Pulse rings — subtle idle animation */
@@ -1138,23 +1212,23 @@
             }
         }
 
-        /* --- Pill Input (Professional Style) --- */
+        /* --- Pill Input (Executive Search Style) --- */
         .pill-input {
             background: #fff;
             border-radius: 50px;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.03);
-            border: 1px solid rgba(15, 23, 42, 0.08);
-            padding: 6px 6px 6px 22px;
+            box-shadow: 0 2px 4px rgba(15, 23, 42, 0.05), 0 8px 16px rgba(15, 23, 42, 0.03);
+            border: 1px solid rgba(15, 23, 42, 0.06);
+            padding: 8px 8px 8px 24px;
             display: flex;
             align-items: center;
-            gap: 8px;
-            transition: all 0.3s var(--transition-smooth);
+            gap: 12px;
+            transition: all 0.4s var(--transition-spring);
         }
 
         .pill-input:focus-within {
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.08), 0 4px 24px rgba(99, 102, 241, 0.06);
-            border-color: rgba(99, 102, 241, 0.25);
-            transform: translateY(-1px);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1), 0 12px 32px rgba(99, 102, 241, 0.08);
+            border-color: rgba(99, 102, 241, 0.3);
+            transform: translateY(-2px);
         }
 
         .pill-input input {
@@ -1191,25 +1265,25 @@
             box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
         }
 
-        /* --- Floating List Items — Premium Elevated --- */
+        /* --- Floating List Items — Executive Elevated --- */
         .floating-item {
             background: #fff;
-            border-radius: 16px;
-            padding: 14px 16px;
-            margin-bottom: 10px;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03), 0 2px 8px rgba(0, 0, 0, 0.02);
-            border: 1px solid rgba(15, 23, 42, 0.06);
+            border-radius: 20px;
+            padding: 16px 20px;
+            margin-bottom: 12px;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.03), 0 1px 3px rgba(15, 23, 42, 0.02);
+            border: 1px solid rgba(15, 23, 42, 0.05);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            transition: all 0.3s var(--transition-smooth);
-            border-left: 3px solid transparent;
+            transition: all 0.4s var(--transition-spring);
+            border-left: 4px solid transparent;
         }
 
         .floating-item:hover {
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06), 0 2px 6px rgba(0, 0, 0, 0.03);
-            transform: translateY(-2px);
-            border-color: rgba(99, 102, 241, 0.08);
+            box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.08), 0 8px 16px -4px rgba(15, 23, 42, 0.04);
+            transform: translateY(-3px) scale(1.01);
+            border-color: rgba(99, 102, 241, 0.15);
         }
 
         /* Dark mode inventory cards — accent left border */
@@ -1254,24 +1328,24 @@
             line-height: 1;
         }
 
-        /* --- Transaction Row (Sales) — Refined --- */
+        /* --- Transaction Row (Sales) — Executive Layout --- */
         .txn-row {
             background: #fff;
-            border-radius: 16px;
-            padding: 14px 16px;
-            margin-bottom: 10px;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03), 0 2px 8px rgba(0, 0, 0, 0.02);
-            border: 1px solid rgba(15, 23, 42, 0.06);
+            border-radius: 20px;
+            padding: 16px 20px;
+            margin-bottom: 12px;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.03), 0 1px 3px rgba(15, 23, 42, 0.02);
+            border: 1px solid var(--border-subtle);
             display: flex;
             align-items: center;
-            gap: 12px;
-            transition: all 0.3s var(--transition-smooth);
+            gap: 16px;
+            transition: all 0.4s var(--transition-spring);
         }
 
         .txn-row:hover {
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06), 0 2px 6px rgba(0, 0, 0, 0.03);
-            transform: translateY(-2px);
-            border-color: rgba(59, 130, 246, 0.08);
+            box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.08), 0 8px 16px -4px rgba(15, 23, 42, 0.04);
+            transform: translateY(-3px) scale(1.01);
+            border-color: rgba(59, 130, 246, 0.15);
         }
 
         .txn-avatar {
@@ -1322,18 +1396,19 @@
 
         /* --- Hover Lift --- */
         .hover-lift {
-            transition: all 0.35s var(--transition-smooth);
+            transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
         }
 
         .hover-lift:hover {
-            transform: translateY(-3px);
+            transform: translateY(-4px) scale(1.01);
             box-shadow: var(--card-shadow-hover);
+            border-color: rgba(16, 185, 129, 0.2);
         }
 
-        /* --- Scrollbar — Minimal Professional --- */
+        /* --- Scrollbar — Invisible Luxury --- */
         ::-webkit-scrollbar {
-            width: 5px;
-            height: 5px;
+            width: 6px;
+            height: 6px;
         }
 
         ::-webkit-scrollbar-track {
@@ -1341,12 +1416,16 @@
         }
 
         ::-webkit-scrollbar-thumb {
-            background: rgba(99, 102, 241, 0.12);
+            background: rgba(15, 23, 42, 0.1);
             border-radius: 10px;
+            border: 2px solid transparent;
+            background-clip: padding-box;
         }
 
         ::-webkit-scrollbar-thumb:hover {
-            background: rgba(99, 102, 241, 0.25);
+            background: rgba(15, 23, 42, 0.2);
+            border: 2px solid transparent;
+            background-clip: padding-box;
         }
 
         /* --- Spinner --- */
@@ -1511,18 +1590,18 @@
             font-size: 0.85rem;
         }
 
-        /* --- Gradient Button — Premium --- */
+        /* --- Gradient Button — Executive Luxury --- */
         .btn-gradient {
-            background: var(--accent-gradient);
+            background: linear-gradient(135deg, #059669 0%, #065F46 100%);
             color: white;
-            border: none;
-            border-radius: 14px;
-            padding: 10px 22px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 16px;
+            padding: 12px 24px;
             font-weight: 700;
-            font-size: 0.85rem;
+            font-size: 0.9rem;
             cursor: pointer;
-            transition: all 0.25s var(--transition-smooth);
-            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2);
+            transition: all 0.4s var(--transition-spring);
+            box-shadow: 0 8px 20px rgba(5, 150, 105, 0.25), inset 0 2px 4px rgba(255, 255, 255, 0.2);
             position: relative;
             overflow: hidden;
         }
@@ -1531,9 +1610,9 @@
             content: '';
             position: absolute;
             inset: 0;
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, transparent 60%);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, transparent 50%);
             opacity: 0;
-            transition: opacity 0.3s;
+            transition: opacity 0.4s;
         }
 
         .btn-gradient:hover::before {
@@ -1541,48 +1620,51 @@
         }
 
         .btn-gradient:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(5, 150, 105, 0.3);
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 16px 32px rgba(5, 150, 105, 0.35), inset 0 2px 4px rgba(255, 255, 255, 0.3);
         }
 
         .btn-gradient:active {
             transform: translateY(0px) scale(0.98);
-            box-shadow: 0 2px 8px rgba(5, 150, 105, 0.25);
+            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2);
         }
 
-        /* --- Auth Pill Button (Glassmorphic) --- */
+        /* --- Auth Pill Button (Executive Glassmorphic) --- */
         .auth-pill-btn {
-            padding: 8px 18px;
+            padding: 10px 22px;
             border-radius: 50px;
             font-weight: 700;
-            font-size: 0.8rem;
+            font-size: 0.85rem;
             cursor: pointer;
-            transition: all 0.3s var(--transition-smooth);
-            border: 1px solid rgba(16, 185, 129, 0.3);
-            background: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(5, 150, 105, 0.08) 100%);
+            transition: all 0.4s var(--transition-spring);
+            border: 1px solid rgba(16, 185, 129, 0.4);
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.05) 100%);
             color: #10B981;
-            backdrop-filter: blur(8px);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
             letter-spacing: 0.02em;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.1);
         }
 
         .auth-pill-btn:hover {
-            background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.15) 100%);
-            border-color: rgba(16, 185, 129, 0.5);
-            box-shadow: 0 0 20px rgba(16, 185, 129, 0.15);
-            transform: translateY(-1px);
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.25) 0%, rgba(5, 150, 105, 0.15) 100%);
+            border-color: rgba(16, 185, 129, 0.6);
+            box-shadow: 0 12px 24px rgba(16, 185, 129, 0.25), inset 0 1px 2px rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px) scale(1.02);
         }
 
-        /* Logout state - red tint */
+        /* Logout state - red luxury tint */
         .auth-pill-btn.auth-logout {
-            border-color: rgba(239, 68, 68, 0.3);
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, rgba(220, 38, 38, 0.08) 100%);
+            border-color: rgba(239, 68, 68, 0.4);
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.05) 100%);
             color: #EF4444;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.1);
         }
 
         .auth-pill-btn.auth-logout:hover {
-            border-color: rgba(239, 68, 68, 0.5);
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.15) 100%);
-            box-shadow: 0 0 20px rgba(239, 68, 68, 0.15);
+            border-color: rgba(239, 68, 68, 0.6);
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.25) 0%, rgba(220, 38, 38, 0.15) 100%);
+            box-shadow: 0 12px 24px rgba(239, 68, 68, 0.25), inset 0 1px 2px rgba(255, 255, 255, 0.2);
         }
 
         /* --- Dark Mode Transaction Rows --- */
@@ -1687,29 +1769,36 @@
 
         .stat-value {
             animation: countUp 0.6s var(--transition-spring) 0.3s both;
+            font-family: var(--font-serif), serif;
+            /* Apply classic serif font */
         }
 
         /* --- Toast / Notification Enhancements --- */
         #toast-container .toast-msg {
-            backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(24px);
+            /* Increased blur */
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            /* Softer border */
         }
 
-        /* --- Login Card Premium --- */
+        /* --- Login Card Premium Executive --- */
         .login-card {
-            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04);
+            box-shadow: 0 20px 60px -15px rgba(0, 0, 0, 0.15), inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+            border-radius: 24px;
         }
 
         /* --- Expiry Badge Animation --- */
         .expiry-badge {
-            animation: fadeInUp 0.3s var(--transition-spring) both;
+            animation: fadeInUp 0.4s var(--transition-spring) both;
         }
 
         /* --- Interactive Focus Ring --- */
         button:focus-visible,
         input:focus-visible {
-            outline: 2px solid var(--accent-purple);
-            outline-offset: 2px;
+            outline: 2px solid var(--accent-green);
+            /* Switched abstract purple for brand green */
+            outline-offset: 3px;
         }
 
         /* --- DARK MODE CALENDAR FIXES --- */
@@ -1739,6 +1828,550 @@
             border-color: rgba(16, 185, 129, 0.2) !important;
             color: #6EE7B7 !important;
         }
+
+        /* ===== PROFESSIONAL POLISH — FINAL REFINEMENTS ===== */
+
+        /* --- Stat Grid: Better Responsive Layout --- */
+        .stat-grid-custom {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        @media (min-width: 768px) {
+            .stat-grid-custom {
+                grid-template-columns: repeat(5, 1fr);
+                gap: 16px;
+            }
+
+            .stat-grid-custom>.hero-stat {
+                grid-column: span 2;
+            }
+        }
+
+        /* --- Section Headers: Executive Glass --- */
+        .section-header-glass {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(24px) saturate(200%);
+            -webkit-backdrop-filter: blur(24px) saturate(200%);
+            border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+            transition: background 0.4s ease;
+        }
+
+        [data-theme="dark"] .section-header-glass {
+            background: rgba(11, 15, 25, 0.85) !important;
+            border-bottom-color: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        /* --- Search Bar: Premium Rounded with Glow --- */
+        .search-premium {
+            background: var(--input-bg);
+            border: 1px solid var(--input-border);
+            border-radius: 14px;
+            padding: 10px 14px 10px 38px;
+            font-size: 0.85rem;
+            color: var(--text-heading);
+            outline: none;
+            width: 100%;
+            transition: all 0.35s var(--transition-smooth);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        .search-premium::placeholder {
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .search-premium:focus {
+            border-color: rgba(16, 185, 129, 0.4);
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.08), 0 4px 16px rgba(16, 185, 129, 0.06);
+            transform: translateY(-1px);
+        }
+
+        [data-theme="dark"] .search-premium {
+            background: rgba(255, 255, 255, 0.04) !important;
+            border-color: rgba(255, 255, 255, 0.06) !important;
+            color: var(--text-heading) !important;
+        }
+
+        [data-theme="dark"] .search-premium:focus {
+            border-color: rgba(16, 185, 129, 0.35) !important;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.06), 0 4px 16px rgba(16, 185, 129, 0.04) !important;
+        }
+
+        .search-icon-premium {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 12px;
+            transition: color 0.3s ease;
+            pointer-events: none;
+        }
+
+        .search-wrapper:focus-within .search-icon-premium {
+            color: #10B981;
+        }
+
+        /* --- Inventory Card Items: Tighter Polish --- */
+        .floating-item {
+            padding: 16px 18px;
+            border-radius: 16px;
+            margin-bottom: 8px;
+            border-left-width: 3px;
+        }
+
+        .floating-item .item-name {
+            font-weight: 700;
+            font-size: 0.9rem;
+            letter-spacing: -0.01em;
+        }
+
+        .floating-item .item-price {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-weight: 500;
+            margin-top: 2px;
+        }
+
+        /* --- Stock Pill: Premium Redesign --- */
+        .stock-pill {
+            font-size: 0.78rem;
+            font-weight: 800;
+            padding: 6px 14px;
+            border-radius: 12px;
+            min-width: 48px;
+            text-align: center;
+            line-height: 1;
+            letter-spacing: -0.01em;
+        }
+
+        /* --- Action Buttons (Inventory +-🗑): Refined --- */
+        .inv-action-btn {
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            transition: all 0.2s var(--transition-smooth);
+        }
+
+        .inv-action-btn:hover {
+            transform: scale(1.12);
+        }
+
+        .inv-action-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* --- Transaction Rows: Enhanced --- */
+        .txn-row {
+            padding: 18px 20px;
+            /* Slightly more breathable padding */
+            border-radius: 16px;
+            margin-bottom: 8px;
+            border-left-width: 4px;
+            /* Thicker accent line */
+        }
+
+        .txn-amount {
+            font-weight: 700;
+            font-size: 1.05rem;
+            /* Larger numbers */
+            letter-spacing: -0.01em;
+            font-family: var(--font-serif), serif;
+        }
+
+        .txn-details {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+            /* Better readability */
+        }
+
+        /* --- Payment Toggle (Cash/Udhaar) --- */
+        .payment-toggle-btn {
+            flex: 1;
+            padding: 10px 12px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            transition: all 0.3s var(--transition-spring);
+            color: var(--text-muted);
+            background: transparent;
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+
+        .payment-toggle-btn:hover {
+            color: var(--text-heading);
+            background: rgba(15, 23, 42, 0.02);
+        }
+
+        [data-theme="dark"] .payment-toggle-btn:hover {
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        /* Active Cash */
+        .payment-toggle-btn.active-cash {
+            background: #ffffff;
+            color: #059669;
+            /* emerald-600 */
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.1);
+        }
+
+        [data-theme="dark"] .payment-toggle-btn.active-cash {
+            background: rgba(16, 185, 129, 0.12);
+            /* Tinted glass */
+            color: #34D399;
+            /* emerald-400 */
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            box-shadow: 0 4px 16px rgba(16, 185, 129, 0.1);
+        }
+
+        /* Active Udhaar */
+        .payment-toggle-btn.active-udhaar {
+            background: #ffffff;
+            color: #DC2626;
+            /* red-600 */
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.1);
+        }
+
+        [data-theme="dark"] .payment-toggle-btn.active-udhaar {
+            background: rgba(239, 68, 68, 0.12);
+            /* Tinted red glass */
+            color: #F87171;
+            /* red-400 */
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            box-shadow: 0 4px 16px rgba(239, 68, 68, 0.1);
+        }
+
+        /* --- Empty State: Professional --- */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 48px 24px;
+            text-align: center;
+        }
+
+        .empty-state-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-bottom: 16px;
+            background: rgba(99, 102, 241, 0.08);
+            color: #6366f1;
+        }
+
+        [data-theme="dark"] .empty-state-icon {
+            background: rgba(99, 102, 241, 0.1);
+            color: #818cf8;
+        }
+
+        .empty-state-text {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .empty-state-sub {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            opacity: 0.7;
+            margin-top: 4px;
+        }
+
+        /* --- Modals: Executive Premium Headers --- */
+        .modal-header-premium {
+            padding: 28px 32px 24px;
+            border-bottom: 1px solid var(--border-subtle);
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.4) 0%, transparent 100%);
+        }
+
+        .modal-title-group h2 {
+            font-size: 1.45rem;
+            font-weight: 800;
+            letter-spacing: -0.04em;
+            color: var(--text-heading);
+            background: linear-gradient(180deg, var(--text-heading) 0%, var(--text-label) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .modal-title-group p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+            font-weight: 500;
+        }
+
+        .modal-close-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            border: 1px solid var(--border-subtle);
+            background: var(--card-bg);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-heading);
+            font-size: 16px;
+            transition: all 0.3s var(--transition-spring);
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+        }
+
+        .modal-close-btn:hover {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+            transform: rotate(90deg) scale(1.1);
+            box-shadow: 0 4px 16px rgba(239, 68, 68, 0.15);
+        }
+
+        /* --- Add Button: Executive Enhanced --- */
+        .btn-add-stock {
+            font-size: 0.85rem;
+            font-weight: 700;
+            padding: 10px 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            cursor: pointer;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.05) 100%);
+            color: #059669;
+            transition: all 0.4s var(--transition-spring);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            letter-spacing: 0.01em;
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.08);
+        }
+
+        .btn-add-stock:hover {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.1) 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(16, 185, 129, 0.2), inset 0 1px 2px rgba(255, 255, 255, 0.4);
+            border-color: rgba(16, 185, 129, 0.4);
+        }
+
+        [data-theme="dark"] .btn-add-stock {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.05) 100%);
+            color: #34D399;
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+
+        [data-theme="dark"] .btn-add-stock:hover {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.25) 0%, rgba(5, 150, 105, 0.1) 100%);
+            box-shadow: 0 8px 24px rgba(16, 185, 129, 0.25), inset 0 1px 2px rgba(255, 255, 255, 0.1);
+            border-color: rgba(16, 185, 129, 0.5);
+        }
+
+        /* --- Expiry Badge: Refined --- */
+        .expiry-badge {
+            font-size: 0.68rem;
+            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: 8px;
+            letter-spacing: 0.02em;
+        }
+
+        /* --- Footer: Refined --- */
+        footer {
+            border-top: 1px solid var(--border-subtle);
+            padding: 28px 0 !important;
+        }
+
+        footer p {
+            font-size: 0.78rem !important;
+            font-weight: 500;
+        }
+
+        /* --- Demo Banner: Sleek Minimal --- */
+        #demo-banner {
+            font-size: 0.8rem !important;
+            letter-spacing: 0.01em;
+        }
+
+        /* --- Voice Center: Refined Inner Shadow --- */
+        .voice-center {
+            border-radius: 28px;
+            padding: 28px !important;
+        }
+
+        .voice-center h2 {
+            font-size: 1.2rem !important;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+        }
+
+        /* --- Calendar Days: Better Hover & Active --- */
+        .calendar-day {
+            border-radius: 14px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            transition: all 0.25s var(--transition-smooth);
+        }
+
+        .calendar-day:hover {
+            transform: scale(1.05);
+        }
+
+        .calendar-day.has-sales {
+            font-weight: 700;
+        }
+
+        [data-theme="dark"] .calendar-day:hover {
+            background: rgba(99, 102, 241, 0.08) !important;
+            border-color: rgba(99, 102, 241, 0.15) !important;
+        }
+
+        [data-theme="dark"] .calendar-day.has-sales {
+            background: rgba(16, 185, 129, 0.12) !important;
+            border-color: rgba(16, 185, 129, 0.25) !important;
+            box-shadow: 0 0 16px rgba(16, 185, 129, 0.06);
+        }
+
+        [data-theme="dark"] .calendar-day.has-sales:hover {
+            background: rgba(16, 185, 129, 0.18) !important;
+            transform: scale(1.08);
+        }
+
+        /* --- Chart Canvas: Rounded --- */
+        canvas {
+            border-radius: 16px;
+        }
+
+        /* --- Udhaar Dashboard: Customer Row Polish --- */
+        .dues-customer-row {
+            border-radius: 16px;
+            padding: 16px 18px;
+            margin-bottom: 8px;
+        }
+
+        .dues-customer-row:hover {
+            transform: translateX(3px);
+        }
+
+        /* --- Loading Skeleton Shimmer --- */
+        @keyframes shimmer {
+            0% {
+                background-position: -200% 0;
+            }
+
+            100% {
+                background-position: 200% 0;
+            }
+        }
+
+        .skeleton {
+            background: linear-gradient(90deg,
+                    var(--input-bg) 25%,
+                    rgba(99, 102, 241, 0.04) 50%,
+                    var(--input-bg) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: 12px;
+        }
+
+        /* --- Smooth Page Transitions --- */
+        main,
+        .fintech-card,
+        .voice-center,
+        footer {
+            animation: fadeInUp 0.5s var(--transition-spring) both;
+        }
+
+        /* --- Button Press Effect (Global) --- */
+        button:active:not(.mic-button):not(.auth-submit-btn) {
+            transform: scale(0.97) !important;
+            transition-duration: 0.1s;
+        }
+
+        /* --- Selection Color --- */
+        ::selection {
+            background: rgba(99, 102, 241, 0.2);
+            color: var(--text-heading);
+        }
+
+        /* --- Mobile Refinements --- */
+        @media (max-width: 640px) {
+            .stat-widget {
+                padding: 16px 14px;
+            }
+
+            .stat-value {
+                font-size: 1.35rem;
+            }
+
+            .stat-label {
+                font-size: 0.58rem;
+            }
+
+            .voice-center {
+                padding: 20px !important;
+            }
+
+            .voice-center h2 {
+                font-size: 1.05rem !important;
+            }
+
+            .mic-button {
+                width: 64px;
+                height: 64px;
+            }
+
+            .mic-pulse-ring {
+                width: 64px;
+                height: 64px;
+            }
+
+            .floating-item,
+            .txn-row {
+                padding: 14px 14px;
+            }
+
+            .section-title {
+                font-size: 0.88rem;
+            }
+        }
+
+        /* --- Focus Styles for Better Accessibility --- */
+        .fintech-card:focus-within {
+            box-shadow: var(--card-shadow-hover);
+        }
+
+        /* --- Print Styles --- */
+        @media print {
+
+            .floating-header,
+            #demo-banner,
+            .mic-button,
+            footer {
+                display: none !important;
+            }
+
+            .fintech-card {
+                box-shadow: none !important;
+                border: 1px solid #ddd !important;
+            }
+        }
     </style>
 </head>
 
@@ -1749,16 +2382,17 @@
 
     <!-- PUBLIC DEMO BANNER (Sticky Top) -->
     <div id="demo-banner"
-        class="hidden fixed top-0 left-0 right-0 z-[100] text-white font-bold text-center py-2.5 px-4 shadow-lg transition-transform duration-300"
-        style="background: linear-gradient(135deg, #1E293B 0%, #334155 100%);">
-        <div class="container mx-auto flex items-center justify-center gap-2 text-sm md:text-base">
-            <i class="fas fa-info-circle text-indigo-400"></i>
-            <span class="text-slate-200">You are in <span
-                    class="underline decoration-2 underline-offset-2 text-indigo-300">Public Demo Mode</span>. Data is
-                shared publicly.</span>
+        class="hidden fixed top-0 left-0 right-0 z-[100] text-white font-bold text-center py-2 px-4 shadow-lg transition-transform duration-300 backdrop-blur-md border-b"
+        style="background: rgba(15, 23, 42, 0.85); border-color: rgba(255,255,255,0.1);">
+        <div class="container mx-auto flex items-center justify-center gap-3 text-xs md:text-sm">
+            <span class="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-400">
+                <i class="fas fa-info-circle"></i>
+            </span>
+            <span class="text-slate-300 font-medium">You are in <span class="font-bold text-indigo-400">Public Demo
+                    Mode</span>. Data is shared publicly.</span>
             <button onclick="document.getElementById('auth-overlay').classList.remove('hidden')"
-                class="ml-4 bg-indigo-500 text-white px-3 py-1 rounded-full text-xs font-bold hover:bg-indigo-400 transition-colors uppercase tracking-wide shadow-sm">
-                Login to Create Private Store
+                class="ml-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-md shadow-indigo-500/20">
+                Login for Private Store
             </button>
         </div>
     </div>
@@ -1782,15 +2416,25 @@
 
     <!-- Loading Overlay -->
     <div id="loading-overlay"
-        class="fixed inset-0 bg-slate-900 z-[100] flex flex-col items-center justify-center transition-opacity duration-500">
-        <div
-            class="w-20 h-20 rounded-full flex items-center justify-center mb-4 shadow-[0_0_30px_rgba(16,185,129,0.3)] animate-pulse overflow-hidden border-2 border-emerald-500/20 bg-slate-800">
-            <img src="/static/logo.png" alt="AutoBill Buddy Logo" class="w-full h-full object-cover"
-                onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-            <i class="fas fa-shopping-cart text-emerald-400 text-3xl hidden"></i>
+        class="fixed inset-0 bg-slate-900/90 backdrop-blur-lg z-[100] flex flex-col items-center justify-center transition-opacity duration-500">
+        <div class="relative w-24 h-24 mb-6">
+            <!-- Pulsing outer ring -->
+            <div class="absolute inset-0 rounded-full bg-emerald-500/20 animate-ping"></div>
+            <!-- Inner circle with logo -->
+            <div
+                class="absolute inset-0 rounded-full flex items-center justify-center shadow-[0_0_40px_rgba(16,185,129,0.4)] overflow-hidden border-2 border-emerald-500/40 bg-slate-800 z-10 transition-transform hover:scale-105 duration-300">
+                <img src="/static/logo.png" alt="AutoBill Buddy Logo" class="w-full h-full object-cover"
+                    onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                <i class="fas fa-shopping-cart text-emerald-400 text-3xl hidden"></i>
+            </div>
         </div>
-        <h2 class="text-white text-xl font-bold animate-pulse">AutoBill Buddy</h2>
-        <p class="text-slate-400 text-sm mt-2">Starting Store...</p>
+        <h2 class="text-white text-2xl font-black tracking-tight flex items-center gap-2">
+            AutoBill <span
+                class="bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-teal-400">Buddy</span>
+        </h2>
+        <p class="text-slate-400 text-sm mt-2 font-medium flex items-center gap-2">
+            <i class="fas fa-circle-notch fa-spin text-emerald-500"></i> Starting your store...
+        </p>
     </div>
 
     <!-- Auth Modal (Hidden by default) -->
@@ -1991,6 +2635,11 @@
                     <p class="text-sm font-semibold animate-pulse" style="color: #059669;">Listening...</p>
                     <p id="live-transcript" class="text-lg font-medium italic mt-1" style="color: var(--text-heading);">
                         "..."</p>
+                    <button id="cancel-mic-btn" onclick="cancelMic()"
+                        class="mt-3 px-5 py-2 rounded-full text-sm font-bold transition-all hover:scale-105"
+                        style="background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5;">
+                        ✕ Cancel
+                    </button>
                 </div>
 
                 <!-- Floating Pill Input -->
@@ -2007,31 +2656,29 @@
 
                 <!-- Inventory (Floating Cards) -->
                 <div class="fintech-card p-0 overflow-hidden flex flex-col h-[420px]">
-                    <div class="p-5 border-b border-gray-100 flex flex-col gap-3 sticky top-0 z-10 bg-white"
+                    <div class="p-5 border-b border-gray-100 flex flex-col gap-3 sticky top-0 z-10 section-header-glass"
                         style="border-radius: 24px 24px 0 0;">
                         <div class="flex justify-between items-center">
                             <h3 class="section-title cursor-pointer hover:text-emerald-600 transition-colors tooltip"
                                 onclick="openFullInventory()" title="Tap for Detailed Inventory Report">
                                 <i class="fas fa-warehouse text-emerald-500"></i> Inventory Status
                             </h3>
-                            <div class="flex gap-2">
+                            <div class="flex gap-2 items-center">
                                 <button onclick="document.getElementById('add-stock-modal').classList.remove('hidden')"
-                                    class="text-xs font-semibold px-3 py-1.5 rounded-xl transition-all"
-                                    style="background: rgba(16,185,129,0.08); color: #059669;">
-                                    <i class="fas fa-plus mr-1"></i> Add
+                                    class="btn-add-stock">
+                                    <i class="fas fa-plus"></i> Add
                                 </button>
                                 <button id="refresh-inventory-btn"
-                                    class="text-gray-400 hover:text-emerald-600 transition-colors">
+                                    class="text-gray-400 hover:text-emerald-600 transition-all hover:rotate-180 duration-500">
                                     <i class="fas fa-refresh"></i>
                                 </button>
                             </div>
                         </div>
                         <!-- Search Bar -->
-                        <div class="relative">
-                            <i class="fas fa-search absolute left-3.5 top-1/2 transform -translate-y-1/2 text-xs"
-                                style="color: var(--text-muted);"></i>
+                        <div class="relative search-wrapper">
+                            <i class="fas fa-search search-icon-premium"></i>
                             <input type="text" id="inventory-search" placeholder="Search items..."
-                                class="w-full pl-9 pr-3 py-2 text-sm bg-gray-50 border border-gray-100 rounded-xl focus:border-emerald-500 focus:ring-1 focus:ring-emerald-100 outline-none transition-all">
+                                class="search-premium">
                         </div>
                     </div>
                     <div class="overflow-y-auto flex-1 p-3" id="inventory-list">
@@ -2041,10 +2688,11 @@
 
                 <!-- Recent Transactions (Bank Style) -->
                 <div class="fintech-card p-0 overflow-hidden flex flex-col h-[420px]">
-                    <div class="p-5 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white"
+                    <div class="p-5 border-b border-gray-100 flex justify-between items-center sticky top-0 section-header-glass"
                         style="border-radius: 24px 24px 0 0;">
                         <h3 class="section-title"><i class="fas fa-history text-blue-500"></i> Recent Sales</h3>
-                        <button id="refresh-sales-btn" class="text-gray-400 hover:text-blue-600 transition-colors">
+                        <button id="refresh-sales-btn"
+                            class="text-gray-400 hover:text-blue-600 transition-all hover:rotate-180 duration-500">
                             <i class="fas fa-refresh"></i>
                         </button>
                     </div>
@@ -2088,33 +2736,65 @@
                 </button>
             </div>
 
-            <!-- VIEW 1: CALENDAR -->
+            <!-- VIEW 1: CALENDAR (Monthly) -->
             <div id="view-calendar" class="flex-1 overflow-y-auto p-6">
-                <!-- CHART CONTAINER -->
-                <div class="mb-8 w-full h-48">
-                    <canvas id="revenueChart"></canvas>
+                <!-- MONTHLY / YEARLY TOGGLE -->
+                <div class="flex items-center justify-center mb-5 gap-1 bg-gray-100 rounded-xl p-1"
+                    style="max-width: 240px; margin-left: auto; margin-right: auto;">
+                    <button id="tab-monthly" onclick="switchDashboardTab('monthly')"
+                        class="flex-1 py-2 px-4 rounded-lg text-sm font-bold transition-all bg-white shadow-sm"
+                        style="color: var(--text-heading);">
+                        📅 Monthly
+                    </button>
+                    <button id="tab-yearly" onclick="switchDashboardTab('yearly')"
+                        class="flex-1 py-2 px-4 rounded-lg text-sm font-bold transition-all"
+                        style="color: var(--text-muted);">
+                        📊 Yearly
+                    </button>
                 </div>
 
-                <div id="calendar-total-rev"
-                    class="bg-emerald-50 text-emerald-700 px-5 py-3.5 rounded-2xl border border-emerald-100 font-bold mb-6 flex gap-4 items-center text-sm">
-                    <span>Rev: ₹0</span>
-                    <span>Profit: ₹0</span>
+                <!-- MONTHLY VIEW CONTENT -->
+                <div id="monthly-content">
+                    <div id="calendar-total-rev"
+                        class="bg-emerald-50 text-emerald-700 px-5 py-3.5 rounded-2xl border border-emerald-100 font-bold mb-6 flex gap-4 items-center text-sm">
+                        <span>Rev: ₹0</span>
+                        <span>Profit: ₹0</span>
+                    </div>
+
+                    <!-- Day Headers -->
+                    <div class="grid grid-cols-7 gap-1 mb-2 text-center">
+                        <div class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-muted);">SUN
+                        </div>
+                        <div class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-muted);">MON
+                        </div>
+                        <div class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-muted);">TUE
+                        </div>
+                        <div class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-muted);">WED
+                        </div>
+                        <div class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-muted);">THU
+                        </div>
+                        <div class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-muted);">FRI
+                        </div>
+                        <div class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-muted);">SAT
+                        </div>
+                    </div>
+
+                    <!-- Calendar Grid -->
+                    <div id="calendar-grid" class="calendar-grid grid grid-cols-7 gap-1">
+                        <!-- Days injected by JS -->
+                    </div>
                 </div>
 
-                <!-- Day Headers -->
-                <div class="grid grid-cols-7 gap-1 mb-2 text-center">
-                    <div class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-muted);">SUN</div>
-                    <div class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-muted);">MON</div>
-                    <div class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-muted);">TUE</div>
-                    <div class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-muted);">WED</div>
-                    <div class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-muted);">THU</div>
-                    <div class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-muted);">FRI</div>
-                    <div class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-muted);">SAT</div>
-                </div>
-
-                <!-- Calendar Grid -->
-                <div id="calendar-grid" class="calendar-grid grid grid-cols-7 gap-1">
-                    <!-- Days injected by JS -->
+                <!-- YEARLY VIEW CONTENT (hidden by default) -->
+                <div id="yearly-content" class="hidden">
+                    <div id="yearly-total-rev"
+                        class="bg-purple-50 text-purple-700 px-5 py-3.5 rounded-2xl border border-purple-100 font-bold mb-6 flex gap-4 items-center text-sm">
+                        <span>Rev: ₹0</span>
+                        <span>Profit: ₹0</span>
+                    </div>
+                    <div id="yearly-months-grid" class="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                        <!-- Month cards injected by JS -->
+                    </div>
                 </div>
             </div>
 
@@ -2170,71 +2850,95 @@
 
     <!-- Udhaar Dashboard Modal -->
     <div id="udhaar-dashboard-modal"
-        class="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
-        <div class="fintech-card w-full max-w-2xl h-[80vh] flex flex-col relative overflow-hidden transition-all">
+        class="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden transition-opacity">
+        <div
+            class="fintech-card w-full max-w-2xl h-[85vh] flex flex-col relative overflow-hidden transition-all modal-content shadow-2xl p-0">
             <!-- Header -->
-            <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-white shrink-0"
+            <div class="p-6 border-b border-gray-100 dark:border-slate-700/50 flex justify-between items-center section-header-glass shrink-0"
                 style="border-radius: 24px 24px 0 0;">
                 <div>
                     <h2 class="text-xl font-bold flex items-center gap-2" style="color: var(--text-heading);">
-                        📒 <span class="text-red-500">Udhaar</span> Khata
+                        <i class="fas fa-book-open text-red-500"></i> <span
+                            class="bg-clip-text text-transparent bg-gradient-to-r from-red-600 to-orange-500">Udhaar
+                            Khata</span>
                     </h2>
-                    <p class="text-xs mt-0.5" style="color: var(--text-label);" id="udhaar-subtitle">Outstanding Dues
+                    <p class="text-xs mt-1" style="color: var(--text-label);" id="udhaar-subtitle">Manage Outstanding
+                        Dues
                     </p>
                 </div>
                 <button onclick="document.getElementById('udhaar-dashboard-modal').classList.add('hidden')"
-                    class="w-9 h-9 rounded-full bg-gray-50 hover:bg-red-50 hover:text-red-500 transition-all flex items-center justify-center"
+                    class="w-9 h-9 rounded-full bg-gray-50 dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700 transition-all flex items-center justify-center"
                     style="color: var(--text-muted);">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
 
             <!-- VIEW 1: SUMMARY (All customers) -->
-            <div id="udhaar-view-summary" class="flex-1 overflow-y-auto p-6">
+            <div id="udhaar-view-summary" class="flex-1 overflow-y-auto p-6" style="background: var(--card-bg);">
                 <div id="udhaar-total-banner"
-                    class="bg-red-50 text-red-600 px-5 py-3.5 rounded-2xl border border-red-100 font-bold mb-6 flex justify-between items-center text-sm">
-                    <span>Total Outstanding</span>
-                    <span id="udhaar-total-amount" class="text-lg">₹0</span>
+                    class="bg-red-50/50 dark:bg-red-900/10 text-red-700 dark:text-red-400 px-6 py-4 rounded-2xl border border-red-100 dark:border-red-800/30 font-bold mb-6 flex justify-between items-center tooltip"
+                    title="Total money owed to you">
+                    <span class="text-sm uppercase tracking-wider">Total Outstanding</span>
+                    <span id="udhaar-total-amount" class="text-2xl font-black">₹0</span>
                 </div>
                 <div id="udhaar-customers-list" class="space-y-3">
-                    <div class="text-center py-10" style="color: var(--text-muted);">Loading...</div>
+                    <div class="text-center py-10" style="color: var(--text-muted);">
+                        <i class="fas fa-spinner fa-spin text-2xl text-red-300 mb-3"></i><br>Loading...
+                    </div>
                 </div>
             </div>
 
             <!-- VIEW 2: DRILL-DOWN (Per customer) -->
-            <div id="udhaar-view-detail" class="flex-1 overflow-y-auto p-6 hidden">
+            <div id="udhaar-view-detail"
+                class="flex-1 overflow-y-auto p-6 hidden flex flex-col bg-gray-50/50 dark:bg-slate-900/50"
+                style="background: var(--app-bg);">
                 <button onclick="showUdhaarSummary()"
-                    class="mb-4 hover:text-red-500 flex items-center gap-2 font-semibold w-fit text-sm transition-colors"
+                    class="mb-5 hover:text-red-600 dark:hover:text-red-400 flex items-center gap-2 font-bold w-fit text-sm transition-colors bg-white dark:bg-slate-800 px-4 py-2 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700"
                     style="color: var(--text-label);">
                     <i class="fas fa-arrow-left"></i> Back to Summary
                 </button>
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-bold" style="color: var(--text-heading);" id="udhaar-customer-title">
-                        Customer</h3>
-                    <div class="flex items-center gap-2">
-                        <span class="text-lg font-bold text-red-500 mr-2" id="udhaar-customer-total">₹0</span>
-                        <div class="flex items-center bg-gray-50 rounded-2xl p-1.5 border border-gray-100">
-                            <input type="number" id="settle-amount-input"
-                                class="w-20 bg-transparent outline-none px-2 text-sm font-bold"
-                                style="color: var(--text-heading);" placeholder="Amount">
+                <div
+                    class="flex flex-col sm:flex-row items-center justify-between mb-6 gap-4 bg-white dark:bg-slate-800 p-5 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm">
+                    <div>
+                        <p class="text-xs font-bold uppercase tracking-wider mb-1" style="color: var(--text-muted);">
+                            Customer</p>
+                        <h3 class="text-xl font-bold" style="color: var(--text-heading);" id="udhaar-customer-title">
+                            Customer Name</h3>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <div class="text-right">
+                            <p class="text-xs font-bold uppercase tracking-wider mb-1"
+                                style="color: var(--text-muted);">Due</p>
+                            <span class="text-2xl font-black text-red-500" id="udhaar-customer-total">₹0</span>
+                        </div>
+                        <div class="h-10 w-px bg-gray-200 dark:bg-slate-700 mx-2 hidden sm:block"></div>
+                        <div
+                            class="flex items-center bg-gray-50 dark:bg-slate-900/50 rounded-2xl p-1.5 border border-gray-100 dark:border-slate-700">
+                            <div class="relative">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold">₹</span>
+                                <input type="number" id="settle-amount-input"
+                                    class="w-24 bg-transparent outline-none pl-7 pr-2 py-1 text-sm font-bold"
+                                    style="color: var(--text-heading);" placeholder="0.00">
+                            </div>
                             <button id="settle-dues-btn" onclick="settleDues()"
-                                class="btn-gradient px-4 py-1.5 text-xs rounded-xl flex items-center gap-2">
-                                <i class="fas fa-check-circle"></i> Settle
+                                class="bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white px-4 py-2 text-xs font-bold rounded-xl flex items-center gap-2 shadow-sm transition-all">
+                                Settle <i class="fas fa-arrow-right"></i>
                             </button>
                         </div>
                     </div>
                 </div>
-                <div class="overflow-x-auto">
+                <div
+                    class="overflow-x-auto rounded-2xl border border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm flex-1">
                     <table class="w-full text-sm">
-                        <thead>
-                            <tr class="text-xs uppercase tracking-wider" style="color: var(--text-muted);">
-                                <th class="px-4 py-3 text-left rounded-l-2xl bg-gray-50">Date/Time</th>
-                                <th class="px-4 py-3 text-left bg-gray-50">Item</th>
-                                <th class="px-4 py-3 text-center bg-gray-50">Qty</th>
-                                <th class="px-4 py-3 text-right rounded-r-2xl bg-gray-50">Cost</th>
+                        <thead class="bg-gray-50 dark:bg-slate-800/80 border-b border-gray-100 dark:border-slate-700">
+                            <tr class="text-xs font-bold uppercase tracking-wider" style="color: var(--text-muted);">
+                                <th class="px-5 py-4 text-left">Date/Time</th>
+                                <th class="px-5 py-4 text-left">Item</th>
+                                <th class="px-5 py-4 text-center">Qty</th>
+                                <th class="px-5 py-4 text-right">Cost</th>
                             </tr>
                         </thead>
-                        <tbody id="udhaar-detail-tbody" class="divide-y divide-gray-50">
+                        <tbody id="udhaar-detail-tbody" class="divide-y divide-gray-50 dark:divide-slate-700">
                         </tbody>
                     </table>
                 </div>
@@ -2247,46 +2951,66 @@
 
     <!-- Detailed Inventory Modal -->
     <div id="full-inventory-modal"
-        class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden bg-black/40 backdrop-blur-sm transition-opacity">
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden bg-slate-900/70 backdrop-blur-md transition-opacity">
         <div
-            class="bg-white rounded-3xl shadow-2xl w-full max-w-4xl overflow-hidden transform transition-all duration-300 modal-content flex flex-col max-h-[90vh]">
-            <div class="p-6 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white z-20"
-                style="background: var(--card-bg);">
-                <h2 class="text-xl font-bold flex items-center gap-2" style="color: var(--text-heading);"><i
-                        class="fas fa-boxes text-emerald-500"></i> Detailed Inventory Report</h2>
+            class="fintech-card w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh] p-0 shadow-2xl modal-content">
+            <div class="p-6 border-b border-gray-100 dark:border-slate-700/50 flex justify-between items-center sticky top-0 section-header-glass z-20"
+                style="border-radius: 24px 24px 0 0;">
+                <div>
+                    <h2 class="text-xl font-bold flex items-center gap-2" style="color: var(--text-heading);"><i
+                            class="fas fa-boxes text-emerald-500"></i> Detail Inventory Report</h2>
+                    <p class="text-xs mt-1" style="color: var(--text-label);">Complete list of stock, prices, and
+                        expiry.</p>
+                </div>
                 <div class="flex items-center gap-4">
-                    <select id="inventory-sort-select" onchange="openFullInventory()"
-                        class="text-sm rounded-lg border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-slate-800 text-gray-700 dark:text-gray-300 focus:ring-emerald-500 focus:border-emerald-500 py-1.5 pl-3 pr-8">
-                        <option value="name">Sort by Name</option>
-                        <option value="expiry_asc">Expiry (Soonest First)</option>
-                        <option value="stock_asc">Stock (Low to High)</option>
-                        <option value="price_desc">Price (High to Low)</option>
-                    </select>
+                    <div class="relative search-wrapper !mb-0 hidden sm:block">
+                        <i class="fas fa-sort search-icon-premium"></i>
+                        <select id="inventory-sort-select" onchange="openFullInventory()"
+                            class="text-sm rounded-xl border-none bg-gray-50 dark:bg-slate-800 text-gray-700 dark:text-gray-200 py-2.5 pl-9 pr-4 font-bold outline-none cursor-pointer focus:ring-2 focus:ring-emerald-500/20 transition-all">
+                            <option value="name">Sort by Name</option>
+                            <option value="expiry_asc">Expiry (Soonest)</option>
+                            <option value="stock_asc">Stock (Low \u2192 High)</option>
+                            <option value="price_desc">Price (High \u2192 Low)</option>
+                        </select>
+                    </div>
                     <button onclick="document.getElementById('full-inventory-modal').classList.add('hidden')"
-                        class="text-gray-400 hover:text-gray-600 transition-colors w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100">
+                        class="w-9 h-9 rounded-full bg-gray-50 dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700 transition-all flex items-center justify-center"
+                        style="color: var(--text-muted);">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
             </div>
-            <div class="overflow-y-auto flex-1 p-0">
+            <!-- Mobile Sort (Visible only on small screens) -->
+            <div
+                class="p-4 border-b border-gray-100 dark:border-slate-700/50 sm:hidden bg-gray-50/50 dark:bg-slate-800/50">
+                <select id="inventory-sort-select-mobile"
+                    onchange="document.getElementById('inventory-sort-select').value=this.value; openFullInventory()"
+                    class="w-full text-sm rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 py-2 px-3 font-bold outline-none cursor-pointer">
+                    <option value="name">Sort by Name</option>
+                    <option value="expiry_asc">Expiry (Soonest)</option>
+                    <option value="stock_asc">Stock (Low \u2192 High)</option>
+                    <option value="price_desc">Price (High \u2192 Low)</option>
+                </select>
+            </div>
+            <div class="overflow-y-auto flex-1 p-0" style="background: var(--card-bg);">
                 <table class="w-full text-left border-collapse">
-                    <thead class="sticky top-0 z-10 bg-gray-50 border-b border-gray-100"
-                        style="background: var(--input-bg);">
-                        <tr>
-                            <th class="py-4 px-6 font-semibold text-xs text-gray-500 uppercase tracking-wider">Item Name
+                    <thead
+                        class="sticky top-0 z-10 border-b border-gray-100 dark:border-slate-700/50 section-header-glass">
+                        <tr style="color: var(--text-muted);">
+                            <th class="py-4 px-6 font-bold text-xs uppercase tracking-wider">Item Name
                             </th>
-                            <th
-                                class="py-4 px-6 font-semibold text-xs text-gray-500 uppercase tracking-wider text-center">
+                            <th class="py-4 px-6 font-bold text-xs uppercase tracking-wider text-center">
                                 Stock</th>
-                            <th class="py-4 px-6 font-semibold text-xs text-gray-500 uppercase tracking-wider">Avg Cost
-                                Price</th>
-                            <th class="py-4 px-6 font-semibold text-xs text-gray-500 uppercase tracking-wider">Selling
-                                Price</th>
-                            <th class="py-4 px-6 font-semibold text-xs text-gray-500 uppercase tracking-wider">Expiry
+                            <th class="py-4 px-6 font-bold text-xs uppercase tracking-wider text-right">Avg Cost
+                            </th>
+                            <th class="py-4 px-6 font-bold text-xs uppercase tracking-wider text-right">Selling
+                            </th>
+                            <th class="py-4 px-6 font-bold text-xs uppercase tracking-wider text-right">Expiry
                             </th>
                         </tr>
                     </thead>
-                    <tbody id="full-inventory-table-body" class="divide-y divide-gray-100">
+                    <tbody id="full-inventory-table-body"
+                        class="divide-y divide-gray-50 dark:divide-slate-700/30 text-sm">
                         <!-- Populated via JS -->
                     </tbody>
                 </table>
@@ -2296,126 +3020,155 @@
 
     <!-- Add Stock Modal (Hidden default) -->
     <div id="add-stock-modal"
-        class="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
-        <div class="fintech-card w-full max-w-md p-7 relative">
+        class="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden transition-opacity">
+        <div class="fintech-card w-full max-w-md p-7 relative modal-content overflow-hidden">
             <button onclick="document.getElementById('add-stock-modal').classList.add('hidden')"
-                class="absolute top-5 right-5 w-8 h-8 rounded-full bg-gray-50 hover:bg-gray-100 flex items-center justify-center transition-all"
+                class="absolute top-5 right-5 w-8 h-8 rounded-full bg-gray-50 dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center justify-center transition-all"
                 style="color: var(--text-muted);"><i class="fas fa-times text-sm"></i></button>
-            <h3 class="font-bold text-lg mb-5" style="color: var(--text-heading);">Add Stock</h3>
-            <form id="add-stock-form" class="space-y-3">
+            <h3 class="font-bold text-xl mb-6 flex items-center gap-2" style="color: var(--text-heading);"><i
+                    class="fas fa-box-open text-emerald-500"></i> Add Stock</h3>
+            <form id="add-stock-form" class="space-y-4">
                 <input type="text" id="stock-item" required
-                    class="w-full px-5 py-3 rounded-2xl border border-gray-200 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-100 text-sm transition-all"
-                    placeholder="Item Name (e.g. Milk)">
-                <input type="number" id="stock-qty" required step="0.1"
-                    class="w-full px-5 py-3 rounded-2xl border border-gray-200 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-100 text-sm transition-all"
-                    placeholder="Quantity">
-                <input type="number" id="stock-price" step="0.01"
-                    class="w-full px-5 py-3 rounded-2xl border border-gray-200 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-100 text-sm transition-all"
-                    placeholder="Sell Price">
+                    class="w-full px-5 py-3 rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-sm transition-all"
+                    style="color: var(--text-heading);" placeholder="Item Name (e.g. Milk)">
+                <div class="grid grid-cols-2 gap-4">
+                    <input type="number" id="stock-qty" required step="0.1"
+                        class="w-full px-5 py-3 rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-sm transition-all"
+                        style="color: var(--text-heading);" placeholder="Quantity">
+                    <input type="number" id="stock-price" step="0.01"
+                        class="w-full px-5 py-3 rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-sm transition-all"
+                        style="color: var(--text-heading);" placeholder="Sell Price (₹)">
+                </div>
                 <input type="number" id="stock-cost" step="0.01"
-                    class="w-full px-5 py-3 rounded-2xl border border-gray-200 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-100 text-sm transition-all"
-                    placeholder="Cost Price">
-                <label class="block text-xs font-bold uppercase mb-1" style="color: var(--text-muted);">Expiry Date
-                    (Optional)</label>
-                <input type="date" id="stock-expiry"
-                    class="w-full px-5 py-3 rounded-2xl border border-gray-200 outline-none focus:border-emerald-500 text-sm transition-all">
-                <button type="submit" class="btn-gradient w-full py-3 rounded-2xl text-sm">Add Stock</button>
+                    class="w-full px-5 py-3 rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-sm transition-all"
+                    style="color: var(--text-heading);" placeholder="Cost Price (₹, optional)">
+                <div class="pt-2">
+                    <label class="block text-xs font-bold uppercase mb-2 tracking-wider"
+                        style="color: var(--text-muted);">Expiry Date (Optional)</label>
+                    <input type="date" id="stock-expiry"
+                        class="w-full px-5 py-3 rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-sm transition-all cursor-pointer"
+                        style="color: var(--text-heading);">
+                </div>
+                <button type="submit"
+                    class="btn-gradient w-full py-3.5 rounded-2xl text-sm font-bold shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/40 hover:-translate-y-0.5 transition-all mt-2">Add
+                    Stock</button>
             </form>
-            <div class="mt-4 pt-4 border-t border-gray-50">
+            <div class="mt-6 pt-5 border-t border-gray-100 dark:border-slate-700/50">
                 <button id="seed-btn"
-                    class="w-full py-2.5 bg-gray-50 rounded-2xl text-xs font-semibold hover:bg-gray-100 transition-all"
-                    style="color: var(--text-label);">Seed Default
-                    Items</button>
+                    class="w-full py-3 bg-gray-50 dark:bg-slate-800/50 rounded-2xl text-xs font-bold hover:bg-gray-100 dark:hover:bg-slate-700 transition-all border border-dashed border-gray-200 dark:border-slate-700"
+                    style="color: var(--text-label);"><i class="fas fa-magic mr-1"></i> Seed Default Items</button>
             </div>
         </div>
     </div>
 
     <!-- Order Confirmation Modal -->
     <div id="order-confirm-modal"
-        class="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
-        <div class="fintech-card w-full max-w-2xl flex flex-col relative overflow-hidden transition-all max-h-[80vh]">
-            <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-white shrink-0"
+        class="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden transition-opacity">
+        <div
+            class="fintech-card w-full max-w-2xl flex flex-col relative overflow-hidden transition-all max-h-[85vh] modal-content shadow-2xl p-0">
+            <!-- Header -->
+            <div class="p-6 border-b border-gray-100 dark:border-slate-700/50 flex justify-between items-center section-header-glass shrink-0"
                 style="border-radius: 24px 24px 0 0;">
                 <div>
-                    <h2 class="text-xl font-bold" style="color: var(--text-heading);">Review Order</h2>
-                    <p class="text-xs mt-0.5" style="color: var(--text-label);">Please verify items before confirming.
-                    </p>
+                    <h2 class="text-xl font-bold flex items-center gap-2" style="color: var(--text-heading);"><i
+                            class="fas fa-clipboard-check text-emerald-500"></i> Review Order</h2>
+                    <p class="text-xs mt-1" style="color: var(--text-label);">Please verify items before confirming.</p>
                 </div>
                 <button onclick="closeOrderModal()"
-                    class="w-9 h-9 rounded-full bg-gray-50 hover:bg-gray-100 transition-all flex items-center justify-center"
+                    class="w-9 h-9 rounded-full bg-gray-50 dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700 transition-all flex items-center justify-center"
                     style="color: var(--text-muted);">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
 
-            <div class="flex-1 overflow-y-auto p-6">
+            <div class="flex-1 overflow-y-auto p-6" style="background: var(--card-bg);">
                 <!-- Customer & Mode Selection -->
-                <div class="flex flex-col sm:flex-row gap-4 mb-6">
+                <div class="flex flex-col sm:flex-row gap-5 mb-6">
                     <div class="flex-1 relative">
-                        <label class="block text-xs font-bold uppercase mb-1.5"
+                        <label class="block text-xs font-bold uppercase mb-2 tracking-wider"
                             style="color: var(--text-muted);">Customer Name</label>
-                        <input type="text" id="confirm-customer" autocomplete="off"
-                            class="w-full px-5 py-3 rounded-2xl border border-gray-200 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-100 text-sm transition-all"
-                            placeholder="Walk-in" onfocus="showCustomerDropdown()" onkeyup="filterCustomerDropdown()"
-                            onblur="setTimeout(hideCustomerDropdown, 200)">
+                        <div class="relative search-wrapper">
+                            <i class="fas fa-user search-icon-premium"></i>
+                            <input type="text" id="confirm-customer" autocomplete="off" class="search-premium"
+                                placeholder="Walk-in Customer" onfocus="showCustomerDropdown()"
+                                onkeyup="filterCustomerDropdown()" onblur="setTimeout(hideCustomerDropdown, 200)">
+                        </div>
                         <ul id="customer-dropdown"
-                            class="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto hidden">
+                            class="absolute z-10 w-full mt-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl max-h-48 overflow-y-auto hidden">
                         </ul>
                     </div>
-                    <div class="flex-1">
-                        <label class="block text-xs font-bold uppercase mb-1.5"
+                    <div class="flex-[0.8]">
+                        <label class="block text-xs font-bold uppercase mb-2 tracking-wider"
                             style="color: var(--text-muted);">Payment Mode</label>
-                        <div class="flex bg-gray-50 rounded-2xl p-1 border border-gray-100">
+                        <div
+                            class="flex bg-gray-50 dark:bg-slate-800/50 rounded-2xl p-1.5 border border-gray-100 dark:border-slate-700/50">
                             <button type="button" id="mode-cash" onclick="setPaymentMode('Cash')"
-                                class="flex-1 py-2 px-3 rounded-xl font-semibold transition-all bg-white shadow-sm text-emerald-600 text-sm">Cash</button>
+                                class="payment-toggle-btn active-cash">Cash</button>
                             <button type="button" id="mode-udhaar" onclick="setPaymentMode('Udhaar')"
-                                class="flex-1 py-2 px-3 rounded-xl font-semibold transition-all text-slate-500 text-sm hover:text-slate-700 hover:bg-slate-100/50">Udhaar</button>
+                                class="payment-toggle-btn">Udhaar</button>
                         </div>
                     </div>
                 </div>
 
                 <!-- Phone Number (Optional, for Udhaar WhatsApp Reminders) -->
                 <div id="confirm-phone-container" class="mb-6 hidden transition-all">
-                    <label class="block text-xs font-bold uppercase mb-1.5" style="color: var(--text-muted);">Phone
-                        Number <span class="text-[10px] font-normal lowercase">(optional, for whatsapp
-                            reminder)</span></label>
-                    <input type="tel" id="confirm-phone" autocomplete="off" value="+91 " maxlength="14"
-                        class="w-full px-5 py-3 rounded-2xl border border-gray-200 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-100 text-sm transition-all"
-                        placeholder="+91 9876543210">
+                    <label class="block text-xs font-bold uppercase mb-2 tracking-wider"
+                        style="color: var(--text-muted);">Phone
+                        Number <span class="normal-case text-[10px] opacity-70 ml-1">(Optional, for
+                            WhatsApp)</span></label>
+                    <div class="relative search-wrapper">
+                        <i class="fab fa-whatsapp search-icon-premium text-emerald-500"></i>
+                        <input type="tel" id="confirm-phone" autocomplete="off" value="+91 " maxlength="14"
+                            class="search-premium font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-800/30"
+                            placeholder="+91 9876543210">
+                    </div>
                 </div>
 
                 <!-- Items Table -->
-                <table class="w-full text-sm mb-4">
-                    <thead>
-                        <tr class="text-xs uppercase tracking-wider" style="color: var(--text-muted);">
-                            <th class="px-3 py-2.5 text-left rounded-l-2xl bg-gray-50">Item</th>
-                            <th class="px-3 py-2.5 text-center w-24 bg-gray-50">Qty</th>
-                            <th class="px-3 py-2.5 text-right bg-gray-50">Price</th>
-                            <th class="px-3 py-2.5 text-center w-10 rounded-r-2xl bg-gray-50"></th>
-                        </tr>
-                    </thead>
-                    <tbody id="confirm-items-tbody" class="divide-y divide-gray-50">
-                        <!-- Items injected here -->
-                    </tbody>
-                </table>
+                <div class="rounded-2xl border border-gray-100 dark:border-slate-700/50 overflow-hidden mb-5">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="text-xs uppercase tracking-wider bg-gray-50 dark:bg-slate-800/50"
+                                style="color: var(--text-muted);">
+                                <th
+                                    class="px-4 py-3 text-left font-bold border-b border-gray-100 dark:border-slate-700/50">
+                                    Item</th>
+                                <th
+                                    class="px-4 py-3 text-center w-24 font-bold border-b border-gray-100 dark:border-slate-700/50">
+                                    Qty</th>
+                                <th
+                                    class="px-4 py-3 text-right font-bold border-b border-gray-100 dark:border-slate-700/50">
+                                    Price</th>
+                                <th
+                                    class="px-4 py-3 text-center w-12 font-bold border-b border-gray-100 dark:border-slate-700/50">
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody id="confirm-items-tbody" class="divide-y divide-gray-50 dark:divide-slate-700/30">
+                            <!-- Items injected here -->
+                        </tbody>
+                    </table>
+                </div>
 
                 <button onclick="addEmptyRow()"
-                    class="w-full py-2.5 border border-dashed border-gray-200 rounded-2xl hover:bg-gray-50 transition-all text-sm font-semibold"
+                    class="w-full py-3.5 border border-dashed border-gray-200 dark:border-slate-700 rounded-2xl hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-all text-sm font-bold flex items-center justify-center gap-2"
                     style="color: var(--text-label);">
-                    <i class="fas fa-plus mr-1"></i> Add Manual Item
+                    <i class="fas fa-plus"></i> Add Manual Item
                 </button>
             </div>
 
             <!-- Footer -->
-            <div class="p-6 border-t border-gray-100 flex justify-between items-center shrink-0 bg-gray-50"
+            <div class="p-6 border-t border-gray-100 dark:border-slate-700/50 flex justify-between items-center section-header-glass shrink-0"
                 style="border-radius: 0 0 24px 24px;">
                 <div>
-                    <p class="stat-label">Total</p>
-                    <p class="text-2xl font-bold" style="color: var(--text-heading);" id="confirm-total-price">₹0</p>
+                    <p class="text-xs font-bold uppercase tracking-wider mb-1" style="color: var(--text-muted);">Total
+                        Amount</p>
+                    <p class="text-3xl font-black bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-teal-500"
+                        id="confirm-total-price">₹0</p>
                 </div>
                 <button onclick="confirmOrder()"
-                    class="btn-gradient px-8 py-3 rounded-2xl text-sm flex items-center gap-2">
-                    <i class="fas fa-check"></i> Confirm Sale
+                    class="btn-gradient px-8 py-3.5 rounded-2xl text-sm font-bold flex items-center gap-2 shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/40 hover:-translate-y-0.5 transition-all">
+                    <i class="fas fa-check-circle"></i> Confirm Sale
                 </button>
             </div>
         </div>
@@ -3231,15 +3984,132 @@
             const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
             recognition = new SR();
             recognition.continuous = false;
+            recognition.interimResults = false; // Set to false for higher reliability and no flickering
+            recognition.maxAlternatives = 1; // Only need the most confident result
             recognition.lang = 'en-IN';
 
+            // Smart corrections for common voice typos (subset for real-time display)
+            const SMART_CORRECTIONS = {
+                // Romanized Hindi
+                'doodh': 'Milk 🥛', 'dudh': 'Milk 🥛', 'dudth': 'Milk 🥛', 'melk': 'Milk 🥛',
+                'chawal': 'Rice 🍚', 'chaawal': 'Rice 🍚', 'rise': 'Rice 🍚',
+                'cheeni': 'Sugar', 'chini': 'Sugar', 'shakkar': 'Sugar',
+                'anda': 'Eggs 🥚', 'ande': 'Eggs 🥚', 'anday': 'Eggs 🥚',
+                'makhan': 'Butter 🧈', 'makkhan': 'Butter 🧈',
+                'dahi': 'Curd', 'dahee': 'Curd',
+                'roti': 'Bread 🍞', 'bred': 'Bread 🍞',
+                'daal': 'Dal', 'dhaal': 'Dal', 'dhal': 'Dal',
+                'panneer': 'Paneer', 'panir': 'Paneer',
+                'ataa': 'Atta', 'aata': 'Atta',
+                'namak': 'Salt', 'tel': 'Oil',
+                'sabun': 'Soap', 'chai': 'Tea ☕',
+                'maggie': 'Maggi', 'maagi': 'Maggi',
+                'ek': '1', 'do': '2', 'teen': '3', 'chaar': '4', 'paanch': '5',
+                'chhe': '6', 'saat': '7', 'aath': '8', 'nau': '9', 'das': '10',
+                'adha': '½', 'dhai': '2½', 'dedh': '1½',
+                // Devanagari Hindi → English
+                // Devanagari Hindi → Clean Hindi (correct fuzzy Hindi words, keep in Hindi)
+                'दूध': 'दूध 🥛', 'दुध': 'दूध 🥛',
+                'चावल': 'चावल 🍚', 'चीनी': 'चीनी', 'शक्कर': 'चीनी', 'सुगर': 'चीनी', 'शुगर': 'चीनी',
+                'अंडा': 'अंडा 🥚', 'अंडे': 'अंडे 🥚',
+                'मक्खन': 'मक्खन 🧈', 'बटर': 'मक्खन 🧈',
+                'दही': 'दही', 'रोटी': 'रोटी 🍞', 'ब्रेड': 'ब्रेड 🍞',
+                'दाल': 'दाल', 'पनीर': 'पनीर', 'आटा': 'आटा',
+                'नमक': 'नमक', 'तेल': 'तेल', 'साबुन': 'साबुन',
+                'चाय': 'चाय ☕', 'मैगी': 'मैगी',
+                'आलू': 'आलू', 'प्याज': 'प्याज', 'टमाटर': 'टमाटर',
+                'घी': 'घी', 'मिल्क': 'दूध 🥛', 'राइस': 'चावल 🍚',
+                // Hindi numbers (keep as digits for clarity)
+                'एक': '1', 'दो': '2', 'तीन': '3', 'चार': '4', 'पांच': '5',
+                'छह': '6', 'छे': '6', 'सात': '7', 'आठ': '8', 'नौ': '9', 'दस': '10',
+                'बीस': '20', 'तीस': '30', 'सौ': '100',
+                'आधा': '½', 'ढाई': '2½', 'डेढ़': '1½',
+                // Hindi units (keep Hindi)
+                'किलो': 'किलो', 'किलोग्राम': 'KG', 'लीटर': 'लीटर', 'ग्राम': 'ग्राम',
+                'पैकेट': 'पैकेट', 'बोतल': 'बोतल',
+                // Hindi connectors
+                'और': 'और', 'का': '', 'की': '', 'के': '',
+                // English words written in Hindi script → English
+                'ऑफ़': 'of', 'ऑफ': 'of',
+                'टेन': '10', 'ट्वेंटी': '20', 'फाइव': '5', 'वन': '1', 'टू': '2', 'थ्री': '3',
+            };
+
+            function smartSubtitle(text) {
+                let words = text.split(/\s+/);
+                let correctedParts = [];
+                let anyCorrected = false;
+                for (let w of words) {
+                    let cleaned = w.replace(/[.,!?।]/g, '').toLowerCase();
+                    let original = w.replace(/[.,!?।]/g, '');
+                    if (SMART_CORRECTIONS[cleaned]) {
+                        correctedParts.push(SMART_CORRECTIONS[cleaned]);
+                        anyCorrected = true;
+                    } else if (SMART_CORRECTIONS[original]) {
+                        correctedParts.push(SMART_CORRECTIONS[original]);
+                        anyCorrected = true;
+                    } else {
+                        correctedParts.push(w);
+                    }
+                }
+                let display = correctedParts.filter(p => p !== '').join(' ');
+                return { display, corrected: anyCorrected };
+            }
+
+            let silenceTimer = null;
+            let isListening = false;
+            let wasCancelled = false;
+            let pendingTranscript = '';
+            let hasFinalResult = false;
+
+            function stopMicUI() {
+                isListening = false;
+                clearTimeout(silenceTimer);
+                els.micBtn.classList.remove('mic-listening', 'mic-pulse');
+            }
+
+            // Cancel button — stop without processing
+            window.cancelMic = function () {
+                wasCancelled = true;
+                pendingTranscript = '';
+                try { recognition.stop(); } catch (e) { }
+                stopMicUI();
+                document.getElementById('live-transcript').innerText = '"Cancelled"';
+                setTimeout(() => document.getElementById('transcript-container').classList.add('hidden'), 1000);
+            };
+
             recognition.onstart = () => {
+                isListening = true;
+                hasFinalResult = false;
+                wasCancelled = false;
+                pendingTranscript = '';
                 els.micBtn.classList.add('mic-listening', 'mic-pulse');
                 document.getElementById('transcript-container').classList.remove('hidden');
+                document.getElementById('live-transcript').innerText = '"Listening..."';
+
+                // Safety timeout: auto-stop after 6 seconds max
+                silenceTimer = setTimeout(() => {
+                    try { recognition.stop(); } catch (e) { }
+                }, 6000);
             };
+
             recognition.onend = () => {
-                els.micBtn.classList.remove('mic-listening', 'mic-pulse');
-                setTimeout(() => document.getElementById('transcript-container').classList.add('hidden'), 3000);
+                stopMicUI();
+                if (wasCancelled) return; // Cancel was pressed, do nothing
+
+                // If we have a pending transcript (from interim results) but no final result,
+                // submit the pending transcript (this is the "tap mic to stop & submit" flow)
+                if (!hasFinalResult && pendingTranscript.trim()) {
+                    const { display, corrected } = smartSubtitle(pendingTranscript);
+                    const correctionNote = corrected ? ' ✨' : '';
+                    document.getElementById('live-transcript').innerHTML = `"${display}"${correctionNote}`;
+                    handleOrderInput(pendingTranscript);
+                    setTimeout(() => document.getElementById('transcript-container').classList.add('hidden'), 3000);
+                } else if (!hasFinalResult) {
+                    document.getElementById('live-transcript').innerText = '"Could not hear clearly, try again"';
+                    setTimeout(() => document.getElementById('transcript-container').classList.add('hidden'), 2000);
+                } else {
+                    setTimeout(() => document.getElementById('transcript-container').classList.add('hidden'), 3000);
+                }
             };
 
             recognition.onresult = (event) => {
@@ -3254,22 +4124,51 @@
                     }
                 }
 
-                if (interimTranscript) document.getElementById('live-transcript').innerText = `"${interimTranscript}..."`;
+                if (interimTranscript) {
+                    pendingTranscript = interimTranscript;
+                    const { display } = smartSubtitle(interimTranscript);
+                    document.getElementById('live-transcript').innerHTML = `"${display}..."`;
+
+                    // Reset silence timer
+                    clearTimeout(silenceTimer);
+                    silenceTimer = setTimeout(() => {
+                        try { recognition.stop(); } catch (e) { }
+                    }, 2000); // Auto-stop after 2s silence
+                }
+
                 if (finalTranscript) {
-                    document.getElementById('live-transcript').innerText = `"${finalTranscript}"`;
+                    hasFinalResult = true;
+                    clearTimeout(silenceTimer);
+                    const { display, corrected } = smartSubtitle(finalTranscript);
+                    const correctionNote = corrected ? ' ✨' : '';
+                    document.getElementById('live-transcript').innerHTML = `"${display}"${correctionNote}`;
+                    try { recognition.stop(); } catch (e) { }
                     handleOrderInput(finalTranscript);
                 }
             };
 
             recognition.onerror = (event) => {
                 console.error('Speech error:', event.error);
-                els.micBtn.classList.remove('mic-listening', 'mic-pulse');
+                stopMicUI();
                 if (event.error === 'not-allowed') showToast('🎤 Mic permission denied', 'error');
+                else if (event.error === 'no-speech') {
+                    document.getElementById('live-transcript').innerText = '"No speech detected, try again"';
+                }
+                setTimeout(() => document.getElementById('transcript-container').classList.add('hidden'), 2000);
             };
 
+            // MIC BUTTON = TOGGLE: tap to start, tap again to stop & submit
             els.micBtn.onclick = async () => {
+                if (isListening) {
+                    // User tapped while listening = "I'm done, process it"
+                    try { recognition.stop(); } catch (e) { }
+                    return;
+                }
+                // Start listening
                 try { await navigator.mediaDevices.getUserMedia({ audio: true }); } catch (e) { }
-                try { recognition.start(); } catch (e) { try { recognition.stop(); setTimeout(() => recognition.start(), 100); } catch (e2) { } }
+                try { recognition.start(); } catch (e) {
+                    try { recognition.stop(); setTimeout(() => recognition.start(), 150); } catch (e2) { }
+                }
             };
         }
 
@@ -3289,15 +4188,24 @@
         // --- TOASTS ---
         function showToast(msg, type = 'info') {
             const toast = document.createElement('div');
-            let color = 'bg-slate-800';
-            let icon = 'fa-info-circle';
+            let colorClass = 'border-slate-600 bg-slate-800/90 text-white shadow-slate-900/50';
+            let icon = 'fa-info-circle text-blue-400';
 
-            if (type === 'success') { color = 'bg-emerald-600'; icon = 'fa-check-circle'; }
-            if (type === 'error') { color = 'bg-red-500'; icon = 'fa-exclamation-circle'; }
-            if (type === 'warning') { color = 'bg-orange-500'; icon = 'fa-exclamation-triangle'; }
+            if (type === 'success') {
+                colorClass = 'border-emerald-500/30 bg-emerald-900/90 text-emerald-50 shadow-emerald-900/50';
+                icon = 'fa-check-circle text-emerald-400';
+            }
+            if (type === 'error') {
+                colorClass = 'border-red-500/30 bg-red-900/90 text-red-50 shadow-red-900/50';
+                icon = 'fa-exclamation-circle text-red-400';
+            }
+            if (type === 'warning') {
+                colorClass = 'border-orange-500/30 bg-orange-900/90 text-orange-50 shadow-orange-900/50';
+                icon = 'fa-exclamation-triangle text-orange-400';
+            }
 
-            toast.className = `${color} text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 transform transition-all translate-x-full opacity-0`;
-            toast.innerHTML = `<i class="fas ${icon}"></i> <span>${msg}</span>`;
+            toast.className = `backdrop-blur-md border ${colorClass} px-5 py-3.5 rounded-2xl shadow-xl flex items-center gap-3 transform transition-all translate-x-full opacity-0 pointer-events-auto`;
+            toast.innerHTML = `<i class="fas ${icon} text-lg"></i> <span class="text-sm font-bold tracking-wide">${msg}</span>`;
 
             const container = document.getElementById('toast-container');
             container.appendChild(toast);
@@ -3308,7 +4216,7 @@
             });
 
             setTimeout(() => {
-                toast.classList.add('translate-x-full', 'opacity-0');
+                toast.classList.add('translate-x-[120%]', 'opacity-0');
                 setTimeout(() => toast.remove(), 300);
             }, 3000);
         }
@@ -3316,53 +4224,99 @@
         // --- MONTHLY DASHBOARD ---
         let monthlyData = null;
         let selectedDateStr = null;
+        let yearlyDataCache = null;
 
-        let revenueChartInstance = null;
+        // --- TAB SWITCHING (Monthly / Yearly) ---
+        window.switchDashboardTab = function (tab) {
+            const tabMonthly = document.getElementById('tab-monthly');
+            const tabYearly = document.getElementById('tab-yearly');
+            const monthlyContent = document.getElementById('monthly-content');
+            const yearlyContent = document.getElementById('yearly-content');
 
-        async function loadRevenueChart() {
-            try {
-                const res = await api('/analytics/weekly');
-                if (res && res.data) {
-                    const ctx = document.getElementById('revenueChart').getContext('2d');
-                    if (revenueChartInstance) revenueChartInstance.destroy();
-
-                    revenueChartInstance = new Chart(ctx, {
-                        type: 'bar',
-                        data: {
-                            labels: res.data.dates,
-                            datasets: [
-                                { label: 'Cash', data: res.data.cash, backgroundColor: '#10B981', borderRadius: 4 },
-                                { label: 'Udhaar', data: res.data.udhaar, backgroundColor: '#F59E0B', borderRadius: 4 }
-                            ]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            scales: {
-                                x: { stacked: true, grid: { display: false } },
-                                y: { stacked: true, beginAtZero: true, border: { dash: [4, 4] }, grid: { color: '#E2E8F0' } }
-                            },
-                            plugins: {
-                                legend: { display: true, position: 'top', labels: { usePointStyle: true, boxWidth: 8, font: { family: "'Plus Jakarta Sans', sans-serif" } } },
-                                tooltip: { backgroundColor: '#1E293B', titleFont: { family: "'Plus Jakarta Sans', sans-serif" }, bodyFont: { family: "'Plus Jakarta Sans', sans-serif" } }
-                            }
-                        }
-                    });
+            if (tab === 'yearly') {
+                tabYearly.classList.add('bg-white', 'shadow-sm');
+                tabYearly.style.color = 'var(--text-heading)';
+                tabMonthly.classList.remove('bg-white', 'shadow-sm');
+                tabMonthly.style.color = 'var(--text-muted)';
+                monthlyContent.classList.add('hidden');
+                yearlyContent.classList.remove('hidden');
+                document.getElementById('calendar-month-title').textContent = `Yearly: ${new Date().getFullYear()}`;
+                document.getElementById('calendar-subtitle').textContent = 'Month-wise Overview';
+                loadYearlyView();
+            } else {
+                tabMonthly.classList.add('bg-white', 'shadow-sm');
+                tabMonthly.style.color = 'var(--text-heading)';
+                tabYearly.classList.remove('bg-white', 'shadow-sm');
+                tabYearly.style.color = 'var(--text-muted)';
+                monthlyContent.classList.remove('hidden');
+                yearlyContent.classList.add('hidden');
+                if (monthlyData) {
+                    document.getElementById('calendar-month-title').textContent = `Monthly: ${monthlyData.month}`;
+                    document.getElementById('calendar-subtitle').textContent = 'Overview';
                 }
-            } catch (e) {
-                console.error("Failed to load chart", e);
+            }
+        };
+
+        async function loadYearlyView() {
+            const grid = document.getElementById('yearly-months-grid');
+            grid.innerHTML = '<div class="col-span-full text-center py-10"><span class="spinner text-purple-500"></span></div>';
+
+            const res = await api('/sales/year');
+            if (res && res.months) {
+                yearlyDataCache = res;
+                const formatRev = (v) => {
+                    if (v >= 100000) return `₹${(v / 100000).toFixed(1)}L`;
+                    if (v >= 1000) return `₹${(v / 1000).toFixed(1)}K`;
+                    return `₹${v}`;
+                };
+
+                document.getElementById('yearly-total-rev').innerHTML =
+                    `<span style="font-size: 13px;">Year Rev: ${formatRev(res.year_revenue)}</span> <span style="font-size: 13px;">Year Profit: ${formatRev(res.year_profit)}</span>`;
+
+                const currentMonth = new Date().getMonth() + 1;
+                const reqYear = new Date().getFullYear();
+
+                grid.innerHTML = res.months.map(m => {
+                    const hasSales = m.revenue > 0;
+                    const isCurrent = m.month === currentMonth;
+                    const bgStyle = isCurrent
+                        ? 'background: linear-gradient(135deg, #059669, #10b981); color: white;'
+                        : hasSales
+                            ? 'background: var(--card-bg); border: 1px solid var(--card-border);'
+                            : 'background: var(--card-bg); border: 1px solid var(--card-border); opacity: 0.5;';
+
+                    return `
+                    <div class="rounded-2xl p-4 cursor-pointer transition-all hover:scale-105 hover:shadow-lg"
+                         style="${bgStyle}"
+                         onclick="openMonthlyDashboard(${reqYear}, ${m.month})">
+                        <p class="font-bold text-sm mb-2" style="${isCurrent ? '' : 'color: var(--text-heading);'}">${m.name}</p>
+                        ${hasSales ? `
+                            <p class="text-xs font-bold mb-1" style="${isCurrent ? 'color: rgba(255,255,255,0.9);' : 'color: #059669;'}">${formatRev(m.revenue)}</p>
+                            <p class="text-xs" style="${isCurrent ? 'color: rgba(255,255,255,0.7);' : 'color: #8b5cf6;'}">P: ${formatRev(m.profit)}</p>
+                            <p class="text-xs mt-1" style="${isCurrent ? 'color: rgba(255,255,255,0.6);' : 'color: var(--text-muted);'}">${m.orders} orders</p>
+                        ` : `<p class="text-xs" style="color: var(--text-muted);">No sales</p>`}
+                    </div>`;
+                }).join('');
+            } else {
+                grid.innerHTML = '<div class="col-span-full text-center py-10" style="color: var(--text-muted);">No data available</div>';
             }
         }
 
-        window.openMonthlyDashboard = async function () {
+        window.openMonthlyDashboard = async function (year = null, month = null) {
             const modal = document.getElementById('monthly-dashboard-modal');
             modal.classList.remove('hidden');
             showCalendarView(); // Reset to calendar view
+            switchDashboardTab('monthly'); // Reset to monthly tab
 
-            // Show loading...
-            loadRevenueChart(); // Load Weekly Trends Chart
+            // Show loading state while fetching
+            document.getElementById('calendar-grid').innerHTML = '<div class="col-span-full text-center py-10"><span class="spinner text-purple-500"></span></div>';
 
-            const res = await api('/sales/month');
+            let url = '/sales/month';
+            if (year && month) {
+                url += `?year=${year}&month=${month}`;
+            }
+
+            const res = await api(url);
             if (res) {
                 monthlyData = res;
                 renderMonthlyDashboard();
@@ -3386,8 +4340,8 @@
             grid.innerHTML = '';
 
             const now = new Date();
-            const year = now.getFullYear();
-            const month = now.getMonth();
+            const year = monthlyData.year || now.getFullYear();
+            const month = (monthlyData.month_num ? monthlyData.month_num - 1 : now.getMonth());
             const daysInMonth = new Date(year, month + 1, 0).getDate();
             const firstDay = new Date(year, month, 1).getDay(); // 0 = Sun
 
@@ -3600,9 +4554,9 @@
             const tbody = document.getElementById('udhaar-detail-tbody');
             tbody.innerHTML = '<tr><td colspan="4" class="text-center py-6"><span class="spinner"></span></td></tr>';
 
-            const res = await api(`/ dues / ${encodeURIComponent(customerName)} `);
+            const res = await api(`/dues/${encodeURIComponent(customerName)}`);
             if (res) {
-                document.getElementById('udhaar-customer-total').textContent = `₹${Math.round(res.total_due)} `;
+                document.getElementById('udhaar-customer-total').textContent = `₹${Math.round(res.total_due || 0)}`;
 
                 const settleBtn = document.getElementById('settle-dues-btn');
                 if (res.total_due <= 0) {
@@ -3617,12 +4571,12 @@
                 }
 
                 tbody.innerHTML = res.transactions.map(t => `
-                < tr class="hover:bg-slate-50 transition-colors" >
-                        <td class="px-4 py-3 text-slate-500 whitespace-nowrap">${t.date_time}</td>
-                        <td class="px-4 py-3 font-medium text-slate-700">${t.item_name}</td>
-                        <td class="px-4 py-3 text-center text-slate-600">${t.quantity}</td>
+                <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="px-4 py-3 whitespace-nowrap" style="color: var(--text-muted);">${t.date_time}</td>
+                        <td class="px-4 py-3 font-medium" style="color: var(--text-heading);">${t.item_name}</td>
+                        <td class="px-4 py-3 text-center" style="color: var(--text-label);">${t.quantity}</td>
                         <td class="px-4 py-3 text-right font-semibold text-red-600">₹${t.total_price}</td>
-                    </tr >
+                    </tr>
                 `).join('');
             }
         };
@@ -3730,13 +4684,15 @@
             const udhaarBtn = document.getElementById('mode-udhaar');
             const phoneContainer = document.getElementById('confirm-phone-container');
 
+            // Reset classes
+            cashBtn.className = "payment-toggle-btn";
+            udhaarBtn.className = "payment-toggle-btn";
+
             if (mode === 'Cash') {
-                cashBtn.className = "flex-1 py-1.5 px-3 rounded-lg font-medium transition-all bg-white shadow text-emerald-600";
-                udhaarBtn.className = "flex-1 py-1.5 px-3 rounded-lg font-medium transition-all text-slate-500";
+                cashBtn.classList.add('active-cash');
                 if (phoneContainer) phoneContainer.classList.add('hidden');
             } else {
-                cashBtn.className = "flex-1 py-1.5 px-3 rounded-lg font-medium transition-all text-slate-500";
-                udhaarBtn.className = "flex-1 py-1.5 px-3 rounded-lg font-medium transition-all bg-white shadow text-red-600";
+                udhaarBtn.classList.add('active-udhaar');
                 if (phoneContainer) phoneContainer.classList.remove('hidden');
             }
         }

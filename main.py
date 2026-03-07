@@ -351,9 +351,20 @@ def fuzzy_match_item(word, available_items, custom_aliases=None):
         for item in available_items:
             if item.lower().startswith(word_lower[:3]) or word_lower.startswith(item.lower()[:3]):
                 return item
+
+    # Token-based fuzzy match (matches typoed single words against multi-word inventory items)
+    if len(word_lower) >= 3:
+        import difflib
+        for item in available_items:
+            item_words = item.lower().split()
+            for iw in item_words:
+                if len(iw) >= 3:
+                    if difflib.SequenceMatcher(None, word_lower, iw).ratio() >= 0.7:
+                        return item
     
     # difflib fuzzy fallback — search BOTH item names AND alias strings
     if len(word_lower) >= 3:
+        import difflib
         inventory_lower = [it.lower() for it in available_items]
         alias_strings = list(custom_aliases.keys())
         all_candidates = inventory_lower + alias_strings
@@ -378,6 +389,50 @@ def parse_message_locally(message, available_items, custom_aliases=None):
     
     if custom_aliases is None:
         custom_aliases = {}
+    
+    # ── Devanagari Hindi → Romanized conversion ──────────────────────
+    # When speech recognition uses hi-IN, it outputs Devanagari script.
+    # Convert to romanized Hindi so existing dictionaries can match.
+    HINDI_TO_ROMAN = {
+        # Numbers
+        'एक': 'ek', 'दो': 'do', 'तीन': 'teen', 'चार': 'char', 'पांच': 'panch',
+        'छह': 'chhe', 'छे': 'chhe', 'सात': 'saat', 'आठ': 'aath', 'नौ': 'nau',
+        'दस': 'das', 'ग्यारह': 'gyarah', 'बारह': 'barah', 'तेरह': 'terah',
+        'चौदह': 'chaudah', 'पंद्रह': 'pandrah', 'सोलह': 'solah',
+        'बीस': 'bees', 'तीस': 'tees', 'चालीस': 'chalees', 'पचास': 'pachas',
+        'सौ': 'sau', 'सो': 'sau',
+        # Fractions
+        'आधा': 'adha', 'आधी': 'adhi', 'ढाई': 'dhai', 'डेढ़': 'dedh',
+        'पौने': 'paune', 'सवा': 'sawa', 'पाव': 'pav',
+        # Units
+        'किलो': 'kilo', 'किलोग्राम': 'kilogram', 'लीटर': 'liter',
+        'पैकेट': 'packet', 'पैक': 'pack', 'बोतल': 'bottle',
+        'केजी': 'kg', 'ग्राम': 'gram',
+        # Common grocery items
+        'दूध': 'doodh', 'चावल': 'chawal', 'चीनी': 'cheeni',
+        'आलू': 'aloo', 'प्याज': 'pyaz', 'टमाटर': 'tamatar',
+        'अंडा': 'anda', 'अंडे': 'ande', 'नमक': 'namak',
+        'तेल': 'tel', 'मक्खन': 'makkhan', 'दही': 'dahi',
+        'रोटी': 'roti', 'दाल': 'daal', 'चना': 'chana',
+        'पनीर': 'panneer', 'आटा': 'atta', 'मैदा': 'maida',
+        'चाय': 'chai', 'कॉफी': 'coffee', 'साबुन': 'sabun',
+        'शक्कर': 'shakkar', 'गेहूं': 'wheat', 'बेसन': 'besan',
+        'हल्दी': 'haldi', 'मिर्च': 'mirch', 'धनिया': 'dhaniya',
+        'जीरा': 'jeera', 'राई': 'rai', 'सरसों': 'sarson',
+        'घी': 'ghee', 'छाछ': 'chaach', 'लस्सी': 'lassi',
+        'बिस्किट': 'biscuit', 'मैगी': 'maggi', 'नूडल्स': 'noodles',
+        'ब्रेड': 'bread', 'शुगर': 'sugar', 'सुगर': 'sugar',
+        'मिल्क': 'milk', 'राइस': 'rice', 'ऑयल': 'oil',
+        'बटर': 'butter', 'ब्लैंकेट': 'blanket',
+        # Connectors (replace with space)
+        'और': 'aur', 'का': 'ka', 'की': 'ki', 'के': 'ke',
+        'दे': 'de', 'दो।': 'do', 'दीजिए': 'dijiye', 'चाहिए': 'chahiye',
+        'वाला': 'wala', 'वाली': 'wali',
+    }
+    
+    # Apply Devanagari conversion
+    for hindi, roman in HINDI_TO_ROMAN.items():
+        text = text.replace(hindi, roman)
     
     # Typos and Numbers dictionaries
     WORD_TO_NUM = {
@@ -874,7 +929,8 @@ async def get_todays_sales(auth: tuple = Depends(get_user_client)):
         today_start_utc = today_start_ist - timedelta(hours=5, minutes=30)
         
         response = db.table("sales").select("*").eq("user_id", user_id).gte("created_at", today_start_utc.isoformat()).execute()
-        sales = response.data
+        all_sales = response.data
+        sales = [s for s in all_sales if s.get("item_name") != "Payment Received"]
         
         total_revenue = sum(s.get('total_price', 0) for s in sales)
         total_cost = sum(s.get('total_cost', 0) or 0 for s in sales)
@@ -1268,15 +1324,27 @@ async def get_weekly_analytics(auth: tuple = Depends(get_user_client)):
         return {"success": False, "message": str(e)}
 
 @app.get("/sales/month")
-async def get_monthly_sales(auth: tuple = Depends(get_user_client)):
+async def get_monthly_sales(month: int = None, year: int = None, auth: tuple = Depends(get_user_client)):
     from datetime import datetime, timezone, timedelta
     try:
         db, user_id = auth
         ist_now = datetime.now(timezone.utc) + timedelta(hours=5, minutes=30)
-        month_start = ist_now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        month_start_utc = month_start - timedelta(hours=5, minutes=30)
         
-        response = db.table("sales").select("*").eq("user_id", user_id).gte("created_at", month_start_utc.isoformat()).execute()
+        # Use provided month/year or default to current
+        target_year = year or ist_now.year
+        target_month = month or ist_now.month
+        
+        month_start = ist_now.replace(year=target_year, month=target_month, day=1, hour=0, minute=0, second=0, microsecond=0)
+        # Calculate end of month
+        if target_month == 12:
+            month_end = month_start.replace(year=target_year + 1, month=1)
+        else:
+            month_end = month_start.replace(month=target_month + 1)
+        
+        month_start_utc = month_start - timedelta(hours=5, minutes=30)
+        month_end_utc = month_end - timedelta(hours=5, minutes=30)
+        
+        response = db.table("sales").select("*").eq("user_id", user_id).gte("created_at", month_start_utc.isoformat()).lt("created_at", month_end_utc.isoformat()).execute()
         all_sales = response.data
         sales = [s for s in all_sales if s.get("item_name") != "Payment Received"]
         
@@ -1338,7 +1406,9 @@ async def get_monthly_sales(auth: tuple = Depends(get_user_client)):
             d["profit"] = round(d.get("profit", 0), 2)
             
         return {
-            "month": ist_now.strftime("%B %Y"),
+            "month": month_start.strftime("%B %Y"),
+            "year": target_year,
+            "month_num": target_month,
             "month_revenue": round(month_revenue, 2),
             "month_profit": round(month_profit, 2),
             "month_orders": month_orders,
@@ -1398,6 +1468,84 @@ async def get_date_sales(date: str, auth: tuple = Depends(get_user_client)):
         traceback.print_exc()
         print(f"Date Sales Error: {e}")
         return {"date": date, "display_date": date, "revenue": 0, "orders": 0, "quantity": 0, "items_sold": []}
+
+@app.get("/sales/year")
+async def get_yearly_sales(year: int = None, auth: tuple = Depends(get_user_client)):
+    from datetime import datetime, timezone, timedelta
+    try:
+        db, user_id = auth
+        ist_now = datetime.now(timezone.utc) + timedelta(hours=5, minutes=30)
+        if year is None:
+            year = ist_now.year
+        
+        year_start = datetime(year, 1, 1, 0, 0, 0)
+        year_end = datetime(year, 12, 31, 23, 59, 59)
+        year_start_utc = year_start - timedelta(hours=5, minutes=30)
+        year_end_utc = year_end - timedelta(hours=5, minutes=30)
+        
+        response = db.table("sales").select("*").eq("user_id", user_id).gte("created_at", year_start_utc.isoformat()).lte("created_at", year_end_utc.isoformat()).execute()
+        all_sales = response.data
+        sales = [s for s in all_sales if s.get("item_name") != "Payment Received"]
+        
+        # Group by month
+        monthly_totals = {}
+        month_names = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+        
+        for s in sales:
+            created = s.get("created_at", "")
+            if created:
+                try:
+                    dt = datetime.fromisoformat(created.replace("Z", "+00:00"))
+                    ist_dt = dt + timedelta(hours=5, minutes=30)
+                    month_key = ist_dt.month  # 1-12
+                    if month_key not in monthly_totals:
+                        monthly_totals[month_key] = {"revenue": 0, "profit": 0, "orders": set(), "quantity": 0}
+                    monthly_totals[month_key]["revenue"] += s.get("total_price", 0)
+                    cost = s.get("total_cost", 0) or 0
+                    monthly_totals[month_key]["profit"] += s.get("total_price", 0) - cost
+                    monthly_totals[month_key]["quantity"] += s.get("quantity", 0)
+                    tid = s.get("transaction_id") or created[:19]
+                    monthly_totals[month_key]["orders"].add(tid)
+                except:
+                    pass
+        
+        months = []
+        year_revenue = 0
+        year_profit = 0
+        for m in range(1, 13):
+            data = monthly_totals.get(m)
+            if data:
+                rev = round(data["revenue"], 2)
+                profit = round(data["profit"], 2)
+                orders = len(data["orders"])
+                qty = round(data["quantity"], 2)
+                year_revenue += rev
+                year_profit += profit
+            else:
+                rev = 0
+                profit = 0
+                orders = 0
+                qty = 0
+            months.append({
+                "month": m,
+                "name": month_names[m - 1],
+                "revenue": rev,
+                "profit": profit,
+                "orders": orders,
+                "quantity": qty
+            })
+        
+        return {
+            "year": year,
+            "year_revenue": round(year_revenue, 2),
+            "year_profit": round(year_profit, 2),
+            "months": months
+        }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print(f"Yearly Sales Error: {e}")
+        return {"year": year or 2026, "year_revenue": 0, "year_profit": 0, "months": []}
 
 # ============================================================================
 # GUEST DEMO MODE — Simple, No Supabase Auth Required
