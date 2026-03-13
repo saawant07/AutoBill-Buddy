@@ -2,6 +2,7 @@ import os
 import json
 import re
 import difflib
+import logging
 from deep_translator import GoogleTranslator
 from datetime import datetime, timedelta
 import asyncio
@@ -11,10 +12,16 @@ from fastapi import FastAPI, HTTPException, Header, Depends, BackgroundTasks, Re
 from fastapi.responses import RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 from supabase import create_client, Client
 import google.generativeai as genai
+import time
+from collections import defaultdict
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -40,6 +47,49 @@ async def root():
     return RedirectResponse(url="/static/index.html")
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+@app.get("/config")
+async def get_config():
+    return {"supabase_url": SUPABASE_URL, "anon_key": SUPABASE_KEY}
+
+# ============================================================================
+# RATE LIMITER — Simple in-memory token bucket per IP per endpoint
+# ============================================================================
+_rate_buckets = defaultdict(lambda: {"tokens": 10, "last": time.time()})
+
+# Endpoint-specific rate limits (requests per minute)
+_RATE_LIMITS = {
+    "/parse-order": 30,
+    "/confirm-order": 30,
+    "/inventory": 60,
+}
+_DEFAULT_RATE_LIMIT = 60  # Default for other endpoints
+_DEFAULT_RATE_WINDOW = 60  # per 60 seconds
+
+def check_rate_limit(request: Request, endpoint_limit: Optional[int] = None):
+    """
+    Check rate limit for the request.
+    - endpoint_limit: Optional override for rate limit (requests per minute)
+    """
+    # Determine rate limit based on endpoint
+    path = request.url.path
+    rate_limit = endpoint_limit
+    if rate_limit is None:
+        rate_limit = _RATE_LIMITS.get(path, _DEFAULT_RATE_LIMIT)
+
+    # Use IP + path as the bucket key for per-endpoint limiting
+    ip = request.client.host if request.client else "unknown"
+    bucket_key = f"{ip}:{path}"
+    bucket = _rate_buckets[bucket_key]
+
+    now = time.time()
+    # Refill tokens based on time elapsed
+    elapsed = now - bucket["last"]
+    bucket["tokens"] = min(float(rate_limit), bucket["tokens"] + elapsed * (rate_limit / _DEFAULT_RATE_WINDOW))
+    bucket["last"] = now
+    if bucket["tokens"] < 1:
+        raise HTTPException(status_code=429, detail=f"Rate limit exceeded for {path}. Please slow down.")
+    bucket["tokens"] -= 1
 
 # ============================================================================
 # SUPABASE PROXY (Bypass Indian ISP Block)
@@ -687,7 +737,8 @@ def parse_message_locally(message, available_items, custom_aliases=None):
     return items_found, detected_mode, detected_customer
 
 @app.post("/parse-order")
-async def parse_order_endpoint(req: ChatRequest, auth: tuple = Depends(get_user_client)):
+async def parse_order_endpoint(req: ChatRequest, request: Request, auth: tuple = Depends(get_user_client)):
+    check_rate_limit(request)
     try:
         db, user_id = auth
         print(f"[PARSE] User {user_id} said: '{req.message}'")
@@ -765,11 +816,12 @@ async def parse_order_endpoint(req: ChatRequest, auth: tuple = Depends(get_user_
 
 class ConfirmOrderRequest(BaseModel):
     items: list[dict] # [{"item_name": "Milk", "quantity": 2, "total_price": 120}]
-    payment_mode: str
-    customer_name: str
+    payment_mode: str = Field(min_length=1)
+    customer_name: str = Field(min_length=1)
 
 @app.post("/confirm-order")
-async def confirm_order_endpoint(req: ConfirmOrderRequest, auth: tuple = Depends(get_user_client)):
+async def confirm_order_endpoint(req: ConfirmOrderRequest, request: Request, auth: tuple = Depends(get_user_client)):
+    check_rate_limit(request)
     db, user_id = auth
     import uuid
     transaction_id = str(uuid.uuid4())[:8]
@@ -794,8 +846,8 @@ async def confirm_order_endpoint(req: ConfirmOrderRequest, auth: tuple = Depends
         if fallback_unit_price == 0 and unit_price > 0:
             try:
                 db.table("inventory").update({"price": unit_price}).eq("user_id", user_id).eq("item_name", item).execute()
-            except:
-                pass
+            except Exception as e:
+                print(f"Price update error for {item}: {e}")
         
         # Check Stock (Aggregate)
         batches = db.table("inventory").select("id, stock_quantity, cost_price").eq("user_id", user_id).eq("item_name", item).order("expiry_date", desc=False).execute().data
@@ -893,8 +945,8 @@ async def get_customer_dues(customer_name: str, auth: tuple = Depends(get_user_c
                     dt = datetime.fromisoformat(created.replace("Z", "+00:00"))
                     ist = dt + timedelta(hours=5, minutes=30)
                     date_str = ist.strftime("%d %b, %I:%M %p")
-                except:
-                    date_str = created
+                except Exception as e:
+                    print(f"Date parse error: {e}")
             transactions.append({
                 "date_time": date_str,
                 "item_name": s.get("item_name", ""),
@@ -964,8 +1016,8 @@ async def get_todays_sales(auth: tuple = Depends(get_user_client)):
                         dt = datetime.fromisoformat(created.replace("Z", "+00:00"))
                         ist = dt + timedelta(hours=5, minutes=30)
                         time_str = ist.strftime("%I:%M %p")
-                    except:
-                        time_str = ""
+                    except Exception as e:
+                        print(f"Time parse error: {e}")
                 
                 orders[oid] = {
                     "items": [],
@@ -1066,10 +1118,10 @@ async def generate_aliases_task(item_name: str, user_id: str, db: Client):
         print(f"❌ Alias Generation Error: {e}")
 
 class AddStockRequest(BaseModel):
-    item_name: str
-    quantity: float
-    price: Optional[float] = None
-    cost_price: Optional[float] = None
+    item_name: str = Field(min_length=1)
+    quantity: float = Field(gt=0)
+    price: Optional[float] = Field(default=None, ge=0)
+    cost_price: Optional[float] = Field(default=None, ge=0)
     expiry_date: Optional[str] = None  # Format: YYYY-MM-DD
 
 @app.post("/add-stock")
@@ -1092,7 +1144,7 @@ async def add_stock(req: AddStockRequest, background_tasks: BackgroundTasks, aut
         if req.price is not None:
              try:
                  db.table("inventory").update({"price": req.price}).eq("user_id", user_id).eq("item_name", item).execute()
-             except:
+             except Exception as e:
                  pass
         
         # 2. Upsert specific batch
@@ -1152,8 +1204,8 @@ async def add_stock(req: AddStockRequest, background_tasks: BackgroundTasks, aut
         return {"message": f"❌ Error: {str(e)}", "success": False}
 
 class ReduceStockRequest(BaseModel):
-    item_name: str
-    quantity: float
+    item_name: str = Field(min_length=1)
+    quantity: float = Field(gt=0)
 
 @app.post("/reduce-stock")
 async def reduce_stock(req: AddStockRequest, auth: tuple = Depends(get_user_client)):
@@ -1204,7 +1256,7 @@ async def reduce_stock(req: AddStockRequest, auth: tuple = Depends(get_user_clie
         return {"message": f"❌ Error: {str(e)}", "success": False}
 
 class DeleteItemRequest(BaseModel):
-    item_name: str
+    item_name: str = Field(min_length=1)
 
 @app.delete("/delete-item")
 async def delete_item(req: DeleteItemRequest, auth: tuple = Depends(get_user_client)):
@@ -1224,8 +1276,8 @@ async def delete_item(req: DeleteItemRequest, auth: tuple = Depends(get_user_cli
         return {"message": f"❌ Error: {str(e)}", "success": False}
 
 class SettleDuesRequest(BaseModel):
-    customer_name: str
-    amount: Optional[float] = None
+    customer_name: str = Field(min_length=1)
+    amount: Optional[float] = Field(default=None, gt=0)
 
 @app.post("/dues/settle")
 async def settle_dues(req: SettleDuesRequest, auth: tuple = Depends(get_user_client)):
@@ -1359,8 +1411,8 @@ async def get_monthly_sales(month: int = None, year: int = None, auth: tuple = D
                         daily_totals[ist_date] = {"revenue": 0, "orders": 0, "quantity": 0}
                     daily_totals[ist_date]["revenue"] += s.get("total_price", 0)
                     daily_totals[ist_date]["quantity"] += s.get("quantity", 0)
-                except:
-                    pass
+                except Exception as e:
+                    print(f"Calendar date parse error: {e}")
         
         order_counts = {}
         for s in sales:
@@ -1373,8 +1425,8 @@ async def get_monthly_sales(month: int = None, year: int = None, auth: tuple = D
                     if ist_date not in order_counts:
                         order_counts[ist_date] = set()
                     order_counts[ist_date].add(order_key)
-                except:
-                    pass
+                except Exception as e:
+                    print(f"Calendar order count parse error: {e}")
         
         for date, orders in order_counts.items():
             if date in daily_totals:
@@ -1390,8 +1442,8 @@ async def get_monthly_sales(month: int = None, year: int = None, auth: tuple = D
                         current_profit = daily_totals[ist_date].get("profit", 0)
                         sale_profit = s.get("total_price", 0) - (s.get("total_cost", 0) or 0)
                         daily_totals[ist_date]["profit"] = current_profit + sale_profit
-                except:
-                    pass
+                except Exception as e:
+                    print(f"Calendar profit parse error: {e}")
 
         month_revenue = sum(s.get("total_price", 0) for s in sales)
         month_cost = sum(s.get("total_cost", 0) or 0 for s in sales)
@@ -1506,8 +1558,8 @@ async def get_yearly_sales(year: int = None, auth: tuple = Depends(get_user_clie
                     monthly_totals[month_key]["quantity"] += s.get("quantity", 0)
                     tid = s.get("transaction_id") or created[:19]
                     monthly_totals[month_key]["orders"].add(tid)
-                except:
-                    pass
+                except Exception as e:
+                    print(f"Yearly date parse error: {e}")
         
         months = []
         year_revenue = 0

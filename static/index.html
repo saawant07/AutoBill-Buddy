@@ -875,13 +875,37 @@
             -webkit-backdrop-filter: blur(20px);
             transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
             will-change: transform, box-shadow, border-color;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Subtle top shine effect */
+        .fintech-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .fintech-card:hover::before {
+            opacity: 1;
         }
 
         .fintech-card:hover {
             box-shadow: var(--card-shadow-hover);
             transform: translateY(-4px) scale(1.005);
             border-color: rgba(16, 185, 129, 0.15);
-            /* Subtle emerald glow on hover */
+        }
+
+        /* Enhanced modal backdrop */
+        .modal-backdrop {
+            backdrop-filter: blur(12px) saturate(180%);
+            -webkit-backdrop-filter: blur(12px) saturate(180%);
         }
 
         /* --- Hero Stat (Revenue Card) — Rich Premium Gradient --- */
@@ -972,6 +996,23 @@
             overflow: hidden;
             background: linear-gradient(180deg, rgba(255, 255, 255, 0.02) 0%, transparent 100%);
             border-top: 1px solid rgba(255, 255, 255, 0.8);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        /* Shimmer effect on stats */
+        .stat-widget::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .stat-widget:hover::after {
+            left: 100%;
         }
 
         /* Inner glow ring for stat cards */
@@ -1048,11 +1089,34 @@
         /* --- Dark Mode Stat Card Accent Glows — Luxury cinematic --- */
         [data-theme="dark"] .hero-stat {
             border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
-            background: linear-gradient(135deg, #022C22 0%, #064E3B 50%, #047857 100%) !important;
+            background: linear-gradient(135deg, #022c22 0%, #064e3b 50%, #047857 100%) !important;
+            position: relative;
+            overflow: hidden;
+        }
+
+        [data-theme="dark"] .hero-stat::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, transparent 60%);
+            animation: heroGlow 8s ease-in-out infinite;
+        }
+
+        @keyframes heroGlow {
+            0%, 100% { transform: translate(0, 0); opacity: 0.5; }
+            50% { transform: translate(10%, 10%); opacity: 1; }
         }
 
         [data-theme="dark"] .hero-stat:hover {
             box-shadow: 0 20px 60px rgba(16, 185, 129, 0.3), 0 0 100px rgba(16, 185, 129, 0.1) !important;
+        }
+
+        /* Enhanced stat icons with glow */
+        [data-theme="dark"] .stat-icon {
+            box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.4), 0 0 30px rgba(16, 185, 129, 0.15), inset 0 2px 4px rgba(255, 255, 255, 0.1);
         }
 
         [data-theme="dark"] .stat-widget:nth-child(2):hover {
@@ -1231,6 +1295,18 @@
             transform: translateY(-2px);
         }
 
+        /* Enhanced dark mode pill input */
+        [data-theme="dark"] .pill-input {
+            background: rgba(30, 41, 59, 0.5);
+            border-color: rgba(99, 102, 241, 0.15);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), inset 0 1px 1px rgba(255, 255, 255, 0.02);
+        }
+
+        [data-theme="dark"] .pill-input:focus-within {
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2), 0 12px 32px rgba(0, 0, 0, 0.3);
+            border-color: rgba(99, 102, 241, 0.4);
+        }
+
         .pill-input input {
             border: none;
             outline: none;
@@ -1284,6 +1360,11 @@
             box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.08), 0 8px 16px -4px rgba(15, 23, 42, 0.04);
             transform: translateY(-3px) scale(1.01);
             border-color: rgba(99, 102, 241, 0.15);
+            background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
+        }
+
+        [data-theme="dark"] .floating-item:hover {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(17, 24, 39, 0.95) 100%);
         }
 
         /* Dark mode inventory cards — accent left border */
@@ -1584,10 +1665,22 @@
             display: flex;
             align-items: center;
             gap: 10px;
+            position: relative;
         }
 
         .section-title i {
             font-size: 0.85rem;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        [data-theme="dark"] .section-title i {
+            background: linear-gradient(135deg, #34d399, #10b981);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
 
         /* --- Gradient Button — Executive Luxury --- */
@@ -1621,12 +1714,21 @@
 
         .btn-gradient:hover {
             transform: translateY(-3px) scale(1.02);
-            box-shadow: 0 16px 32px rgba(5, 150, 105, 0.35), inset 0 2px 4px rgba(255, 255, 255, 0.3);
+            box-shadow: 0 16px 32px rgba(5, 150, 105, 0.35), 0 0 40px rgba(5, 150, 105, 0.2), inset 0 2px 4px rgba(255, 255, 255, 0.3);
         }
 
         .btn-gradient:active {
             transform: translateY(0px) scale(0.98);
             box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2);
+        }
+
+        /* Enhanced dark mode button */
+        [data-theme="dark"] .btn-gradient {
+            box-shadow: 0 8px 20px rgba(5, 150, 105, 0.35), 0 0 20px rgba(5, 150, 105, 0.1), inset 0 2px 4px rgba(255, 255, 255, 0.15);
+        }
+
+        [data-theme="dark"] .btn-gradient:hover {
+            box-shadow: 0 16px 40px rgba(5, 150, 105, 0.5), 0 0 60px rgba(5, 150, 105, 0.25), inset 0 2px 4px rgba(255, 255, 255, 0.2);
         }
 
         /* --- Auth Pill Button (Executive Glassmorphic) --- */
@@ -1693,6 +1795,11 @@
             }
         }
 
+        @keyframes gentleBounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-6px); }
+        }
+
         .animate-in {
             animation: fadeInUp 0.55s var(--transition-spring) both;
         }
@@ -1703,6 +1810,11 @@
 
         .animate-in-delay-2 {
             animation: fadeInUp 0.55s var(--transition-spring) 0.24s both;
+        }
+
+        /* Bouncy call-to-action */
+        .bounce-subtle {
+            animation: gentleBounce 2s ease-in-out infinite;
         }
 
         /* ===== STARTUP POLISH ===== */
@@ -2525,9 +2637,15 @@
                     <div>
                         <h1 id="header-shop-name"
                             class="font-bold text-lg sm:text-xl cursor-pointer hover:opacity-70 transition-opacity"
-                            style="color: var(--text-heading);" title="Click to rename">AutoBill Buddy</h1>
-                        <p class="text-xs flex items-center gap-1" style="color: var(--text-label);">
-                            <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span> Connected
+                            style="color: var(--text-heading);" title="Click to rename">
+                            <span class="hidden sm:inline">AutoBill</span> Buddy
+                        </h1>
+                        <p class="text-xs flex items-center gap-1.5" style="color: var(--text-label);">
+                            <span class="relative flex h-2 w-2">
+                              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                              <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                            </span>
+                            <span class="hidden sm:inline">Live</span>
                         </p>
                     </div>
                 </div>
@@ -2615,7 +2733,7 @@
 
             <!-- ===== 2. VOICE COMMAND CENTER (Compact Glass) ===== -->
             <div class="voice-center glass rounded-3xl p-5 sm:p-6 text-center relative animate-in-delay">
-                <h2 class="text-lg sm:text-xl font-bold mb-1" style="color: var(--text-heading);">Voice Command Center
+                <h2 class="text-lg sm:text-xl font-bold mb-1 bounce-subtle" style="color: var(--text-heading);">Voice Command Center
                 </h2>
                 <p class="text-xs mb-5" style="color: var(--text-label);">Tap & Speak: "Sold 2 milk, 5 bread and 1 kg
                     sugar"</p>
@@ -2661,7 +2779,7 @@
                         <div class="flex justify-between items-center">
                             <h3 class="section-title cursor-pointer hover:text-emerald-600 transition-colors tooltip"
                                 onclick="openFullInventory()" title="Tap for Detailed Inventory Report">
-                                <i class="fas fa-warehouse text-emerald-500"></i> Inventory Status
+                                <i class="fas fa-warehouse text-emerald-500"></i> Inventory Status <span id="low-stock-badge" class="hidden ml-2 px-2 py-0.5 text-[10px] font-bold text-white bg-red-500 rounded-full">0</span>
                             </h3>
                             <div class="flex gap-2 items-center">
                                 <button onclick="document.getElementById('add-stock-modal').classList.remove('hidden')"
@@ -3175,17 +3293,40 @@
     </div>
 
 
+    <!-- Inline Input Modal (replaces browser prompt()) -->
+    <div id="inline-prompt-modal"
+        class="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-[60] flex items-center justify-center p-4 hidden transition-opacity">
+        <div class="fintech-card w-full max-w-sm p-7 relative modal-content overflow-hidden">
+            <button onclick="window._closeInlinePrompt()"
+                class="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-50 dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center justify-center transition-all"
+                style="color: var(--text-muted);"><i class="fas fa-times text-sm"></i></button>
+            <h3 id="inline-prompt-title" class="font-bold text-lg mb-4 flex items-center gap-2"
+                style="color: var(--text-heading);"><i class="fas fa-edit text-emerald-500"></i> Enter Value</h3>
+            <input type="text" id="inline-prompt-input"
+                class="w-full px-5 py-3 rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-sm transition-all"
+                style="color: var(--text-heading);" placeholder="Enter value">
+            <button id="inline-prompt-submit"
+                class="btn-gradient w-full py-3 rounded-2xl text-sm font-bold shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/40 hover:-translate-y-0.5 transition-all mt-4">Confirm</button>
+        </div>
+    </div>
+
     <script type="module">
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
         // --- CONFIG ---
-        // Proxy URL instead of raw Supabase URL to bypass ISP blocks
-        const SUPABASE_URL = window.location.origin + '/supabase-proxy';
-        // Note: In production, use env vars. For prototype, anon key is fine if RLS is set.
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1obnVlYWFmYWRubHdlZXptZW1jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA1Mzc3OTcsImV4cCI6MjA4NjExMzc5N30.IuweIlK8DP0VY3y9a7DMuftn-XnuovKa39_2pcuj6ow';
         const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:8000' : '';
 
-        const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // --- fetch config from backend first
+        async function initSupabase() {
+            const res = await fetch('/config');
+            const cfg = await res.json();
+            return createClient(
+                window.location.origin + '/supabase-proxy',  // keep your proxy
+                cfg.anon_key
+            );
+        }
+
+        const supabase = await initSupabase();
 
         // --- STATE ---
         let session = null;
@@ -3197,6 +3338,64 @@
         // Profit State
         let todayStats = { revenue: 0, profit: 0 };
         let showProfit = false;
+
+        // --- UTILITIES ---
+        // XSS-safe HTML escaping
+        function escapeHtml(str) {
+            if (str == null) return '';
+            const div = document.createElement('div');
+            div.appendChild(document.createTextNode(String(str)));
+            return div.innerHTML;
+        }
+        // Shortcut for escaping
+        const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+        // Debounce utility
+        function debounce(fn, delay = 300) {
+            let timer;
+            return (...args) => {
+                clearTimeout(timer);
+                timer = setTimeout(() => fn(...args), delay);
+            };
+        }
+
+        // Inline prompt (replaces browser prompt())
+        let _inlinePromptResolve = null;
+        function showInlinePrompt(title, placeholder = '', defaultValue = '', inputType = 'text') {
+            return new Promise((resolve) => {
+                _inlinePromptResolve = resolve;
+                const modal = document.getElementById('inline-prompt-modal');
+                const input = document.getElementById('inline-prompt-input');
+                const titleEl = document.getElementById('inline-prompt-title');
+                titleEl.innerHTML = `<i class="fas fa-edit text-emerald-500"></i> ${escapeHtml(title)}`;
+                input.type = inputType;
+                input.placeholder = placeholder;
+                input.value = defaultValue;
+                modal.classList.remove('hidden');
+                setTimeout(() => input.focus(), 100);
+
+                const submitBtn = document.getElementById('inline-prompt-submit');
+                const handler = () => {
+                    submitBtn.removeEventListener('click', handler);
+                    input.removeEventListener('keydown', keyHandler);
+                    modal.classList.add('hidden');
+                    resolve(input.value);
+                };
+                const keyHandler = (e) => {
+                    if (e.key === 'Enter') handler();
+                    if (e.key === 'Escape') { window._closeInlinePrompt(); }
+                };
+                submitBtn.addEventListener('click', handler);
+                input.addEventListener('keydown', keyHandler);
+            });
+        }
+        window._closeInlinePrompt = function () {
+            document.getElementById('inline-prompt-modal').classList.add('hidden');
+            if (_inlinePromptResolve) { _inlinePromptResolve(null); _inlinePromptResolve = null; }
+        };
+
+        // Dedup guard for refreshAllData
+        let _refreshInFlight = false;
 
         // --- ELEMENTS ---
         const els = {
@@ -3460,10 +3659,13 @@
 
 
         async function refreshAllData() {
-            fetchStats();
-            fetchInventory();
-            fetchUdhaarStats();
-            fetchPrices();
+            if (_refreshInFlight) return;
+            _refreshInFlight = true;
+            try {
+                await Promise.all([fetchStats(), fetchInventory(), fetchUdhaarStats(), fetchPrices()]);
+            } finally {
+                _refreshInFlight = false;
+            }
         }
 
         async function fetchPrices() {
@@ -3578,25 +3780,27 @@
 
                 const pillClass = qty <= 0 ? 'stock-critical' : (qty < 5 ? 'stock-low' : 'stock-good');
                 const stockItemClass = qty <= 0 ? 'stock-item-critical' : (qty < 5 ? 'stock-item-low' : 'stock-item-good');
+                const safeName = escapeHtml(item.item_name);
+                const safeNameAttr = item.item_name.replace(/'/g, "\\'").replace(/</g, '');
                 return `
                 <div class="floating-item ${statusClass} ${stockItemClass}" style="animation: fadeInUp 0.35s var(--transition-spring) ${index * 0.04}s both;">
                     <div class="flex-1 min-w-0">
                         <p class="font-semibold text-sm flex items-center gap-1" style="color: var(--text-heading);">
-                            ${item.item_name}
+                            ${safeName}
                             ${expiryHTML}
                         </p>
                         <p class="text-xs mt-0.5" style="color: var(--text-muted);">₹${item.price || 0}/unit</p>
                     </div>
                     <div class="flex items-center gap-2 flex-shrink-0">
-                        <button type="button" onclick="event.preventDefault(); decreaseStockPrompt('${item.item_name.replace(/'/g, "\\'")}')" title="Reduce Stock" 
+                        <button type="button" onclick="event.preventDefault(); decreaseStockPrompt('${safeNameAttr}')" title="Reduce Stock" 
                             class="w-7 h-7 flex items-center justify-center rounded-full bg-amber-50 text-amber-500 hover:bg-amber-100 transition-all">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path></svg>
                         </button>
-                        <button type="button" onclick="event.preventDefault(); increaseStockPrompt('${item.item_name.replace(/'/g, "\\'")}')" title="Increase Stock" 
+                        <button type="button" onclick="event.preventDefault(); increaseStockPrompt('${safeNameAttr}')" title="Increase Stock" 
                             class="w-7 h-7 flex items-center justify-center rounded-full bg-emerald-50 text-emerald-500 hover:bg-emerald-100 transition-all">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                         </button>
-                        <button type="button" onclick="event.preventDefault(); deleteItemPrompt('${item.item_name.replace(/'/g, "\\'")}')" title="Delete Item"
+                        <button type="button" onclick="event.preventDefault(); deleteItemPrompt('${safeNameAttr}')" title="Delete Item"
                             class="w-7 h-7 flex items-center justify-center rounded-full bg-red-50 text-red-400 hover:bg-red-100 transition-all">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                         </button>
@@ -3604,11 +3808,23 @@
                     </div>
                 </div>`;
             }).join('');
+
+            // Update low stock badge
+            const lowStockCount = items.filter(i => (i.stock_quantity || 0) < 5).length;
+            const badge = document.getElementById('low-stock-badge');
+            if (badge) {
+                if (lowStockCount > 0) {
+                    badge.textContent = lowStockCount;
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
+            }
         }
 
         // Reduce Stock Prompt - exposed to window for onclick
         window.decreaseStockPrompt = async function (itemName) {
-            const qty = prompt(`Reduce stock for "${itemName}" by how much?`, "1");
+            const qty = await showInlinePrompt(`Reduce stock for "${itemName}"`, 'Enter quantity', '1', 'number');
             if (qty === null || qty === '') return;
             const amount = parseFloat(qty);
             if (isNaN(amount) || amount <= 0) {
@@ -3626,7 +3842,7 @@
 
         // Increase Stock Prompt - exposed to window for onclick
         window.increaseStockPrompt = async function (itemName) {
-            const qty = prompt(`Add stock to "${itemName}" by how much?`, "1");
+            const qty = await showInlinePrompt(`Add stock to "${itemName}"`, 'Enter quantity', '1', 'number');
             if (qty === null || qty === '') return;
             const amount = parseFloat(qty);
             if (isNaN(amount) || amount <= 0) {
@@ -3696,7 +3912,7 @@
 
                 return `
                     <tr class="transition-colors border-b border-gray-50 dark:border-gray-800/50 hover:bg-gray-50/50 dark:hover:bg-slate-800/30">
-                        <td class="py-4 px-6 font-semibold text-sm whitespace-nowrap" style="color: var(--text-heading);">${item.item_name}</td>
+                        <td class="py-4 px-6 font-semibold text-sm whitespace-nowrap" style="color: var(--text-heading);">${escapeHtml(item.item_name)}</td>
                         <td class="py-4 px-6 text-sm text-center whitespace-nowrap ${statusClass}">${qty}</td>
                         <td class="py-4 px-6 text-sm font-medium whitespace-nowrap" style="color: var(--text-muted);">₹${item.cost_price || 0}</td>
                         <td class="py-4 px-6 text-sm font-medium whitespace-nowrap" style="color: var(--text-heading);">₹${item.price || 0}</td>
@@ -3708,12 +3924,12 @@
             document.getElementById('full-inventory-modal').classList.remove('hidden');
         };
 
-        // Search Listener
-        els.invSearch.addEventListener('input', (e) => {
+        // Search Listener (debounced)
+        els.invSearch.addEventListener('input', debounce((e) => {
             const term = e.target.value.toLowerCase();
             const filtered = allInventoryItems.filter(i => i.item_name.toLowerCase().includes(term));
             renderInventory(filtered);
-        });
+        }, 250));
 
         function renderTransactions(txs) {
             if (!txs || txs.length === 0) {
@@ -3728,12 +3944,12 @@
                 <div class="txn-row">
                     <div class="txn-avatar" style="background: ${bgColor};">${icon}</div>
                     <div class="flex-1 min-w-0">
-                        <p class="font-semibold text-sm truncate" style="color: var(--text-heading);" title="${t.item}">${t.item}</p>
+                        <p class="font-semibold text-sm truncate" style="color: var(--text-heading);" title="${escapeHtml(t.item)}">${escapeHtml(t.item)}</p>
                         <p class="text-xs flex items-center gap-2 mt-0.5" style="color: var(--text-muted);">
-                            <span>#${t.order}</span>
+                            <span>#${escapeHtml(t.order)}</span>
                             <span>•</span>
-                            <span>${t.time || 'Just now'}</span>
-                            ${t.payment_mode === 'Udhaar' && t.customer_name && t.customer_name !== 'Walk-in' ? `<span class="text-red-400 font-medium">${t.customer_name}</span>` : ''}
+                            <span>${escapeHtml(t.time) || 'Just now'}</span>
+                            ${t.payment_mode === 'Udhaar' && t.customer_name && t.customer_name !== 'Walk-in' ? `<span class="text-red-400 font-medium">${escapeHtml(t.customer_name)}</span>` : ''}
                         </p>
                     </div>
                     <div class="flex items-center gap-2 flex-shrink-0">
@@ -4205,7 +4421,7 @@
             }
 
             toast.className = `backdrop-blur-md border ${colorClass} px-5 py-3.5 rounded-2xl shadow-xl flex items-center gap-3 transform transition-all translate-x-full opacity-0 pointer-events-auto`;
-            toast.innerHTML = `<i class="fas ${icon} text-lg"></i> <span class="text-sm font-bold tracking-wide">${msg}</span>`;
+            toast.innerHTML = `<i class="fas ${icon} text-lg"></i> <span class="text-sm font-bold tracking-wide">${escapeHtml(msg)}</span>`;
 
             const container = document.getElementById('toast-container');
             container.appendChild(toast);
@@ -4403,7 +4619,7 @@
                 } else {
                     list.innerHTML = res.items_sold.map(i => `
                         <div class="floating-item">
-                            <span class="font-semibold text-sm" style="color: var(--text-heading);">${i.name}</span>
+                            <span class="font-semibold text-sm" style="color: var(--text-heading);">${esc(i.name)}</span>
                             <span class="stock-pill stock-good">${i.qty} sold</span>
                         </div>
                      `).join('');
@@ -4428,7 +4644,7 @@
                 : `<span class="cash-badge text-xs px-2 py-1 rounded-full font-bold">🟢 Cash</span>`;
 
             const customerHTML = customer !== 'Walk-in'
-                ? `<div class="flex justify-between text-sm mt-2"><span class="text-slate-500">Customer</span><span class="font-semibold ${isUdhaar ? 'text-red-600' : 'text-slate-700'}">${customer}</span></div>`
+                ? `<div class="flex justify-between text-sm mt-2"><span class="text-slate-500">Customer</span><span class="font-semibold ${isUdhaar ? 'text-red-600' : 'text-slate-700'}">${escapeHtml(customer)}</span></div>`
                 : '';
 
             const card = document.createElement('div');
@@ -4478,16 +4694,16 @@
 
                 listEl.innerHTML = res.dues.map(d => {
                     const amountStr = Math.round(d.total_due);
-                    const safeName = d.customer_name.replace(/'/g, "\\'");
+                    const safeName = d.customer_name.replace(/'/g, "\\'").replace(/</g, '');
                     return `
                     <div class="dues-customer-row flex items-center justify-between p-4 bg-white border border-slate-100 rounded-xl"
                          onclick="if(!event.target.closest('button')) openCustomerDues('${safeName}')">
                         <div class="flex items-center gap-3">
                             <div class="w-10 h-10 bg-red-50 text-red-600 rounded-full flex items-center justify-center font-bold text-sm">
-                                ${d.customer_name.charAt(0).toUpperCase()}
+                                ${escapeHtml(d.customer_name.charAt(0).toUpperCase())}
                             </div>
                             <div>
-                                <p class="font-semibold text-slate-800">${d.customer_name}</p>
+                                <p class="font-semibold text-slate-800">${escapeHtml(d.customer_name)}</p>
                                 <p class="text-xs text-slate-400">${d.last_updated ? new Date(d.last_updated).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : ''}</p>
                             </div>
                         </div>
@@ -4508,14 +4724,13 @@
             }
         };
 
-        window.sendWhatsappReminder = function (customerName, amount) {
+        window.sendWhatsappReminder = async function (customerName, amount) {
             // Note: Since we are not modifying the DB schema, we save to/read from localStorage.
             let phone = localStorage.getItem("phone_" + customerName);
 
             if (!phone) {
-                const userEntered = prompt(`Enter WhatsApp number for ${customerName} (10 digits):`, "+91 ");
+                const userEntered = await showInlinePrompt(`WhatsApp number for ${customerName}`, '+91 9876543210', '+91 ', 'tel');
                 if (userEntered) {
-                    // Extract just the digits, assume +91 if exactly 10 digits are entered, otherwise use exactly what was parsed stripped of spaces/symbols
                     let digits = userEntered.replace(/[^0-9]/g, '');
                     if (digits.length === 10) {
                         digits = "91" + digits;
@@ -4526,7 +4741,7 @@
             }
 
             if (!phone) {
-                alert("Customer phone number not available.");
+                showToast("Customer phone number not available.", "warning");
                 return;
             }
 
@@ -4572,8 +4787,8 @@
 
                 tbody.innerHTML = res.transactions.map(t => `
                 <tr class="hover:bg-slate-50 transition-colors">
-                        <td class="px-4 py-3 whitespace-nowrap" style="color: var(--text-muted);">${t.date_time}</td>
-                        <td class="px-4 py-3 font-medium" style="color: var(--text-heading);">${t.item_name}</td>
+                        <td class="px-4 py-3 whitespace-nowrap" style="color: var(--text-muted);">${esc(t.date_time)}</td>
+                        <td class="px-4 py-3 font-medium" style="color: var(--text-heading);">${esc(t.item_name)}</td>
                         <td class="px-4 py-3 text-center" style="color: var(--text-label);">${t.quantity}</td>
                         <td class="px-4 py-3 text-right font-semibold text-red-600">₹${t.total_price}</td>
                     </tr>
@@ -4643,8 +4858,8 @@
                 dropdown.innerHTML = `<li class="px-4 py-3 text-sm text-slate-400 italic">No historical matches</li>`;
             } else {
                 dropdown.innerHTML = filtered.map(c => `
-                <li onclick="selectCustomer('${c.replace(/'/g, "\\'")}')" class="px-4 py-3 text-sm text-slate-700 hover:bg-emerald-50 cursor-pointer font-medium transition-colors border-b border-gray-50 last:border-0">
-                    <i class="fas fa-user-circle text-emerald-400 mr-2"></i> ${c}
+                <li onclick="selectCustomer('${c.replace(/'/g, "\\'").replace(/</g, '')}')" class="px-4 py-3 text-sm text-slate-700 hover:bg-emerald-50 cursor-pointer font-medium transition-colors border-b border-gray-50 last:border-0">
+                    <i class="fas fa-user-circle text-emerald-400 mr-2"></i> ${escapeHtml(c)}
                 </li>
                 `).join('');
             }
@@ -4710,7 +4925,7 @@
                 tr.className = "hover:bg-slate-50/50";
                 tr.innerHTML = `
                     <td class="px-3 py-2">
-                        <input type="text" value="${item.item_name}" 
+                        <input type="text" value="${escapeHtml(item.item_name)}" 
                             onchange="updateItemName(${index}, this.value)"
                             class="w-full bg-transparent outline-none border-b border-transparent focus:border-emerald-300 font-medium text-slate-700">
                     </td>
@@ -4741,19 +4956,19 @@
         }
 
         window.updateQty = function (index, change) {
-            const newQty = currentOrderItems[index].quantity + change;
-            if (newQty > 0) {
-                currentOrderItems[index].quantity = newQty;
-                renderOrderItems();
-            }
+            const newQty = Math.max(0.5, currentOrderItems[index].quantity + change);
+            currentOrderItems[index].quantity = newQty;
+            renderOrderItems();
         }
 
         window.updateItemPrice = function (index, newPrice) {
             const price = parseFloat(newPrice);
-            if (!isNaN(price) && price >= 0) {
-                currentOrderItems[index].unit_price = price;
-                renderOrderItems();
+            if (isNaN(price) || price < 0) {
+                showToast('Price cannot be negative', 'error');
+                return;
             }
+            currentOrderItems[index].unit_price = price;
+            renderOrderItems();
         }
 
         window.updateItemName = function (index, newName) {
@@ -4808,6 +5023,18 @@
             if (currentOrderItems.length === 0) {
                 showToast("No items in order!", "error");
                 return;
+            }
+
+            // Validate all items have valid quantity and price
+            for (const item of currentOrderItems) {
+                if (item.quantity <= 0) {
+                    showToast(`Invalid quantity for ${item.item_name}`, 'error');
+                    return;
+                }
+                if (item.unit_price < 0) {
+                    showToast(`Price cannot be negative for ${item.item_name}`, 'error');
+                    return;
+                }
             }
 
             const payload = {

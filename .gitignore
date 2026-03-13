@@ -2,6 +2,7 @@
 .env
 .env.*
 *.env
+debug_*.py
 
 # Python virtual environments
 venv/
