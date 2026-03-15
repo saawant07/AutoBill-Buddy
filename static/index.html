@@ -24,90 +24,81 @@
         }
     </script>
     <style>
-        /* ===== AUTO-BILL BUDDY LUXURY DESIGN SYSTEM ===== */
+        /* ===== PREMIUM MODERN WEB DESIGN SYSTEM ===== */
         :root {
-            /* Light Mode - Executive Elegance */
-            --bg-page: #FDFDFE;
-            /* Soft, almost-white pearl */
+            /* Premium Light Theme - Clean & Professional */
+            --bg-page: #F8FAFC;
             --card-bg: #FFFFFF;
-            --card-radius: 28px;
-            /* Slightly softer curves */
-            --card-shadow: 0 10px 40px -10px rgba(15, 23, 42, 0.08), 0 4px 12px -5px rgba(15, 23, 42, 0.04);
-            --card-shadow-hover: 0 30px 60px -15px rgba(15, 23, 42, 0.12), 0 12px 24px -10px rgba(15, 23, 42, 0.08);
+            --card-radius: 16px;
+            --card-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 4px 12px rgba(0,0,0,0.03);
+            --card-shadow-hover: 0 4px 16px rgba(0,0,0,0.08), 0 12px 32px rgba(0,0,0,0.06);
 
-            /* Luxury Vibrant Accents — Deepened for Executive Polish */
-            --accent-green: #065F46;
-            /* Deep Jade instead of stark emerald */
-            --accent-purple: #5B21B6;
-            /* Deepened violet */
-            --accent-blue: #1E3A8A;
-            /* Navy instead of bright blue */
-            --accent-gradient: linear-gradient(135deg, #059669 0%, #064E3B 100%);
-            /* Softer, richer green gradient */
-            --purple-gradient: linear-gradient(135deg, #7C3AED 0%, #4C1D95 100%);
-            --gold-gradient: linear-gradient(135deg, #D97706 0%, #92400E 100%);
-            /* Deeper gold/bronze */
+            /* Modern Accent Colors */
+            --accent-green: #10B981;
+            --accent-purple: #8B5CF6;
+            --accent-blue: #3B82F6;
+            --accent-orange: #F59E0B;
+            --accent-red: #EF4444;
+            --accent-pink: #EC4899;
+            --accent-teal: #14B8A6;
 
-            /* Sophisticated Typography Scale */
-            --text-heading: #0F172A;
-            /* Slate 900 */
-            --text-label: #334155;
-            /* Slate 700 */
-            --text-muted: #64748B;
-            /* Slate 500 */
+            /* Premium Gradients */
+            --accent-gradient: linear-gradient(135deg, #10B981 0%, #059669 100%);
+            --purple-gradient: linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%);
+            --blue-gradient: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%);
+            --orange-gradient: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+            --pink-gradient: linear-gradient(135deg, #EC4899 0%, #DB2777 100%);
+            --mixed-gradient: linear-gradient(135deg, #10B981, #3B82F6, #8B5CF6);
 
-            /* Premium Glassmorphism */
-            --glass-bg: rgba(255, 255, 255, 0.65);
-            /* Softer white */
-            --glass-border: rgba(255, 255, 255, 0.4);
-            --glass-shadow: 0 12px 40px rgba(15, 23, 42, 0.04);
-            /* Wider, softer shadow */
+            /* Typography */
+            --text-heading: #111827;
+            --text-label: #4B5563;
+            --text-muted: #9CA3AF;
 
-            /* Physics */
-            --transition-spring: cubic-bezier(0.25, 1, 0.5, 1);
+            /* Glassmorphism */
+            --glass-bg: rgba(255, 255, 255, 0.8);
+            --glass-border: rgba(255, 255, 255, 0.5);
+            --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.04);
+
+            /* Transitions */
+            --transition-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
             --transition-smooth: cubic-bezier(0.4, 0, 0.2, 1);
 
             /* Inputs */
-            --input-bg: #F8FAFC;
-            --input-border: #E2E8F0;
-            --border-subtle: rgba(15, 23, 42, 0.04);
+            --input-bg: #F9FAFB;
+            --input-border: #E5E7EB;
+            --border-subtle: #E5E7EB;
+
+            /* Status Colors */
+            --success: #10B981;
+            --warning: #F59E0B;
+            --error: #EF4444;
+            --info: #3B82F6;
         }
 
-        /* === DARK MODE — High-End Obsidian & Neon === */
+        /* === DARK MODE — Sleek & Modern === */
         [data-theme="dark"] {
-            /* Ultra-deep space backgrounds */
-            --bg-page: #020617;
-            /* Slate 950 */
-            --card-bg: rgba(15, 23, 42, 0.6);
-            /* Slate 900 with transparency for glass effect */
-            --card-bg-elevated: rgba(30, 41, 59, 0.8);
-            /* Slate 800 */
+            --bg-page: #0F172A;
+            --card-bg: #1E293B;
+            --card-shadow: 0 1px 3px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.2);
+            --card-shadow-hover: 0 4px 16px rgba(0,0,0,0.4), 0 12px 32px rgba(0,0,0,0.3);
 
-            /* Enhanced cinematic shadows */
-            --card-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.8), inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
-            --card-shadow-hover: 0 30px 60px -15px rgba(0, 0, 0, 0.9), 0 0 40px rgba(16, 185, 129, 0.05), inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+            --text-heading: #F9FAFB;
+            --text-label: #D1D5DB;
+            --text-muted: #9CA3AF;
 
-            /* Crisp contrast text */
-            --text-heading: #F8FAFC;
-            --text-label: #CBD5E1;
-            --text-muted: #64748B;
+            --glass-bg: rgba(30, 41, 59, 0.8);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 
-            /* Refined Glassmorphism */
-            --glass-bg: rgba(15, 23, 42, 0.55);
-            --glass-border: rgba(255, 255, 255, 0.05);
-            /* Extremely subtle border */
-            --glass-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+            --input-bg: #374151;
+            --input-border: #4B5563;
+            --border-subtle: #374151;
 
-            /* Inputs */
-            --input-bg: rgba(255, 255, 255, 0.03);
-            --input-border: rgba(255, 255, 255, 0.06);
-            --border-subtle: rgba(255, 255, 255, 0.04);
-
-            /* Muted Cinematic Glows (Midnight Mist) */
-            --glow-emerald: rgba(5, 150, 105, 0.15);
-            /* Significantly reduced opacity */
-            --glow-indigo: rgba(79, 70, 229, 0.12);
-            --glow-violet: rgba(124, 58, 237, 0.1);
+            --success: #34D399;
+            --warning: #FBBF24;
+            --error: #F87171;
+            --info: #60A5FA;
         }
 
         [data-theme="dark"] body {
@@ -115,95 +106,64 @@
             color: var(--text-heading);
         }
 
-        /* Animated ambient gradient blobs — Ultra-refined Luxury */
-        [data-theme="dark"] body::before {
+        /* Animated ambient background */
+        body::before {
             content: '';
             position: fixed;
             inset: 0;
             z-index: -1;
             background:
-                radial-gradient(ellipse 60% 50% at 10% 0%, rgba(99, 102, 241, 0.15) 0%, transparent 60%),
-                radial-gradient(ellipse 50% 40% at 90% 5%, rgba(16, 185, 129, 0.12) 0%, transparent 50%),
-                radial-gradient(ellipse 55% 45% at 50% 100%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
-                radial-gradient(ellipse 35% 35% at 65% 45%, rgba(139, 92, 246, 0.06) 0%, transparent 45%);
-            animation: ambientShift 30s ease-in-out infinite alternate;
+                radial-gradient(ellipse 80% 50% at 20% 10%, rgba(16, 185, 129, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse 60% 40% at 80% 20%, rgba(59, 130, 246, 0.06) 0%, transparent 50%),
+                radial-gradient(ellipse 50% 30% at 60% 80%, rgba(139, 92, 246, 0.05) 0%, transparent 50%);
             pointer-events: none;
         }
 
         @keyframes ambientShift {
-            0% {
-                opacity: 0.8;
-                transform: scale(1) rotate(0deg);
-            }
-
-            50% {
-                opacity: 1;
-                transform: scale(1.05) translateX(-1%) rotate(0.5deg);
-            }
-
-            100% {
-                opacity: 0.8;
-                transform: scale(1) translateX(1%) rotate(-0.5deg);
-            }
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
         }
 
-        /* Cards & Header — Deep Obsidian Luxury */
+        /* Dark mode ambient */
+        [data-theme="dark"] body::before {
+            background:
+                radial-gradient(ellipse 80% 50% at 20% 10%, rgba(16, 185, 129, 0.12) 0%, transparent 50%),
+                radial-gradient(ellipse 60% 40% at 80% 20%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
+                radial-gradient(ellipse 50% 30% at 60% 80%, rgba(139, 92, 246, 0.08) 0%, transparent 50%);
+        }
+
+        @keyframes ambientShift {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+
+        /* Cards & Header — Modern Style */
         [data-theme="dark"] .fintech-card {
             background: var(--card-bg);
-            backdrop-filter: blur(40px) saturate(160%);
-            -webkit-backdrop-filter: blur(40px) saturate(160%);
             border: 1px solid var(--glass-border);
             box-shadow: var(--card-shadow);
-            position: relative;
-        }
-
-        /* Subtle noise texture overlay on cards */
-        [data-theme="dark"] .fintech-card::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            border-radius: inherit;
-            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.02'/%3E%3C/svg%3E");
-            pointer-events: none;
-            z-index: 0;
         }
 
         [data-theme="dark"] .fintech-card:hover {
-            border-color: rgba(16, 185, 129, 0.2);
-            box-shadow: var(--card-shadow-hover), 0 0 40px rgba(16, 185, 129, 0.08);
-            transform: translateY(-4px);
+            box-shadow: var(--card-shadow-hover);
+            transform: translateY(-2px);
         }
 
         [data-theme="dark"] .floating-header {
-            background: rgba(2, 6, 23, 0.85);
-            /* Slate 950 glass */
-            backdrop-filter: blur(32px) saturate(200%);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 1px 0 rgba(255, 255, 255, 0.02), 0 10px 40px rgba(0, 0, 0, 0.6);
+            background: rgba(15, 23, 42, 0.95);
+            border-bottom: 1px solid var(--glass-border);
         }
 
         /* Voice Center */
-        [data-theme="dark"] .voice-center::after {
-            background: rgba(26, 29, 39, 0.95);
-        }
-
         [data-theme="dark"] .voice-center {
-            background-image: radial-gradient(circle, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
         }
 
         /* Inputs */
         [data-theme="dark"] .pill-input {
             background: var(--input-bg);
             border-color: var(--input-border);
-            color: var(--text-heading);
-        }
-
-        [data-theme="dark"] .pill-input input {
-            color: var(--text-heading);
-        }
-
-        [data-theme="dark"] .pill-input input::placeholder {
-            color: var(--text-muted);
         }
 
         [data-theme="dark"] input,
@@ -231,60 +191,49 @@
             border-color: var(--border-subtle);
         }
 
-        /* Stock Status Pills — dark luxury variants */
+        /* Stock Status Pills */
         [data-theme="dark"] .stock-good {
-            color: #10B981;
-            /* Sharper emerald */
-            background: rgba(16, 185, 129, 0.1);
-            border-color: rgba(16, 185, 129, 0.3);
-            box-shadow: inset 0 0 10px rgba(16, 185, 129, 0.05);
+            color: var(--success);
+            background: rgba(16, 185, 129, 0.15);
         }
 
         [data-theme="dark"] .stock-low {
-            color: #F59E0B;
-            background: rgba(245, 158, 11, 0.1);
-            border-color: rgba(245, 158, 11, 0.3);
-            box-shadow: inset 0 0 10px rgba(245, 158, 11, 0.05);
+            color: var(--warning);
+            background: rgba(245, 158, 11, 0.15);
         }
 
         [data-theme="dark"] .stock-critical {
-            color: #EF4444;
-            background: rgba(239, 68, 68, 0.1);
-            border-color: rgba(239, 68, 68, 0.3);
-            box-shadow: inset 0 0 10px rgba(239, 68, 68, 0.05);
+            color: var(--error);
+            background: rgba(239, 68, 68, 0.15);
         }
 
         /* Inventory Action Buttons */
         [data-theme="dark"] .floating-item button[title="Reduce Stock"] {
-            background: rgba(245, 158, 11, 0.1) !important;
+            background: rgba(245, 158, 11, 0.15) !important;
             color: #FBBF24 !important;
-            border: 1px solid rgba(245, 158, 11, 0.2);
         }
 
         [data-theme="dark"] .floating-item button[title="Increase Stock"] {
-            background: rgba(16, 185, 129, 0.1) !important;
+            background: rgba(16, 185, 129, 0.15) !important;
             color: #34D399 !important;
-            border: 1px solid rgba(16, 185, 129, 0.2);
         }
 
         [data-theme="dark"] .floating-item button[title="Delete Item"] {
-            background: rgba(239, 68, 68, 0.1) !important;
+            background: rgba(239, 68, 68, 0.15) !important;
             color: #F87171 !important;
-            border: 1px solid rgba(239, 68, 68, 0.2);
         }
 
         [data-theme="dark"] .floating-item button:hover {
-            transform: scale(1.1);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            transform: scale(1.05);
         }
 
         /* Profile & Auth */
         [data-theme="dark"] .profile-pill {
-            background: rgba(139, 92, 246, 0.15);
+            background: rgba(139, 92, 246, 0.2);
         }
 
         [data-theme="dark"] .avatar-circle {
-            background: linear-gradient(135deg, #8B5CF6, #7C3AED);
+            background: var(--purple-gradient);
         }
 
         /* Tailwind bg-gray overrides for dark mode */
@@ -294,7 +243,7 @@
         }
 
         [data-theme="dark"] .bg-gray-200 {
-            background-color: rgba(255, 255, 255, 0.04) !important;
+            background-color: rgba(255, 255, 255, 0.08) !important;
         }
 
         /* Text color overrides for hardcoded Tailwind text classes */
@@ -606,41 +555,27 @@
             }
         }
 
-        /* Glassmorphic Card */
+        /* Modern Auth Card */
         .auth-card {
-            background: rgba(15, 23, 42, 0.6);
-            backdrop-filter: blur(40px) saturate(180%);
-            -webkit-backdrop-filter: blur(40px) saturate(180%);
-            border-radius: 28px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow:
-                0 0 0 1px rgba(255, 255, 255, 0.04) inset,
-                0 24px 80px rgba(0, 0, 0, 0.5),
-                0 0 60px rgba(99, 102, 241, 0.04);
-            animation: authCardIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            background: var(--card-bg);
+            border-radius: 16px;
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            animation: authCardIn 0.3s var(--transition-smooth) forwards;
         }
 
         @keyframes authCardIn {
-            0% {
-                opacity: 0;
-                transform: scale(0.92) translateY(20px);
-            }
-
-            100% {
-                opacity: 1;
-                transform: scale(1) translateY(0);
-            }
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
         }
 
-        /* Animated Logo Ring */
+        /* Logo Ring */
         .auth-logo-ring {
             width: 72px;
             height: 72px;
-            border-radius: 20px;
+            border-radius: 16px;
             padding: 3px;
-            background: conic-gradient(from 0deg,
-                    #10B981, #3B82F6, #8B5CF6, #EC4899, #10B981);
-            animation: logoSpin 6s linear infinite;
+            background: var(--mixed-gradient);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -649,41 +584,31 @@
         .auth-logo-inner {
             width: 100%;
             height: 100%;
-            border-radius: 17px;
-            background: linear-gradient(135deg, #0F172A, #1E293B);
+            border-radius: 14px;
+            background: var(--card-bg);
             display: flex;
             align-items: center;
             justify-content: center;
         }
 
-        @keyframes logoSpin {
-            0% {
-                filter: hue-rotate(0deg);
-            }
-
-            100% {
-                filter: hue-rotate(360deg);
-            }
-        }
-
         /* Tab Switcher */
         .auth-tab-container {
             display: flex;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 14px;
+            background: var(--input-bg);
+            border-radius: 10px;
             padding: 4px;
             position: relative;
-            border: 1px solid rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--input-border);
         }
 
         .auth-tab {
             flex: 1;
             padding: 10px 16px;
-            border-radius: 11px;
+            border-radius: 8px;
             font-weight: 600;
             font-size: 0.85rem;
-            color: rgba(255, 255, 255, 0.4);
-            transition: all 0.3s ease;
+            color: var(--text-muted);
+            transition: all 0.2s ease;
             cursor: pointer;
             background: transparent;
             border: none;
@@ -696,18 +621,7 @@
 
         .auth-tab-active {
             color: white !important;
-        }
-
-        .auth-tab-indicator {
-            position: absolute;
-            top: 4px;
-            bottom: 4px;
-            left: 4px;
-            width: calc(50% - 4px);
-            background: rgba(255, 255, 255, 0.08);
-            border-radius: 11px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+            background: var(--accent-gradient);
         }
 
         /* Input Fields */
@@ -717,50 +631,48 @@
 
         .auth-input-icon {
             position: absolute;
-            left: 18px;
+            left: 16px;
             top: 50%;
             transform: translateY(-50%);
-            color: rgba(255, 255, 255, 0.25);
-            font-size: 13px;
-            transition: color 0.3s ease;
+            color: var(--text-muted);
+            font-size: 14px;
             pointer-events: none;
         }
 
         .auth-input-group:focus-within .auth-input-icon {
-            color: #10B981;
+            color: var(--accent-green);
         }
 
         .auth-input {
             width: 100%;
             padding: 14px 18px 14px 44px;
-            border-radius: 14px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            background: rgba(255, 255, 255, 0.04) !important;
-            color: white !important;
-            font-size: 0.9rem;
+            border-radius: 12px;
+            border: 1px solid var(--input-border);
+            background: var(--input-bg);
+            color: var(--text-heading);
+            font-size: 0.95rem;
             outline: none;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
         }
 
         .auth-input::placeholder {
-            color: rgba(255, 255, 255, 0.3) !important;
+            color: var(--text-muted);
         }
 
         .auth-input:focus {
-            border-color: rgba(16, 185, 129, 0.4) !important;
-            background: rgba(255, 255, 255, 0.06) !important;
-            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.08), 0 4px 16px rgba(16, 185, 129, 0.04);
+            border-color: var(--accent-green);
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
         }
 
         /* Submit Button */
         .auth-submit-btn {
             width: 100%;
             padding: 14px 24px;
-            border-radius: 14px;
+            border-radius: 12px;
             border: none;
-            background: linear-gradient(135deg, #059669 0%, #10B981 50%, #34D399 100%);
+            background: var(--accent-gradient);
             color: white;
-            font-weight: 700;
+            font-weight: 600;
             font-size: 0.95rem;
             cursor: pointer;
             display: flex;
@@ -770,27 +682,12 @@
             transition: all 0.3s ease;
             position: relative;
             overflow: hidden;
-            box-shadow: 0 4px 20px rgba(16, 185, 129, 0.25);
-        }
-
-        .auth-submit-btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 60%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
-            transition: left 0.5s ease;
-        }
-
-        .auth-submit-btn:hover::before {
-            left: 200%;
+            box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
         }
 
         .auth-submit-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 32px rgba(16, 185, 129, 0.35);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.35);
         }
 
         .auth-submit-btn:active {
@@ -829,11 +726,6 @@
             color: var(--text-heading);
             min-height: 100vh;
             background: var(--bg-page);
-            background-image:
-                radial-gradient(ellipse 70% 45% at 15% -5%, rgba(99, 102, 241, 0.06) 0%, transparent 55%),
-                radial-gradient(ellipse 55% 45% at 90% 5%, rgba(16, 185, 129, 0.05) 0%, transparent 45%),
-                radial-gradient(ellipse 65% 45% at 50% 100%, rgba(59, 130, 246, 0.04) 0%, transparent 45%);
-            background-attachment: fixed;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
             text-rendering: optimizeLegibility;
@@ -842,64 +734,34 @@
         /* --- Glass Utility --- */
         .glass {
             background: var(--glass-bg);
-            backdrop-filter: blur(24px) saturate(180%);
-            -webkit-backdrop-filter: blur(24px) saturate(180%);
             border: 1px solid var(--glass-border);
             box-shadow: var(--glass-shadow);
         }
 
         /* --- Floating Header --- */
         .floating-header {
-            background: rgba(255, 255, 255, 0.88);
-            backdrop-filter: blur(24px) saturate(200%);
-            -webkit-backdrop-filter: blur(24px) saturate(200%);
-            border-bottom: 1px solid rgba(15, 23, 42, 0.05);
-            box-shadow: 0 1px 0 rgba(0, 0, 0, 0.02), 0 4px 24px rgba(0, 0, 0, 0.04);
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--border-subtle);
+            box-shadow: var(--card-shadow);
         }
 
         .glass-dark {
-            background: rgba(255, 255, 255, 0.88);
-            backdrop-filter: blur(24px) saturate(200%);
-            -webkit-backdrop-filter: blur(24px) saturate(200%);
-            border-bottom: 1px solid rgba(15, 23, 42, 0.05);
-            box-shadow: 0 1px 0 rgba(0, 0, 0, 0.02), 0 4px 24px rgba(0, 0, 0, 0.04);
+            background: var(--glass-bg);
+            border-bottom: 1px solid var(--border-subtle);
         }
 
-        /* --- Cards — Professional Layered Surfaces --- */
+        /* --- Cards — Modern Clean Style --- */
         .fintech-card {
             background: var(--card-bg);
             border-radius: var(--card-radius);
             box-shadow: var(--card-shadow);
             border: 1px solid var(--border-subtle);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
-            will-change: transform, box-shadow, border-color;
-            position: relative;
-            overflow: hidden;
-        }
-
-        /* Subtle top shine effect */
-        .fintech-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .fintech-card:hover::before {
-            opacity: 1;
+            transition: all 0.2s var(--transition-smooth);
         }
 
         .fintech-card:hover {
             box-shadow: var(--card-shadow-hover);
-            transform: translateY(-4px) scale(1.005);
-            border-color: rgba(16, 185, 129, 0.15);
+            transform: translateY(-2px);
         }
 
         /* Enhanced modal backdrop */
@@ -908,63 +770,23 @@
             -webkit-backdrop-filter: blur(12px) saturate(180%);
         }
 
-        /* --- Hero Stat (Revenue Card) — Rich Premium Gradient --- */
+        /* --- Hero Stat (Revenue Card) — Modern Gradient --- */
         .hero-stat {
             grid-column: span 2;
-            background: linear-gradient(135deg, #065F46 0%, #059669 40%, #10B981 80%, #34D399 100%) !important;
-            box-shadow: 0 20px 40px -10px rgba(5, 150, 105, 0.4) !important;
+            background: var(--accent-gradient) !important;
+            box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25) !important;
             color: white !important;
-            border: 1px solid rgba(255, 255, 255, 0.1) !important;
-            position: relative;
-            overflow: hidden;
-            transform-origin: center bottom;
+            border: none !important;
         }
 
         .hero-stat:hover {
-            transform: translateY(-6px) scale(1.02);
-            box-shadow: 0 30px 60px -15px rgba(5, 150, 105, 0.5) !important;
-        }
-
-        .hero-stat::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            right: -10%;
-            width: 250px;
-            height: 250px;
-            background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, transparent 70%);
-            border-radius: 50%;
-            pointer-events: none;
-        }
-
-        .hero-stat::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 60%;
-            height: 100%;
-            background: linear-gradient(90deg,
-                    transparent 0%,
-                    rgba(255, 255, 255, 0.08) 50%,
-                    transparent 100%);
-            animation: shimmerSweep 5s ease-in-out infinite;
-        }
-
-        @keyframes shimmerSweep {
-            0% {
-                left: -100%;
-            }
-
-            100% {
-                left: 200%;
-            }
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.35) !important;
         }
 
         .hero-stat .stat-icon {
-            background: rgba(255, 255, 255, 0.18) !important;
+            background: rgba(255, 255, 255, 0.2) !important;
             color: white !important;
-            backdrop-filter: blur(12px);
         }
 
         .hero-stat .stat-label {
@@ -973,11 +795,6 @@
 
         .hero-stat .stat-value {
             color: white !important;
-        }
-
-        .hero-stat:hover {
-            transform: translateY(-4px) scale(1.005);
-            box-shadow: 0 20px 60px -8px rgba(5, 150, 105, 0.35) !important;
         }
 
         @media (max-width: 640px) {
@@ -1139,90 +956,50 @@
             box-shadow: 0 15px 50px rgba(0, 0, 0, 0.6), 0 0 40px rgba(234, 88, 12, 0.1) !important;
         }
 
-        /* --- Voice Command Center — Stitch Premium Glass --- */
+        /* --- Voice Command Center — Modern Glass --- */
         .voice-center {
-            background: rgba(255, 255, 255, 0.65);
-            backdrop-filter: blur(40px) saturate(200%);
-            -webkit-backdrop-filter: blur(40px) saturate(200%);
-            border-radius: 28px;
-            border: 1px solid rgba(255, 255, 255, 0.6);
-            position: relative;
-            overflow: hidden;
-            box-shadow:
-                0 0 0 1px rgba(0, 0, 0, 0.02),
-                0 8px 32px rgba(0, 0, 0, 0.05),
-                inset 0 1px 0 rgba(255, 255, 255, 0.9);
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
         }
 
-        .voice-center::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            border-radius: var(--card-radius);
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(40px);
-            z-index: -1;
-        }
-
-        /* --- Mic Button (Executive Jewel Centerpiece) --- */
+        /* --- Mic Button (Modern Style) --- */
         .mic-button {
-            width: 80px;
-            height: 80px;
+            width: 72px;
+            height: 72px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #059669 0%, #065F46 100%);
-            border: 2px solid rgba(255, 255, 255, 0.2);
+            background: var(--accent-gradient);
+            border: none;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
             position: relative;
             z-index: 1;
-            transition: transform 0.5s var(--transition-spring), box-shadow 0.5s ease;
-            box-shadow:
-                inset 0 4px 12px rgba(255, 255, 255, 0.3),
-                0 10px 30px rgba(5, 150, 105, 0.4),
-                0 0 60px rgba(5, 150, 105, 0.2);
-            font-size: 28px;
-            /* Slightly larger icon */
-            animation: micBreathe 5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+            transition: all 0.3s var(--transition-smooth);
+            box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+            font-size: 24px;
+            animation: micBreathe 3s ease-in-out infinite;
         }
 
         @keyframes micBreathe {
-
-            0%,
-            100% {
-                transform: scale(1);
-                box-shadow:
-                    inset 0 4px 12px rgba(255, 255, 255, 0.3),
-                    0 10px 30px rgba(5, 150, 105, 0.4),
-                    0 0 60px rgba(5, 150, 105, 0.2);
-            }
-
-            50% {
-                transform: scale(1.05);
-                box-shadow:
-                    inset 0 4px 12px rgba(255, 255, 255, 0.4),
-                    0 15px 40px rgba(5, 150, 105, 0.5),
-                    0 0 80px rgba(5, 150, 105, 0.3);
-            }
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
         }
 
         .mic-button:hover {
-            transform: scale(1.15) !important;
+            transform: scale(1.1) !important;
             animation: none;
-            box-shadow:
-                inset 0 6px 16px rgba(255, 255, 255, 0.5),
-                0 20px 50px rgba(5, 150, 105, 0.6),
-                0 0 100px rgba(5, 150, 105, 0.4);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
         }
 
-        /* Pulse rings — subtle idle animation */
+        /* Pulse rings */
         .mic-pulse-ring {
             position: absolute;
-            width: 72px;
-            height: 72px;
+            width: 68px;
+            height: 68px;
             border-radius: 50%;
-            border: 1.5px solid rgba(16, 185, 129, 0.2);
+            border: 2px solid rgba(16, 185, 129, 0.3);
             animation: micPulseIdle 4s ease-out infinite;
             opacity: 0;
             pointer-events: none;
@@ -2484,6 +2261,446 @@
                 border: 1px solid #ddd !important;
             }
         }
+
+        /* ===== ENHANCED PREMIUM UI ===== */
+
+        /* Floating Card Glow on Hover */
+        .fintech-card.glow-hover:hover {
+            box-shadow: var(--card-shadow-hover), 0 0 40px rgba(16, 185, 129, 0.15) !important;
+        }
+
+        /* Animated gradient border */
+        .gradient-border {
+            position: relative;
+            background: var(--card-bg);
+            border-radius: var(--card-radius);
+        }
+
+        .gradient-border::before {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            border-radius: calc(var(--card-radius) + 2px);
+            background: linear-gradient(135deg, #10B981, #6366f1, #8b5cf6, #ec4899, #10B981);
+            background-size: 400% 400%;
+            animation: gradientBorderFlow 4s ease infinite;
+            z-index: -1;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .gradient-border:hover::before {
+            opacity: 1;
+        }
+
+        @keyframes gradientBorderFlow {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        /* Stat Card Enhanced Hover */
+        .stat-widget {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-widget::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 50%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .stat-widget:hover::after {
+            left: 100%;
+        }
+
+        /* Premium Button Hover Effects */
+        .btn-gradient {
+            background: var(--accent-gradient);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .btn-gradient::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .btn-gradient:hover::before {
+            left: 100%;
+        }
+
+        .btn-gradient:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.35);
+        }
+
+        /* Enhanced Input Focus */
+        .pill-input input:focus,
+        input:focus,
+        select:focus,
+        textarea:focus {
+            transform: scale(1.01);
+            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+        }
+
+        /* Loading Spinner Enhancement */
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(16, 185, 129, 0.2);
+            border-top-color: #10B981;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Pulse Animation */
+        .pulse-glow {
+            animation: pulseGlow 2s ease-in-out infinite;
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 20px rgba(16, 185, 129, 0.3); }
+            50% { box-shadow: 0 0 40px rgba(16, 185, 129, 0.5); }
+        }
+
+        /* Shimmer Effect for Cards */
+        .shimmer {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .shimmer::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            100% { left: 100%; }
+        }
+
+        /* Number Counter Animation */
+        .count-up {
+            animation: countUp 0.5s ease-out forwards;
+        }
+
+        @keyframes countUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Skeleton Loading */
+        .skeleton {
+            background: linear-gradient(90deg, var(--input-bg) 25%, var(--card-bg) 50%, var(--input-bg) 75%);
+            background-size: 200% 100%;
+            animation: skeleton 1.5s ease-in-out infinite;
+        }
+
+        @keyframes skeleton {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* Enhanced Toast */
+        .toast {
+            animation: toastIn 0.3s ease-out forwards;
+            backdrop-filter: blur(10px);
+        }
+
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateX(100px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        /* Voice Wave Animation */
+        .voice-wave {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+            height: 30px;
+        }
+
+        .voice-wave span {
+            width: 3px;
+            height: 10px;
+            background: #10B981;
+            border-radius: 3px;
+            animation: voiceWave 1s ease-in-out infinite;
+        }
+
+        .voice-wave span:nth-child(2) { animation-delay: 0.1s; }
+        .voice-wave span:nth-child(3) { animation-delay: 0.2s; }
+        .voice-wave span:nth-child(4) { animation-delay: 0.3s; }
+        .voice-wave span:nth-child(5) { animation-delay: 0.4s; }
+
+        @keyframes voiceWave {
+            0%, 100% { height: 10px; }
+            50% { height: 25px; }
+        }
+
+        /* Better Card Shadows */
+        .shadow-premium {
+            box-shadow: 0 10px 40px -10px rgba(15, 23, 42, 0.1), 0 4px 12px -5px rgba(15, 23, 42, 0.05);
+        }
+
+        .shadow-premium-hover:hover {
+            box-shadow: 0 20px 50px -15px rgba(15, 23, 42, 0.15), 0 10px 20px -10px rgba(15, 23, 42, 0.1);
+        }
+
+        /* Transaction Row Hover */
+        .txn-row {
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .txn-row::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: var(--accent-gradient);
+            transform: scaleY(0);
+            transition: transform 0.3s ease;
+        }
+
+        .txn-row:hover::before {
+            transform: scaleY(1);
+        }
+
+        /* Inventory Item Enhanced */
+        .floating-item {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .floating-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Badge Pulse */
+        .badge-pulse {
+            animation: badgePulse 2s ease-in-out infinite;
+        }
+
+        @keyframes badgePulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        /* Tab Active Glow */
+        .tab-active-glow {
+            position: relative;
+        }
+
+        .tab-active-glow::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 30px;
+            height: 3px;
+            background: var(--accent-gradient);
+            border-radius: 3px;
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+        }
+
+        /* Modal Entrance Animation */
+        .modal-animate-in {
+            animation: modalIn 0.3s ease-out forwards;
+        }
+
+        @keyframes modalIn {
+            from { opacity: 0; transform: scale(0.95) translateY(20px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        /* Floating Label Input */
+        .floating-label {
+            position: relative;
+        }
+
+        .floating-label label {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            transition: all 0.2s ease;
+            pointer-events: none;
+            color: var(--text-muted);
+        }
+
+        .floating-label input:focus + label,
+        .floating-label input:not(:placeholder-shown) + label {
+            top: -8px;
+            left: 12px;
+            font-size: 11px;
+            background: var(--card-bg);
+            padding: 0 4px;
+            color: #10B981;
+        }
+
+        /* Smooth Scroll */
+        .smooth-scroll {
+            scroll-behavior: smooth;
+        }
+
+        /* Status Indicator */
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            position: relative;
+        }
+
+        .status-dot.online {
+            background: #10B981;
+        }
+
+        .status-dot.online::after {
+            content: '';
+            position: absolute;
+            inset: -3px;
+            border-radius: 50%;
+            background: rgba(16, 185, 129, 0.3);
+            animation: statusPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes statusPulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.5); opacity: 0; }
+        }
+
+        /* Icon Circle Enhancement */
+        .icon-circle {
+            width: 44px;
+            height: 44px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .icon-circle::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 50%);
+        }
+
+        /* Udhaar Alert */
+        .udhaar-alert {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(239, 68, 68, 0.1) 100%);
+            border-left: 4px solid #f59e0b;
+        }
+
+        /* Quick Action Button */
+        .quick-action-btn {
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .quick-action-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.3s ease, height 0.3s ease;
+        }
+
+        .quick-action-btn:active::before {
+            width: 200px;
+            height: 200px;
+        }
+
+        /* Section Reveal Animation */
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .reveal.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Enhanced Mobile Touch */
+        @media (hover: none) {
+            .fintech-card:active {
+                transform: scale(0.98);
+            }
+
+            .stat-widget:active {
+                transform: scale(0.97);
+            }
+        }
+
+        /* Premium Divider */
+        .divider-gradient {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.3), transparent);
+        }
+
+        /* Search Highlight */
+        .search-highlight {
+            background: linear-gradient(90deg, rgba(16, 185, 129, 0.2), rgba(16, 185, 129, 0.1));
+            padding: 0 2px;
+            border-radius: 2px;
+        }
+
+        /* Price Tag */
+        .price-tag {
+            background: linear-gradient(135deg, #10B981, #059669);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 12px;
+        }
+
+        /* Order Number Badge */
+        .order-badge {
+            background: linear-gradient(135deg, #6366f1, #4f46e5);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+        }
     </style>
 </head>
 
@@ -2512,7 +2729,7 @@
     <!-- Shop Name Modal -->
     <div id="shop-name-modal"
         class="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
-        <div class="fintech-card w-full max-w-md p-8">
+        <div class="fintech-card w-full max-w-md p-8 modal-animate-in">
             <h2 class="text-2xl font-bold mb-2" style="color: var(--text-heading);">Welcome! 👋</h2>
             <p style="color: var(--text-label);" class="mb-6">What is the name of your shop?</p>
             <form id="shop-name-form" class="space-y-4">
@@ -2534,7 +2751,7 @@
             <div class="absolute inset-0 rounded-full bg-emerald-500/20 animate-ping"></div>
             <!-- Inner circle with logo -->
             <div
-                class="absolute inset-0 rounded-full flex items-center justify-center shadow-[0_0_40px_rgba(16,185,129,0.4)] overflow-hidden border-2 border-emerald-500/40 bg-slate-800 z-10 transition-transform hover:scale-105 duration-300">
+                class="absolute inset-0 rounded-full flex items-center justify-center shadow-[0_0_40px_rgba(16,185,129,0.4)] overflow-hidden border-2 border-emerald-500/40 bg-slate-800 z-10 transition-transform hover:scale-105 duration-300 pulse-glow">
                 <img src="/static/logo.png" alt="AutoBill Buddy Logo" class="w-full h-full object-cover"
                     onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
                 <i class="fas fa-shopping-cart text-emerald-400 text-3xl hidden"></i>
@@ -2670,7 +2887,7 @@
             <div class="grid grid-cols-2 lg:grid-cols-6 gap-4 animate-in">
 
                 <!-- Revenue HERO (2x width) -->
-                <div class="fintech-card hero-stat stat-widget cursor-pointer" onclick="toggleRevenueProfit()"
+                <div class="fintech-card hero-stat stat-widget cursor-pointer glow-hover" onclick="toggleRevenueProfit()"
                     id="revenue-card">
                     <div class="stat-icon"
                         style="background: linear-gradient(135deg, #10B981, #047857); color: #fff; box-shadow: 0 4px 20px rgba(16, 185, 129, 0.35);">
@@ -2683,7 +2900,7 @@
                 </div>
 
                 <!-- Monthly Revenue -->
-                <div class="fintech-card stat-widget cursor-pointer" onclick="openMonthlyDashboard()">
+                <div class="fintech-card stat-widget cursor-pointer glow-hover" onclick="openMonthlyDashboard()">
                     <div class="stat-icon"
                         style="background: linear-gradient(135deg, #818CF8, #4F46E5); color: #fff; box-shadow: 0 4px 20px rgba(99, 102, 241, 0.3);">
                         <i class="fas fa-calendar-check"></i>
@@ -2695,7 +2912,7 @@
                 </div>
 
                 <!-- Items Sold -->
-                <div class="fintech-card stat-widget">
+                <div class="fintech-card stat-widget glow-hover">
                     <div class="stat-icon"
                         style="background: linear-gradient(135deg, #60A5FA, #2563EB); color: #fff; box-shadow: 0 4px 20px rgba(59, 130, 246, 0.3);">
                         <i class="fas fa-cubes"></i>
@@ -2707,7 +2924,7 @@
                 </div>
 
                 <!-- Total Orders -->
-                <div class="fintech-card stat-widget">
+                <div class="fintech-card stat-widget glow-hover">
                     <div class="stat-icon"
                         style="background: linear-gradient(135deg, #C084FC, #9333EA); color: #fff; box-shadow: 0 4px 20px rgba(168, 85, 247, 0.3);">
                         <i class="fas fa-clipboard-list"></i>
@@ -2719,7 +2936,7 @@
                 </div>
 
                 <!-- Udhaar Outstanding -->
-                <div class="fintech-card stat-widget cursor-pointer" onclick="openUdhaarDashboard()">
+                <div class="fintech-card stat-widget cursor-pointer glow-hover" onclick="openUdhaarDashboard()">
                     <div class="stat-icon"
                         style="background: linear-gradient(135deg, #FB923C, #EA580C); color: #fff; box-shadow: 0 4px 20px rgba(234, 88, 12, 0.3);">
                         <i class="fas fa-hand-holding-dollar"></i>
@@ -2748,15 +2965,22 @@
                     <div class="mic-pulse-ring"></div>
                 </div>
 
+                <!-- Voice Wave Animation (shown when listening) -->
+                <div id="voice-wave" class="voice-wave mt-3 hidden mx-auto justify-center">
+                    <span></span><span></span><span></span><span></span><span></span>
+                </div>
+
                 <!-- Live Transcript -->
                 <div id="transcript-container" class="mt-4 mb-3 hidden">
-                    <p class="text-sm font-semibold animate-pulse" style="color: #059669;">Listening...</p>
+                    <p class="text-sm font-semibold" style="color: #059669;">
+                        <i class="fas fa-microphone-lines animate-pulse mr-2"></i>Listening...
+                    </p>
                     <p id="live-transcript" class="text-lg font-medium italic mt-1" style="color: var(--text-heading);">
                         "..."</p>
                     <button id="cancel-mic-btn" onclick="cancelMic()"
-                        class="mt-3 px-5 py-2 rounded-full text-sm font-bold transition-all hover:scale-105"
+                        class="mt-3 px-5 py-2 rounded-full text-sm font-bold transition-all hover:scale-105 quick-action-btn"
                         style="background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5;">
-                        ✕ Cancel
+                        <i class="fas fa-times mr-1"></i> Cancel
                     </button>
                 </div>
 
@@ -2764,7 +2988,7 @@
                 <div class="mt-5 max-w-lg mx-auto">
                     <div class="pill-input">
                         <input type="text" id="text-input" placeholder="Or type your order here...">
-                        <button id="send-text-btn"><i class="fas fa-paper-plane text-sm"></i></button>
+                        <button id="send-text-btn" class="quick-action-btn"><i class="fas fa-paper-plane text-sm"></i></button>
                     </div>
                 </div>
             </div>
@@ -2773,7 +2997,7 @@
             <div class="grid md:grid-cols-2 gap-6 animate-in-delay-2">
 
                 <!-- Inventory (Floating Cards) -->
-                <div class="fintech-card p-0 overflow-hidden flex flex-col h-[420px]">
+                <div class="fintech-card p-0 overflow-hidden flex flex-col h-[420px] glow-hover">
                     <div class="p-5 border-b border-gray-100 flex flex-col gap-3 sticky top-0 z-10 section-header-glass"
                         style="border-radius: 24px 24px 0 0;">
                         <div class="flex justify-between items-center">
@@ -2805,7 +3029,7 @@
                 </div>
 
                 <!-- Recent Transactions (Bank Style) -->
-                <div class="fintech-card p-0 overflow-hidden flex flex-col h-[420px]">
+                <div class="fintech-card p-0 overflow-hidden flex flex-col h-[420px] glow-hover">
                     <div class="p-5 border-b border-gray-100 flex justify-between items-center sticky top-0 section-header-glass"
                         style="border-radius: 24px 24px 0 0;">
                         <h3 class="section-title"><i class="fas fa-history text-blue-500"></i> Recent Sales</h3>
@@ -3060,6 +3284,13 @@
                         </tbody>
                     </table>
                 </div>
+                <div class="mt-4 flex justify-center">
+                    <button id="share-statement-btn" onclick="shareStatement()"
+                        class="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all hover:-translate-y-0.5 shadow-sm"
+                        style="background: #25d366; color: #fff; box-shadow: 0 4px 14px rgba(37,211,102,0.25);">
+                        <i class="fab fa-whatsapp text-base"></i> Share Statement
+                    </button>
+                </div>
             </div>
 
         </div>
@@ -3139,7 +3370,7 @@
     <!-- Add Stock Modal (Hidden default) -->
     <div id="add-stock-modal"
         class="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden transition-opacity">
-        <div class="fintech-card w-full max-w-md p-7 relative modal-content overflow-hidden">
+        <div class="fintech-card w-full max-w-md p-7 relative modal-content overflow-hidden modal-animate-in">
             <button onclick="document.getElementById('add-stock-modal').classList.add('hidden')"
                 class="absolute top-5 right-5 w-8 h-8 rounded-full bg-gray-50 dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center justify-center transition-all"
                 style="color: var(--text-muted);"><i class="fas fa-times text-sm"></i></button>
@@ -3183,7 +3414,7 @@
     <div id="order-confirm-modal"
         class="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden transition-opacity">
         <div
-            class="fintech-card w-full max-w-2xl flex flex-col relative overflow-hidden transition-all max-h-[85vh] modal-content shadow-2xl p-0">
+            class="fintech-card w-full max-w-2xl flex flex-col relative overflow-hidden transition-all max-h-[85vh] modal-content shadow-2xl p-0 modal-animate-in">
             <!-- Header -->
             <div class="p-6 border-b border-gray-100 dark:border-slate-700/50 flex justify-between items-center section-header-glass shrink-0"
                 style="border-radius: 24px 24px 0 0;">
@@ -3231,14 +3462,18 @@
                 <!-- Phone Number (Optional, for Udhaar WhatsApp Reminders) -->
                 <div id="confirm-phone-container" class="mb-6 hidden transition-all">
                     <label class="block text-xs font-bold uppercase mb-2 tracking-wider"
-                        style="color: var(--text-muted);">Phone
-                        Number <span class="normal-case text-[10px] opacity-70 ml-1">(Optional, for
-                            WhatsApp)</span></label>
-                    <div class="relative search-wrapper">
-                        <i class="fab fa-whatsapp search-icon-premium text-emerald-500"></i>
-                        <input type="tel" id="confirm-phone" autocomplete="off" value="+91 " maxlength="14"
-                            class="search-premium font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-800/30"
-                            placeholder="+91 9876543210">
+                        style="color: var(--text-muted);">WhatsApp Number <span class="normal-case text-[10px] opacity-70 ml-1">(Optional, for
+                            reminders)</span></label>
+                    <div class="flex items-center gap-0 rounded-2xl border border-emerald-200 dark:border-emerald-800/30 bg-emerald-50/50 dark:bg-emerald-900/10 overflow-hidden">
+                        <div class="flex items-center gap-1.5 px-4 py-3 bg-emerald-100/80 dark:bg-emerald-900/30 border-r border-emerald-200 dark:border-emerald-800/30 shrink-0">
+                            <i class="fab fa-whatsapp text-emerald-500"></i>
+                            <span class="font-bold text-sm text-emerald-700 dark:text-emerald-400">+91</span>
+                        </div>
+                        <input type="tel" id="confirm-phone" autocomplete="off" value="" maxlength="10"
+                            pattern="[0-9]{10}" inputmode="numeric"
+                            class="flex-1 bg-transparent outline-none px-4 py-3 text-sm font-medium tracking-wider"
+                            style="color: var(--text-heading);"
+                            placeholder="9876543210">
                     </div>
                 </div>
 
@@ -4281,6 +4516,7 @@
                 isListening = false;
                 clearTimeout(silenceTimer);
                 els.micBtn.classList.remove('mic-listening', 'mic-pulse');
+                document.getElementById('voice-wave').classList.add('hidden');
             }
 
             // Cancel button — stop without processing
@@ -4300,6 +4536,7 @@
                 pendingTranscript = '';
                 els.micBtn.classList.add('mic-listening', 'mic-pulse');
                 document.getElementById('transcript-container').classList.remove('hidden');
+                document.getElementById('voice-wave').classList.remove('hidden');
                 document.getElementById('live-transcript').innerText = '"Listening..."';
 
                 // Safety timeout: auto-stop after 6 seconds max
@@ -4729,7 +4966,7 @@
             let phone = localStorage.getItem("phone_" + customerName);
 
             if (!phone) {
-                const userEntered = await showInlinePrompt(`WhatsApp number for ${customerName}`, '+91 9876543210', '+91 ', 'tel');
+                const userEntered = await showInlinePrompt(`WhatsApp number for ${customerName}`, '10-digit mobile number', '', 'tel');
                 if (userEntered) {
                     let digits = userEntered.replace(/[^0-9]/g, '');
                     if (digits.length === 10) {
@@ -4771,7 +5008,16 @@
 
             const res = await api(`/dues/${encodeURIComponent(customerName)}`);
             if (res) {
-                document.getElementById('udhaar-customer-total').textContent = `₹${Math.round(res.total_due || 0)}`;
+                const totalDue = Math.round(res.total_due || 0);
+                document.getElementById('udhaar-customer-total').textContent = `₹${totalDue}`;
+
+                // Set max on settle input to prevent overpayment
+                const settleInput = document.getElementById('settle-amount-input');
+                settleInput.max = totalDue;
+                settleInput.placeholder = `Max ₹${totalDue}`;
+
+                // Store total_due for share button
+                document.getElementById('share-statement-btn').dataset.customer = customerName;
 
                 const settleBtn = document.getElementById('settle-dues-btn');
                 if (res.total_due <= 0) {
@@ -4804,6 +5050,14 @@
 
             if (!customerName) return;
 
+            // Frontend validation: reject overpayment
+            const maxDue = parseFloat(amountInput.max) || 0;
+            if (!isNaN(partialAmount) && partialAmount > 0 && maxDue > 0 && partialAmount > maxDue) {
+                showToast(`Amount ₹${partialAmount} exceeds dues of ₹${maxDue}. Enter ₹${maxDue} or less.`, 'error');
+                amountInput.value = maxDue;
+                return;
+            }
+
             let confirmMsg = `Settle all dues for "${customerName}" ? `;
             let payload = { customer_name: customerName };
 
@@ -4823,6 +5077,45 @@
             } else {
                 showToast(res?.message || 'Failed to settle dues', 'error');
             }
+        };
+
+        // --- SHARE STATEMENT ---
+        window.shareStatement = async function () {
+            const customerName = document.getElementById('share-statement-btn').dataset.customer;
+            if (!customerName) return;
+            
+            // Open window NOW (synchronous = no popup blocker)
+            const win = window.open('about:blank', '_blank');
+            
+            // Refresh the session to get a fresh token
+            let token = session?.access_token;
+            try {
+                const { data } = await supabase.auth.refreshSession();
+                if (data?.session) {
+                    session = data.session;
+                    token = data.session.access_token;
+                }
+            } catch(e) {
+                console.log('Session refresh failed, using current token');
+            }
+            
+            if (!token) {
+                if (win) win.close();
+                showToast('Please log in again to view the statement.', 'warning');
+                return;
+            }
+            
+            const phone = localStorage.getItem('phone_' + customerName) || '';
+            const shopName = document.getElementById('header-shop-name')?.innerText || 'My Store';
+            const url = `${API_BASE}/dues/${encodeURIComponent(customerName)}/statement`;
+            const params = new URLSearchParams({
+                authorization: 'Bearer ' + token,
+                phone: phone,
+                shop: shopName
+            });
+            
+            // Navigate the already-open window to the statement
+            if (win) win.location.href = url + '?' + params.toString();
         };
 
         // --- UDHAAR STATS & CUSTOMER DROPDOWN ---
@@ -5017,7 +5310,8 @@
 
             if (currentPaymentMode === 'Udhaar') {
                 const phoneInputEl = document.getElementById('confirm-phone');
-                phone = phoneInputEl ? phoneInputEl.value.trim() : null;
+                const rawPhone = phoneInputEl ? phoneInputEl.value.trim().replace(/\D/g, '') : '';
+                phone = rawPhone.length === 10 ? '+91' + rawPhone : null;
             }
 
             if (currentOrderItems.length === 0) {

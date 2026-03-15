@@ -1292,6 +1292,10 @@ async def settle_dues(req: SettleDuesRequest, auth: tuple = Depends(get_user_cli
         
         total_due = dues_check.data[0]["total_due"]
         
+        # Reject overpayment
+        if amount_to_settle is not None and amount_to_settle > total_due:
+            return {"message": f"❌ Amount ₹{round(amount_to_settle)} exceeds outstanding dues of ₹{round(total_due)}. Enter ₹{round(total_due)} or less.", "success": False}
+        
         # Handle Full vs Partial Settlement
         if amount_to_settle is None or amount_to_settle >= total_due:
             # Full Settle
@@ -1599,9 +1603,635 @@ async def get_yearly_sales(year: int = None, auth: tuple = Depends(get_user_clie
         print(f"Yearly Sales Error: {e}")
         return {"year": year or 2026, "year_revenue": 0, "year_profit": 0, "months": []}
 
+
 # ============================================================================
-# GUEST DEMO MODE — Simple, No Supabase Auth Required
+# UDHAAR STATEMENT — Beautiful HTML Statement for WhatsApp/PDF Sharing
 # ============================================================================
+from fastapi.responses import HTMLResponse
+
+@app.get("/dues/{customer_name}/statement")
+async def get_customer_statement(customer_name: str, authorization: str = "", phone: str = "", shop: str = "My Store"):
+    """Generates a beautiful HTML statement page that can be printed to PDF."""
+    from datetime import datetime, timezone, timedelta
+    try:
+        # Parse auth from query param (since this opens in a new browser tab, can't use headers)
+        if not authorization or not authorization.startswith("Bearer "):
+            return HTMLResponse(content="<h1>Unauthorized</h1><p>Please access this page from AutoBill Buddy.</p>", status_code=401)
+        
+        token = authorization.replace("Bearer ", "")
+        
+        # Guest mode bypass
+        if token == GUEST_MAGIC_TOKEN:
+            db = create_client(SUPABASE_URL, SUPABASE_KEY)
+            user_id = GUEST_USER_ID
+        else:
+            db = create_client(SUPABASE_URL, SUPABASE_KEY)
+            try:
+                db.auth.set_session(token, token)
+                user_response = db.auth.get_user(token)
+                user_id = user_response.user.id
+            except Exception:
+                return HTMLResponse(content="<h1>Session Expired</h1><p>Please log in again.</p>", status_code=401)
+        
+        # Get transactions
+        response = db.table("sales").select("item_name, quantity, total_price, created_at").eq(
+            "user_id", user_id
+        ).eq("customer_name", customer_name).eq("payment_mode", "Udhaar").order("created_at", desc=True).execute()
+        
+        # Get total due
+        dues_check = db.table("dues").select("total_due").eq("user_id", user_id).eq("customer_name", customer_name).execute()
+        total_due = dues_check.data[0]["total_due"] if dues_check.data else 0
+        
+        # Build transaction rows
+        rows_html = ""
+        total_purchases = 0
+        total_payments = 0
+        for s in (response.data or []):
+            date_str = ""
+            created = s.get("created_at", "")
+            if created:
+                try:
+                    dt = datetime.fromisoformat(created.replace("Z", "+00:00"))
+                    ist = dt + timedelta(hours=5, minutes=30)
+                    date_str = ist.strftime("%d %b %Y, %I:%M %p")
+                except Exception:
+                    date_str = created[:10]
+            
+            item_name = s.get("item_name", "")
+            quantity = s.get("quantity", 0)
+            total_price = s.get("total_price", 0)
+            
+            is_payment = item_name == "Payment Received"
+            if is_payment:
+                total_payments += abs(total_price)
+            else:
+                total_purchases += total_price
+            
+            price_class = "payment" if is_payment else "purchase"
+            price_display = f"-₹{abs(total_price)}" if is_payment else f"₹{total_price}"
+            
+            rows_html += f"""
+            <tr class="{price_class}">
+                <td>{date_str}</td>
+                <td>{item_name}</td>
+                <td class="center">{quantity}</td>
+                <td class="right">{price_display}</td>
+            </tr>"""
+        
+        ist_now = datetime.now(timezone.utc) + timedelta(hours=5, minutes=30)
+        statement_date = ist_now.strftime("%d %b %Y, %I:%M %p")
+        
+        html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Statement — {customer_name}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+        
+        body {{
+            font-family: 'Inter', -apple-system, sans-serif;
+            min-height: 100vh;
+            padding: 24px;
+            background: #0f172a;
+            background-image: 
+                radial-gradient(at 20% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
+                radial-gradient(at 80% 80%, rgba(244, 63, 94, 0.12) 0%, transparent 50%),
+                radial-gradient(at 50% 50%, rgba(14, 165, 233, 0.08) 0%, transparent 60%);
+        }}
+
+        .statement {{
+            max-width: 560px;
+            margin: 0 auto;
+            background: rgba(255,255,255, 0.97);
+            border-radius: 24px;
+            box-shadow: 
+                0 0 0 1px rgba(255,255,255,0.1),
+                0 20px 60px rgba(0,0,0,0.3),
+                0 4px 16px rgba(0,0,0,0.15);
+            overflow: hidden;
+            backdrop-filter: blur(20px);
+        }}
+
+        /* ── HEADER ── */
+        .header {{
+            background: linear-gradient(135deg, #1e293b 0%, #334155 50%, #1e293b 100%);
+            color: #fff;
+            padding: 32px 32px 28px;
+            position: relative;
+            overflow: hidden;
+        }}
+        .header::before {{
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -30%;
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(251,146,60,0.25), transparent 70%);
+            border-radius: 50%;
+        }}
+        .header::after {{
+            content: '';
+            position: absolute;
+            bottom: -40%;
+            left: -20%;
+            width: 160px;
+            height: 160px;
+            background: radial-gradient(circle, rgba(99,102,241,0.2), transparent 70%);
+            border-radius: 50%;
+        }}
+        .shop-name {{
+            font-size: 22px;
+            font-weight: 900;
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            position: relative;
+            z-index: 1;
+        }}
+        .shop-icon {{
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #f97316, #fb923c);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            box-shadow: 0 4px 12px rgba(249,115,22,0.4);
+        }}
+        .header-sub {{
+            font-size: 11px;
+            opacity: 0.6;
+            font-weight: 500;
+            margin-top: 8px;
+            letter-spacing: 0.3px;
+            position: relative;
+            z-index: 1;
+        }}
+        .header-slogan {{
+            font-size: 10px;
+            opacity: 0.4;
+            margin-top: 6px;
+            font-style: italic;
+            position: relative;
+            z-index: 1;
+        }}
+
+        /* ── CUSTOMER BAR ── */
+        .customer-bar {{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 24px 32px;
+            background: linear-gradient(135deg, #fef2f2, #fff1f2);
+            border-bottom: 1px solid #fecdd3;
+        }}
+        .customer-bar .name {{
+            font-size: 17px;
+            font-weight: 800;
+            color: #1e293b;
+            letter-spacing: -0.3px;
+        }}
+        .customer-bar .name-label {{
+            font-size: 9px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #94a3b8;
+            margin-bottom: 4px;
+        }}
+        .customer-bar .due {{
+            text-align: right;
+        }}
+        .customer-bar .due-label {{
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #e11d48;
+            margin-bottom: 2px;
+        }}
+        .customer-bar .due-amount {{
+            font-size: 32px;
+            font-weight: 900;
+            color: #e11d48;
+            letter-spacing: -1px;
+            line-height: 1;
+        }}
+        .currency {{
+            font-size: 20px;
+            font-weight: 700;
+            opacity: 0.7;
+            vertical-align: top;
+            margin-right: 1px;
+        }}
+
+        /* ── SUMMARY CARDS ── */
+        .summary {{
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            padding: 24px 32px;
+            border-bottom: 1px solid #f1f5f9;
+        }}
+        .summary-card {{
+            padding: 16px;
+            border-radius: 16px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }}
+        .summary-card::before {{
+            content: '';
+            position: absolute;
+            top: -20px;
+            right: -20px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            opacity: 0.1;
+        }}
+        .summary-card.purchases {{
+            background: linear-gradient(145deg, #fff7ed, #ffedd5);
+            border: 1px solid #fed7aa;
+        }}
+        .summary-card.purchases::before {{ background: #ea580c; }}
+        .summary-card.payments {{
+            background: linear-gradient(145deg, #f0fdf4, #dcfce7);
+            border: 1px solid #bbf7d0;
+        }}
+        .summary-card.payments::before {{ background: #16a34a; }}
+        .summary-card .card-icon {{
+            font-size: 20px;
+            margin-bottom: 6px;
+        }}
+        .summary-card .label {{
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+        }}
+        .summary-card.purchases .label {{ color: #c2410c; }}
+        .summary-card.payments .label {{ color: #15803d; }}
+        .summary-card .value {{
+            font-size: 22px;
+            font-weight: 900;
+            letter-spacing: -0.5px;
+        }}
+        .summary-card.purchases .value {{ color: #ea580c; }}
+        .summary-card.payments .value {{ color: #16a34a; }}
+
+        /* ── TABLE ── */
+        .table-wrapper {{
+            padding: 0 16px;
+        }}
+        table {{
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }}
+        thead th {{
+            padding: 14px 16px;
+            text-align: left;
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: #94a3b8;
+            border-bottom: 2px solid #e2e8f0;
+        }}
+        thead th.center {{ text-align: center; }}
+        thead th.right {{ text-align: right; }}
+        tbody tr {{
+            transition: background 0.2s ease;
+        }}
+        tbody tr:hover {{
+            background: #f8fafc;
+        }}
+        tbody td {{
+            padding: 14px 16px;
+            border-bottom: 1px solid #f1f5f9;
+            color: #475569;
+            font-weight: 500;
+        }}
+        tbody td:first-child {{
+            font-size: 11px;
+            color: #94a3b8;
+            font-weight: 600;
+            white-space: nowrap;
+        }}
+        tbody td.center {{ text-align: center; }}
+        tbody td.right {{ text-align: right; font-weight: 700; }}
+        tr.purchase td.right {{ color: #dc2626; }}
+        tr.payment td {{ color: #059669; }}
+        tr.payment td.right {{ color: #059669; font-weight: 800; }}
+        tr.payment {{
+            background: linear-gradient(90deg, #f0fdf4, #ecfdf5);
+        }}
+        tr.payment:hover {{
+            background: linear-gradient(90deg, #dcfce7, #d1fae5);
+        }}
+        tr.payment td:nth-child(2)::before {{
+            content: '✓ ';
+            font-weight: 800;
+        }}
+
+        /* ── FOOTER ── */
+        .footer {{
+            padding: 24px 32px;
+            text-align: center;
+            background: #f8fafc;
+            border-top: 1px solid #e2e8f0;
+        }}
+        .footer .date {{
+            font-size: 10px;
+            color: #94a3b8;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+        }}
+        .footer .brand {{
+            font-size: 10px;
+            color: #cbd5e1;
+            margin-top: 6px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }}
+        .footer .powered {{
+            font-size: 9px;
+            color: #e2e8f0;
+            margin-top: 4px;
+        }}
+
+        /* ── BUTTONS ── */
+        .no-print {{
+            text-align: center;
+            margin: 24px auto;
+            max-width: 560px;
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }}
+        .no-print button {{
+            padding: 14px 28px;
+            border: none;
+            border-radius: 14px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
+            letter-spacing: 0.2px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }}
+        .btn-pdf {{
+            background: linear-gradient(135deg, #1e293b, #334155);
+            color: #fff;
+            box-shadow: 0 4px 16px rgba(30,41,59,0.3);
+        }}
+        .btn-pdf:hover {{
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(30,41,59,0.4);
+        }}
+        .btn-whatsapp {{
+            background: linear-gradient(135deg, #25d366, #128C7E);
+            color: #fff;
+            box-shadow: 0 4px 16px rgba(37,211,102,0.3);
+            flex: 1;
+            justify-content: center;
+        }}
+        .btn-whatsapp:hover {{
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(37,211,102,0.4);
+        }}
+        .btn-whatsapp:disabled {{
+            opacity: 0.7;
+            transform: none;
+            cursor: wait;
+        }}
+        .btn-wa-text {{
+            background: linear-gradient(135deg, #128C7E, #075E54);
+            color: #fff;
+            box-shadow: 0 4px 16px rgba(18,140,126,0.3);
+            flex: 1;
+            justify-content: center;
+        }}
+        .btn-wa-text:hover {{
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(18,140,126,0.4);
+        }}
+
+        @media print {{
+            body {{ padding: 0; background: #fff; }}
+            .statement {{ box-shadow: none; border-radius: 0; }}
+            .no-print {{ display: none !important; }}
+            .header {{ background: #1e293b !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
+            tr.payment {{ background: #f0fdf4 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
+        }}
+
+        @media (max-width: 480px) {{
+            body {{ padding: 12px; }}
+            .header {{ padding: 24px 20px 20px; }}
+            .customer-bar {{ padding: 20px; }}
+            .summary {{ padding: 20px; gap: 10px; }}
+            .no-print {{ flex-direction: column; padding: 0 12px; }}
+            .no-print button {{ justify-content: center; }}
+        }}
+    </style>
+</head>
+<body>
+    <div class="statement">
+        <div class="header">
+            <div class="shop-name">
+                <div class="shop-icon">🏪</div>
+                {shop}
+            </div>
+            <div class="header-sub">📋 Udhaar Statement — Transaction History & Outstanding Balance</div>
+            <div class="header-slogan">"Aaj nagad, kal udhaar" — par hisaab toh rakhna padega! 😄</div>
+        </div>
+        
+        <div class="customer-bar">
+            <div>
+                <div class="name-label">Customer</div>
+                <div class="name">{customer_name}</div>
+            </div>
+            <div class="due">
+                <div class="due-label">Balance Due</div>
+                <div class="due-amount"><span class="currency">₹</span>{round(total_due)}</div>
+            </div>
+        </div>
+        
+        <div class="summary">
+            <div class="summary-card purchases">
+                <div class="card-icon">🛒</div>
+                <div class="label">Total Purchases</div>
+                <div class="value">₹{round(total_purchases)}</div>
+            </div>
+            <div class="summary-card payments">
+                <div class="card-icon">💸</div>
+                <div class="label">Total Payments</div>
+                <div class="value">₹{round(total_payments)}</div>
+            </div>
+        </div>
+        
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date / Time</th>
+                        <th>Item</th>
+                        <th class="center">Qty</th>
+                        <th class="right">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {rows_html if rows_html else '<tr><td colspan="4" style="text-align:center;padding:32px;color:#94a3b8;font-weight:600;">No transactions found</td></tr>'}
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="footer">
+            <div class="date">Statement generated on {statement_date}</div>
+            <div class="brand">AutoBill Buddy</div>
+            <div class="powered">Powered by AI</div>
+        </div>
+    </div>
+    
+    <div class="no-print">
+        <button class="btn-pdf" onclick="savePDF()">📄 Save PDF</button>
+        <button class="btn-whatsapp" onclick="sendAsPdf()">
+            <span>📎 Send as PDF</span>
+        </button>
+        <button class="btn-wa-text" onclick="sendAsText()">
+            <span>💬 Send as Text</span>
+        </button>
+    </div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script>
+        var PHONE = '{phone.replace(chr(39), "")}';
+        var CUSTOMER = '{customer_name.replace(chr(39), "")}';
+        var TOTAL_DUE = {round(total_due)};
+        var SHOP = '{shop.replace(chr(39), "")}';
+        var TOTAL_PURCHASES = {round(total_purchases)};
+        var TOTAL_PAYMENTS = {round(total_payments)};
+        
+        function getPdfOptions() {{
+            return {{
+                margin: [10, 0, 10, 0],
+                filename: 'Statement_' + CUSTOMER.replace(/\\s+/g, '_') + '.pdf',
+                image: {{ type: 'jpeg', quality: 0.98 }},
+                html2canvas: {{ scale: 2, useCORS: true, logging: false }},
+                jsPDF: {{ unit: 'mm', format: 'a4', orientation: 'portrait' }}
+            }};
+        }}
+        
+        function savePDF() {{
+            var el = document.querySelector('.statement');
+            html2pdf().set(getPdfOptions()).from(el).save();
+        }}
+        
+        function buildWaUrl(msg) {{
+            var encoded = encodeURIComponent(msg);
+            if (PHONE) {{
+                return 'https://wa.me/' + PHONE + '?text=' + encoded;
+            }}
+            return 'https://wa.me/?text=' + encoded;
+        }}
+        
+        function sendAsPdf() {{
+            var el = document.querySelector('.statement');
+            var nl = String.fromCharCode(10);
+            var waMsg = '*Udhaar Statement*' + nl
+                + '*' + SHOP + '*' + nl + nl
+                + 'Customer: *' + CUSTOMER + '*' + nl
+                + 'Balance Due: *Rs.' + TOTAL_DUE + '*' + nl + nl
+                + '_\"Aaj nagad, kal udhaar\" - par hisaab toh rakhna padega!_';
+            
+            // Try native share with file (works on mobile)
+            if (navigator.canShare) {{
+                html2pdf().set(getPdfOptions()).from(el).outputPdf('blob').then(function(blob) {{
+                    var fileName = 'Statement_' + CUSTOMER.replace(/\\s+/g, '_') + '.pdf';
+                    var file = new File([blob], fileName, {{ type: 'application/pdf' }});
+                    
+                    if (navigator.canShare({{ files: [file] }})) {{
+                        navigator.share({{
+                            text: waMsg,
+                            files: [file]
+                        }}).catch(function(err) {{
+                            console.log('Share cancelled or failed:', err);
+                            // Fallback: save PDF + open WhatsApp
+                            html2pdf().set(getPdfOptions()).from(el).save();
+                            window.open(buildWaUrl(waMsg), '_blank');
+                        }});
+                    }} else {{
+                        // canShare exists but can't share files — fallback
+                        html2pdf().set(getPdfOptions()).from(el).save();
+                        window.open(buildWaUrl(waMsg + nl + nl + 'PDF saved on device, please attach it.'), '_blank');
+                    }}
+                }});
+            }} else {{
+                // Desktop fallback: open WhatsApp first, then save PDF
+                window.open(buildWaUrl(waMsg + nl + nl + 'PDF bill saved on device, please attach and send it.'), '_blank');
+                html2pdf().set(getPdfOptions()).from(el).save();
+            }}
+        }}
+        
+        function sendAsText() {{
+            var nl = String.fromCharCode(10);
+            var lines = [];
+            lines.push('*UDHAAR STATEMENT*');
+            lines.push('*' + SHOP + '*');
+            lines.push('');
+            lines.push('Customer: *' + CUSTOMER + '*');
+            lines.push('Balance Due: *Rs.' + TOTAL_DUE + '*');
+            lines.push('');
+            lines.push('Total Purchases: Rs.' + TOTAL_PURCHASES);
+            lines.push('Total Payments: Rs.' + TOTAL_PAYMENTS);
+            lines.push('');
+            lines.push('--- Items ---');
+            
+            // Collect transaction rows from the table
+            var rows = document.querySelectorAll('tbody tr');
+            rows.forEach(function(row) {{
+                var cells = row.querySelectorAll('td');
+                if (cells.length >= 4) {{
+                    var date = cells[0].textContent.trim();
+                    var item = cells[1].textContent.trim();
+                    var qty = cells[2].textContent.trim();
+                    var amt = cells[3].textContent.trim();
+                    lines.push(date + ' | ' + item + ' x' + qty + ' = ' + amt);
+                }}
+            }});
+            
+            lines.push('');
+            lines.push('_\"Aaj nagad, kal udhaar\" - par hisaab toh rakhna padega!_');
+            
+            var msg = lines.join(nl);
+            window.open(buildWaUrl(msg), '_blank');
+        }}
+    </script>
+</body>
+</html>"""
+        
+        return HTMLResponse(content=html)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return HTMLResponse(content=f"<h1>Error generating statement</h1><p>{str(e)}</p>", status_code=500)
+
+
 # Demo mode uses GUEST_MAGIC_TOKEN (defined at top) + GUEST_USER_ID.
 # No email/password, no service key, no Supabase Auth at all.
 # Logged-in users get isolated data via their own user_id + RLS.
