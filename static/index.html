@@ -993,6 +993,95 @@
             box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
         }
 
+        /* --- Compact Mic Button for Confirmation Modal --- */
+        .confirm-mic-btn {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: var(--accent-gradient);
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s var(--transition-smooth);
+            box-shadow: 0 3px 10px rgba(16, 185, 129, 0.3);
+            flex-shrink: 0;
+        }
+        .confirm-mic-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4);
+        }
+        .confirm-mic-btn.listening {
+            background: linear-gradient(135deg, #ef4444, #f97316);
+            box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.2);
+            animation: confirmMicPulse 1.2s ease-in-out infinite;
+        }
+        @keyframes confirmMicPulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.2); }
+            50% { transform: scale(1.08); box-shadow: 0 0 0 8px rgba(239, 68, 68, 0.1); }
+        }
+        .confirm-voice-area {
+            margin-top: 12px;
+            padding: 14px 16px;
+            background: var(--glass-bg);
+            border: 1px dashed var(--glass-border);
+            border-radius: 16px;
+        }
+        .confirm-voice-input-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .confirm-voice-input-row input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            border-bottom: 1.5px solid rgba(255,255,255,0.1);
+            outline: none;
+            padding: 8px 4px;
+            font-size: 13px;
+            color: var(--text-heading);
+            transition: border-color 0.2s;
+        }
+        .confirm-voice-input-row input::placeholder {
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+        .confirm-voice-input-row input:focus {
+            border-bottom-color: #10b981;
+        }
+        .confirm-voice-input-row .send-btn {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            color: var(--text-label);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+        .confirm-voice-input-row .send-btn:hover {
+            background: rgba(16, 185, 129, 0.15);
+            color: #10b981;
+        }
+        .confirm-transcript {
+            margin-top: 8px;
+            font-size: 12px;
+            font-style: italic;
+            color: var(--text-label);
+            min-height: 18px;
+            transition: opacity 0.3s;
+        }
+        .confirm-transcript.active {
+            color: #10b981;
+            font-weight: 600;
+        }
+
         /* Pulse rings */
         .mic-pulse-ring {
             position: absolute;
@@ -3508,6 +3597,23 @@
                     style="color: var(--text-label);">
                     <i class="fas fa-plus"></i> Add Manual Item
                 </button>
+
+                <!-- Voice / Text Input for adding items -->
+                <div class="confirm-voice-area">
+                    <p class="text-[10px] font-bold uppercase tracking-wider mb-2.5" style="color: var(--text-muted);">
+                        <i class="fas fa-microphone-alt mr-1"></i> Quick Add by Voice or Text
+                    </p>
+                    <div class="confirm-voice-input-row">
+                        <button id="confirm-mic-btn" class="confirm-mic-btn" title="Tap to speak items">
+                            <i class="fas fa-microphone text-white text-sm"></i>
+                        </button>
+                        <input type="text" id="confirm-text-input" placeholder='Say or type: "2 milk, 3 bread"'>
+                        <button id="confirm-send-btn" class="send-btn" title="Add items">
+                            <i class="fas fa-paper-plane text-xs"></i>
+                        </button>
+                    </div>
+                    <p id="confirm-live-transcript" class="confirm-transcript"></p>
+                </div>
             </div>
 
             <!-- Footer -->
@@ -5167,13 +5273,28 @@
         let currentOrderItems = [];
         let currentPaymentMode = "Cash";
 
+        // Consolidate duplicate items by merging quantities (case-insensitive)
+        function consolidateItems(items) {
+            const merged = {};
+            for (const item of items) {
+                const key = (item.item_name || '').toLowerCase();
+                if (merged[key]) {
+                    merged[key].quantity += item.quantity;
+                    merged[key].total_price = merged[key].quantity * merged[key].unit_price;
+                } else {
+                    merged[key] = { ...item };
+                }
+            }
+            return Object.values(merged);
+        }
+
         window.openOrderModal = function (items, mode, customer) {
-            currentOrderItems = items.map(i => ({
+            currentOrderItems = consolidateItems(items.map(i => ({
                 item_name: i.item_name || i.item,
                 quantity: i.quantity || i.qty,
                 unit_price: i.unit_price || 0,
                 total_price: (i.quantity || i.qty) * (i.unit_price || 0)
-            }));
+            })));
 
             document.getElementById('confirm-customer').value = customer || "Walk-in";
             setPaymentMode(mode || "Cash");
@@ -5303,6 +5424,159 @@
             });
             renderOrderItems();
         }
+
+        // --- CONFIRMATION MODAL: VOICE & TEXT INPUT ---
+        let confirmRecognition = null;
+        let confirmIsListening = false;
+
+        function initConfirmSpeech() {
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) return;
+            const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+            confirmRecognition = new SR();
+            confirmRecognition.continuous = false;
+            confirmRecognition.interimResults = true;
+            confirmRecognition.maxAlternatives = 3;
+            confirmRecognition.lang = 'en-IN';
+
+            let confirmSilenceTimer = null;
+            let confirmPendingTranscript = '';
+            let confirmHasFinalResult = false;
+            const transcriptEl = document.getElementById('confirm-live-transcript');
+            const micBtn = document.getElementById('confirm-mic-btn');
+
+            function stopConfirmMicUI() {
+                confirmIsListening = false;
+                clearTimeout(confirmSilenceTimer);
+                micBtn.classList.remove('listening');
+                micBtn.querySelector('i').className = 'fas fa-microphone text-white text-sm';
+            }
+
+            confirmRecognition.onstart = () => {
+                confirmIsListening = true;
+                confirmHasFinalResult = false;
+                confirmPendingTranscript = '';
+                micBtn.classList.add('listening');
+                micBtn.querySelector('i').className = 'fas fa-stop text-white text-sm';
+                transcriptEl.textContent = 'Listening...';
+                transcriptEl.classList.add('active');
+                confirmSilenceTimer = setTimeout(() => {
+                    try { confirmRecognition.stop(); } catch(e) {}
+                }, 6000);
+            };
+
+            confirmRecognition.onend = () => {
+                stopConfirmMicUI();
+                if (!confirmHasFinalResult && confirmPendingTranscript.trim()) {
+                    transcriptEl.textContent = `"${confirmPendingTranscript}"`;
+                    handleConfirmVoiceInput(confirmPendingTranscript);
+                } else if (!confirmHasFinalResult) {
+                    transcriptEl.textContent = 'Could not hear, try again';
+                    setTimeout(() => { transcriptEl.textContent = ''; transcriptEl.classList.remove('active'); }, 2000);
+                }
+            };
+
+            confirmRecognition.onresult = (event) => {
+                let interimTranscript = '';
+                let finalTranscript = '';
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        finalTranscript += event.results[i][0].transcript;
+                    } else {
+                        interimTranscript += event.results[i][0].transcript;
+                    }
+                }
+                if (interimTranscript) {
+                    confirmPendingTranscript = interimTranscript;
+                    transcriptEl.textContent = `"${interimTranscript}..."`;
+                    clearTimeout(confirmSilenceTimer);
+                    confirmSilenceTimer = setTimeout(() => {
+                        try { confirmRecognition.stop(); } catch(e) {}
+                    }, 2000);
+                }
+                if (finalTranscript) {
+                    confirmHasFinalResult = true;
+                    clearTimeout(confirmSilenceTimer);
+                    transcriptEl.textContent = `"${finalTranscript}"`;
+                    try { confirmRecognition.stop(); } catch(e) {}
+                    handleConfirmVoiceInput(finalTranscript);
+                }
+            };
+
+            confirmRecognition.onerror = (event) => {
+                console.error('Confirm speech error:', event.error);
+                stopConfirmMicUI();
+                if (event.error === 'not-allowed') showToast('🎤 Mic permission denied', 'error');
+                else if (event.error === 'no-speech') {
+                    transcriptEl.textContent = 'No speech detected';
+                }
+                setTimeout(() => { transcriptEl.textContent = ''; transcriptEl.classList.remove('active'); }, 2000);
+            };
+
+            // Toggle mic: tap to start, tap again to stop & submit
+            micBtn.onclick = async () => {
+                if (confirmIsListening) {
+                    try { confirmRecognition.stop(); } catch(e) {}
+                    return;
+                }
+                try { await navigator.mediaDevices.getUserMedia({ audio: true }); } catch(e) {}
+                try { confirmRecognition.start(); } catch(e) {
+                    try { confirmRecognition.stop(); setTimeout(() => confirmRecognition.start(), 150); } catch(e2) {}
+                }
+            };
+        }
+
+        async function handleConfirmVoiceInput(text) {
+            const transcriptEl = document.getElementById('confirm-live-transcript');
+            transcriptEl.textContent = 'Adding items...';
+            transcriptEl.classList.add('active');
+
+            const res = await api('/parse-order', 'POST', { message: text });
+            if (res && res.success && res.items && res.items.length > 0) {
+                // Merge parsed items into current order (group duplicates)
+                for (const item of res.items) {
+                    const newName = (item.item_name || item.item || '').toLowerCase();
+                    const newQty = item.quantity || item.qty || 1;
+                    const newPrice = item.unit_price || 0;
+                    // Check if item already exists in order
+                    const existing = currentOrderItems.find(e => (e.item_name || '').toLowerCase() === newName);
+                    if (existing) {
+                        existing.quantity += newQty;
+                        existing.total_price = existing.quantity * existing.unit_price;
+                    } else {
+                        currentOrderItems.push({
+                            item_name: item.item_name || item.item,
+                            quantity: newQty,
+                            unit_price: newPrice,
+                            total_price: newQty * newPrice
+                        });
+                    }
+                }
+                renderOrderItems();
+                transcriptEl.textContent = `✅ Added ${res.items.length} item${res.items.length > 1 ? 's' : ''}`;
+                showToast(`Added ${res.items.length} item${res.items.length > 1 ? 's' : ''} to order`, 'success');
+            } else {
+                transcriptEl.textContent = '❌ Could not parse items';
+                showToast(res?.message || 'Could not understand', 'error');
+            }
+            setTimeout(() => { transcriptEl.textContent = ''; transcriptEl.classList.remove('active'); }, 3000);
+        }
+
+        // Text input for confirm modal
+        function sendConfirmText() {
+            const input = document.getElementById('confirm-text-input');
+            const message = input.value.trim();
+            if (!message) return;
+            input.value = '';
+            handleConfirmVoiceInput(message);
+        }
+
+        document.getElementById('confirm-send-btn').onclick = sendConfirmText;
+        document.getElementById('confirm-text-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); sendConfirmText(); }
+        });
+
+        // Initialize confirm speech on load
+        initConfirmSpeech();
 
         window.confirmOrder = async function () {
             const customer = document.getElementById('confirm-customer').value.trim() || "Walk-in";

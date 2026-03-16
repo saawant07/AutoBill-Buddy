@@ -736,6 +736,18 @@ def parse_message_locally(message, available_items, custom_aliases=None):
                 
     return items_found, detected_mode, detected_customer
 
+def consolidate_items(items_list):
+    """Merge duplicate item names by summing their quantities (case-insensitive)."""
+    merged = {}
+    for item in items_list:
+        name = item["item"]
+        key = name.lower()
+        if key in merged:
+            merged[key]["qty"] += item["qty"]
+        else:
+            merged[key] = {"item": name, "qty": item["qty"]}
+    return list(merged.values())
+
 @app.post("/parse-order")
 async def parse_order_endpoint(req: ChatRequest, request: Request, auth: tuple = Depends(get_user_client)):
     check_rate_limit(request)
@@ -763,8 +775,16 @@ async def parse_order_endpoint(req: ChatRequest, request: Request, auth: tuple =
         if not items_to_sell:
             try:
                 prompt = f"""
-                You are a smart cashier. Parse: "{req.message}"
+                You are a smart cashier. Parse this order: "{req.message}"
                 Items available: {json.dumps(available_items)}
+                
+                CRITICAL RULES:
+                - Return ONLY valid JSON, no explanation text
+                - NEVER return duplicate item names. If same item appears multiple times, merge into ONE entry with combined quantity.
+                - "3 curd" = [{{"item": "Curd", "qty": 3}}] NOT 3 separate entries
+                - "curd curd curd" = [{{"item": "Curd", "qty": 3}}] NOT 3 entries with qty 1
+                - Each item name must appear EXACTLY ONCE in the output array
+                
                 Return ONLY JSON: {{"items": [{{"item": "Name", "qty": 1}}], "payment_mode": "Cash"/"Udhaar", "customer_name": "Name"}}
                 """
                 response = model.generate_content(prompt)
@@ -792,7 +812,10 @@ async def parse_order_endpoint(req: ChatRequest, request: Request, auth: tuple =
                 print(f"AI Parse Fallback Error (Quota/Network): {ai_err}")
                 # AI failed, but we still have local results (which are empty here)
         
-        # 3. Prepare response with pricing
+        # 3. Consolidate duplicate items (merge by name, sum quantities)
+        items_to_sell = consolidate_items(items_to_sell)
+        
+        # 4. Prepare response with pricing
         parsed_items = []
         for s in items_to_sell:
             name = s["item"]
