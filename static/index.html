@@ -3659,11 +3659,11 @@
 
         // --- fetch config from backend first
         async function initSupabase() {
-            const res = await fetch('/config');
-            const cfg = await res.json();
+            // FIX 14: Removed /config call since anon key is hidden on backend
+            // Using proxy for all requests, so we just use a placeholder key for the client SDK
             return createClient(
-                window.location.origin + '/supabase-proxy',  // keep your proxy
-                cfg.anon_key
+                window.location.origin + '/supabase-proxy',
+                'public-client-placeholder-key'
             );
         }
 

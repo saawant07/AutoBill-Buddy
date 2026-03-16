@@ -35,12 +35,24 @@ supabase_anon: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel('gemini-2.0-flash')
 
-# Guest mode bypass — uses anon client directly (RLS is disabled)
-GUEST_MAGIC_TOKEN = "GUEST_MODE_NO_AUTH"
-GUEST_USER_ID = "933fc862-30f9-45ef-b83f-c9d57f1ebfc6"
+# Guest mode bypass — loaded from env for security
+GUEST_MAGIC_TOKEN = os.getenv("GUEST_MAGIC_TOKEN", "GUEST_MODE_NO_AUTH")
+GUEST_USER_ID = os.getenv("GUEST_USER_ID", "933fc862-30f9-45ef-b83f-c9d57f1ebfc6")
 
 app = FastAPI()
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
+# CORS — restrict to known origins
+_ALLOWED_ORIGINS = [
+    "http://localhost:8000",
+    "http://localhost:3000",
+    "https://autobillbuddy.vercel.app",
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_ALLOWED_ORIGINS,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
+    allow_headers=["Authorization", "Content-Type"],
+)
 
 @app.get("/")
 async def root():
@@ -48,34 +60,61 @@ async def root():
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-@app.get("/config")
-async def get_config():
-    return {"supabase_url": SUPABASE_URL, "anon_key": SUPABASE_KEY}
-
+# /config endpoint REMOVED — anon key no longer exposed to frontend
 # ============================================================================
-# RATE LIMITER — Simple in-memory token bucket per IP per endpoint
+# RATE LIMITER & MIDDLEWARES
 # ============================================================================
 _rate_buckets = defaultdict(lambda: {"tokens": 10, "last": time.time()})
 
 # Endpoint-specific rate limits (requests per minute)
 _RATE_LIMITS = {
-    "/parse-order": 30,
-    "/confirm-order": 30,
+    "/parse-order": 20,
+    "/confirm-order": 10,
+    "/get-guest-token": 5,
+    "/add-stock": 30,
+    "/dues/settle": 10,
     "/inventory": 60,
+    "/prices": 60,
+    "/dues": 60,
+    "/dues/{customer_name}": 60,
+    "/sales/today": 60,
+    "/sales/month": 60,
+    "/sales/date/{date}": 60,
+    "/sales/year": 60,
+    "/analytics/weekly": 60,
+    "/reduce-stock": 30,
+    "/delete-item": 10,
+    "/reset-demo-inventory": 5,
 }
-_DEFAULT_RATE_LIMIT = 60  # Default for other endpoints
+_DEFAULT_RATE_LIMIT = 30  # Default for other endpoints
 _DEFAULT_RATE_WINDOW = 60  # per 60 seconds
 
-def check_rate_limit(request: Request, endpoint_limit: Optional[int] = None):
+@app.middleware("http")
+async def security_middleware(request: Request, call_next):
+    # 1. Request Size Limit (10KB max for POST inputs to prevent large payloads)
+    if request.method == "POST":
+        content_length = request.headers.get("content-length")
+        if content_length and int(content_length) > 10_000:
+            return Response(status_code=413, content="Request body too large")
+            
+    # Process request
+    response = await call_next(request)
+    
+    # 2. Security Headers
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    
+    return response
+
+def check_rate_limit(request: Request):
     """
     Check rate limit for the request.
-    - endpoint_limit: Optional override for rate limit (requests per minute)
     """
     # Determine rate limit based on endpoint
     path = request.url.path
-    rate_limit = endpoint_limit
-    if rate_limit is None:
-        rate_limit = _RATE_LIMITS.get(path, _DEFAULT_RATE_LIMIT)
+    rate_limit = _RATE_LIMITS.get(path, _DEFAULT_RATE_LIMIT)
 
     # Use IP + path as the bucket key for per-endpoint limiting
     ip = request.client.host if request.client else "unknown"
@@ -96,6 +135,7 @@ def check_rate_limit(request: Request, endpoint_limit: Optional[int] = None):
 # ============================================================================
 @app.api_route("/supabase-proxy/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"])
 async def supabase_proxy(path: str, request: Request):
+    check_rate_limit(request)
     if not SUPABASE_URL:
         return Response(status_code=500, content="SUPABASE_URL not configured")
 
@@ -215,7 +255,8 @@ class ChatRequest(BaseModel):
 
 
 @app.get("/inventory")
-async def get_inventory(auth: tuple = Depends(get_user_client)):
+async def get_inventory(request: Request, auth: tuple = Depends(get_user_client)):
+    check_rate_limit(request)
     try:
         db, user_id = auth
         # Fetch all batches
@@ -272,7 +313,8 @@ async def get_inventory(auth: tuple = Depends(get_user_client)):
         return []
 
 @app.get("/prices")
-async def get_all_prices(auth: tuple = Depends(get_user_client)):
+async def get_all_prices(request: Request, auth: tuple = Depends(get_user_client)):
+    check_rate_limit(request)
     try:
         db, user_id = auth
         ITEM_PRICES, _ = get_user_inventory_data(db, user_id)
@@ -753,7 +795,13 @@ async def parse_order_endpoint(req: ChatRequest, request: Request, auth: tuple =
     check_rate_limit(request)
     try:
         db, user_id = auth
-        print(f"[PARSE] User {user_id} said: '{req.message}'")
+        # FIX 6: Sanitize input
+        message = req.message.strip()[:500]
+        if not message:
+            return {"success": False, "message": "Empty message"}
+        if '<script' in message.lower() or '<iframe' in message.lower():
+            raise HTTPException(status_code=400, detail="Invalid input detected")
+        print(f"[PARSE] User {user_id} said: '{message}'")
         
         ITEM_PRICES, user_inventory = get_user_inventory_data(db, user_id)
         available_items = list(ITEM_PRICES.keys())
@@ -769,13 +817,13 @@ async def parse_order_endpoint(req: ChatRequest, request: Request, auth: tuple =
             print(f"[PARSE] Error fetching aliases: {e}")
         
         # 1. Try Local Parsing First
-        items_to_sell, payment_mode, customer_name = parse_message_locally(req.message, available_items, custom_aliases)
+        items_to_sell, payment_mode, customer_name = parse_message_locally(message, available_items, custom_aliases)
         
         # 2. AI Fallback if Local finds nothing
         if not items_to_sell:
             try:
                 prompt = f"""
-                You are a smart cashier. Parse this order: "{req.message}"
+                You are a smart cashier. Parse this order: "{message}"
                 Items available: {json.dumps(available_items)}
                 
                 CRITICAL RULES:
@@ -845,101 +893,120 @@ class ConfirmOrderRequest(BaseModel):
 @app.post("/confirm-order")
 async def confirm_order_endpoint(req: ConfirmOrderRequest, request: Request, auth: tuple = Depends(get_user_client)):
     check_rate_limit(request)
-    db, user_id = auth
-    import uuid
-    transaction_id = str(uuid.uuid4())[:8]
-    
-    ITEM_PRICES, user_inventory = get_user_inventory_data(db, user_id)
-    
-    total_order_price = 0
-    results = []
-    failed = []
-    
-    for item_data in req.items:
-        item = item_data["item_name"].strip().title()
-        qty = float(item_data["quantity"])
+    try:
+        db, user_id = auth
+        import uuid
+        transaction_id = str(uuid.uuid4())[:8]
         
-        # Determine price (trust frontend price since user explicitly confirms it)
-        # Fallback to backend price if missing
-        fallback_unit_price = ITEM_PRICES.get(item, 0)
-        unit_price = item_data.get("unit_price", fallback_unit_price)
-        price = item_data.get("total_price", qty * unit_price)
+        # FIX 5: Input sanitization
+        customer = re.sub(r'<[^>]+>', '', req.customer_name.strip())[:100]
+        if not customer:
+            customer = "Walk-in"
+        if '<script' in customer.lower() or '<iframe' in customer.lower():
+            raise HTTPException(status_code=400, detail="Invalid customer name")
+        if req.payment_mode not in ("Cash", "Udhaar"):
+            raise HTTPException(status_code=400, detail="Invalid payment mode. Must be Cash or Udhaar.")
         
-        # If backend price was 0, learn the new price from this transaction
-        if fallback_unit_price == 0 and unit_price > 0:
-            try:
-                db.table("inventory").update({"price": unit_price}).eq("user_id", user_id).eq("item_name", item).execute()
-            except Exception as e:
-                print(f"Price update error for {item}: {e}")
+        ITEM_PRICES, user_inventory = get_user_inventory_data(db, user_id)
         
-        # Check Stock (Aggregate)
-        batches = db.table("inventory").select("id, stock_quantity, cost_price").eq("user_id", user_id).eq("item_name", item).order("expiry_date", desc=False).execute().data
+        total_order_price = 0
+        results = []
+        failed = []
         
-        current_stock = sum(b['stock_quantity'] for b in batches)
+        for item_data in req.items:
+            item = re.sub(r'<[^>]+>', '', item_data["item_name"].strip().title())[:100]
+            qty = float(item_data["quantity"])
+            if qty <= 0:
+                failed.append(f"{item} (Invalid qty)")
+                continue
         
-        if current_stock < qty:
-            failed.append(f"{item} (Stock: {current_stock})")
-            continue
+            # Determine price (trust frontend price since user explicitly confirms it)
+            # Fallback to backend price if missing
+            fallback_unit_price = ITEM_PRICES.get(item, 0)
+            unit_price = item_data.get("unit_price", fallback_unit_price)
+            price = item_data.get("total_price", qty * unit_price)
             
-        # Update Stock (FIFO) & Calculate Total Cost
-        remaining_qty = qty
-        total_cost_of_sold = 0
-        
-        for b in batches:
-            if remaining_qty <= 0:
-                break
+            # If backend price was 0, learn the new price from this transaction
+            if fallback_unit_price == 0 and unit_price > 0:
+                try:
+                    db.table("inventory").update({"price": unit_price}).eq("user_id", user_id).eq("item_name", item).execute()
+                except Exception as e:
+                    print(f"Price update error for {item}: {e}")
+            
+            # Check Stock (Aggregate)
+            batches = db.table("inventory").select("id, stock_quantity, cost_price").eq("user_id", user_id).eq("item_name", item).order("expiry_date", desc=False).execute().data or []
+            
+            current_stock = sum(b['stock_quantity'] for b in batches)
+            
+            if current_stock < qty:
+                failed.append(f"{item} (Stock: {current_stock})")
+                continue
                 
-            available = b['stock_quantity']
-            batch_cp = b.get('cost_price', 0) or 0
+            # Update Stock (FIFO) & Calculate Total Cost
+            remaining_qty = qty
+            total_cost_of_sold = 0
             
-            if available > remaining_qty:
-                # Deduct from this batch
-                new_batch_stock = available - remaining_qty
-                db.table("inventory").update({"stock_quantity": new_batch_stock}).eq("id", b['id']).execute()
-                total_cost_of_sold += remaining_qty * batch_cp
-                remaining_qty = 0
-            else:
-                # Deplete this batch
-                db.table("inventory").update({"stock_quantity": 0}).eq("id", b['id']).execute()
-                total_cost_of_sold += available * batch_cp
-                remaining_qty -= available
+            for b in batches:
+                if remaining_qty <= 0:
+                    break
+                    
+                available = b['stock_quantity']
+                batch_cp = b.get('cost_price', 0) or 0
+                
+                if available > remaining_qty:
+                    # Deduct from this batch (FIX 7: floor at 0)
+                    new_batch_stock = max(0, available - remaining_qty)
+                    db.table("inventory").update({"stock_quantity": new_batch_stock}).eq("id", b['id']).execute()
+                    total_cost_of_sold += remaining_qty * batch_cp
+                    remaining_qty = 0
+                else:
+                    # Deplete this batch
+                    db.table("inventory").update({"stock_quantity": 0}).eq("id", b['id']).execute()
+                    total_cost_of_sold += available * batch_cp
+                    remaining_qty -= available
+                
+            # Record Sale
+            db.table("sales").insert({
+                "item_name": item,
+                "quantity": qty,
+                "total_price": price,
+                "total_cost": total_cost_of_sold,
+                "customer_name": customer,
+                "user_id": user_id,
+                "transaction_id": transaction_id,
+                "payment_mode": req.payment_mode,
+                "is_settled": req.payment_mode == 'Cash'
+            }).execute()
             
-        # Record Sale
-        db.table("sales").insert({
-            "item_name": item,
-            "quantity": qty,
-            "total_price": price,
-            "total_cost": total_cost_of_sold,
-            "customer_name": req.customer_name,
-            "user_id": user_id,
-            "transaction_id": transaction_id,
-            "payment_mode": req.payment_mode,
-            "is_settled": req.payment_mode == 'Cash'
-        }).execute()
+            total_order_price += price
+            results.append(f"{qty} {item}")
         
-        total_order_price += price
-        results.append(f"{qty} {item}")
+        # FIX 8: Update Dues if Udhaar (guard against Walk-in)
+        if results and req.payment_mode == 'Udhaar' and customer.lower().strip() not in ('walk-in', 'walkin', 'walk in', ''):
+            try:
+                dues_check = db.table("dues").select("total_due").eq("user_id", user_id).eq("customer_name", customer).execute()
+                if dues_check.data:
+                    new_due = dues_check.data[0]['total_due'] + total_order_price
+                    db.table("dues").update({"total_due": new_due, "last_updated": "now()"}).eq("user_id", user_id).eq("customer_name", customer).execute()
+                else:
+                    db.table("dues").insert({"customer_name": customer, "total_due": total_order_price, "user_id": user_id}).execute()
+            except Exception as e:
+                print(f"Dues Update Error: {e}")
+                
+        if failed:
+            return {"success": len(results) > 0, "message": f"Saved {len(results)} items. Failed: {', '.join(failed)}", "failed_items": failed}
         
-    # Update Dues if Udhaar
-    if results and req.payment_mode == 'Udhaar' and req.customer_name != 'Walk-in':
-        try:
-            dues_check = db.table("dues").select("total_due").eq("user_id", user_id).eq("customer_name", req.customer_name).execute()
-            if dues_check.data:
-                new_due = dues_check.data[0]['total_due'] + total_order_price
-                db.table("dues").update({"total_due": new_due, "last_updated": "now()"}).eq("user_id", user_id).eq("customer_name", req.customer_name).execute()
-            else:
-                db.table("dues").insert({"customer_name": req.customer_name, "total_due": total_order_price, "user_id": user_id}).execute()
-        except Exception as e:
-            print(f"Dues Update Error: {e}")
-            
-    if failed:
-        return {"success": len(results) > 0, "message": f"Saved {len(results)} items. Failed: {', '.join(failed)}", "failed_items": failed}
-    
-    return {"success": True, "message": f"✅ Order Confirmed: ₹{total_order_price}", "transaction_id": transaction_id}
+        return {"success": True, "message": f"✅ Order Confirmed: ₹{total_order_price}", "transaction_id": transaction_id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Confirm order error: {e}", exc_info=True)
+        return {"success": False, "message": f"❌ Order failed: {str(e)}"}
 
 
 @app.get("/dues")
-async def get_dues(auth: tuple = Depends(get_user_client)):
+async def get_dues(request: Request, auth: tuple = Depends(get_user_client)):
+    check_rate_limit(request)
     try:
         db, user_id = auth
         response = db.table("dues").select("customer_name, total_due, last_updated").eq("user_id", user_id).gt("total_due", 0).order("total_due", desc=True).execute()
@@ -953,7 +1020,8 @@ async def get_dues(auth: tuple = Depends(get_user_client)):
         return {"dues": []}
 
 @app.get("/dues/{customer_name}")
-async def get_customer_dues(customer_name: str, auth: tuple = Depends(get_user_client)):
+async def get_customer_dues(customer_name: str, request: Request, auth: tuple = Depends(get_user_client)):
+    check_rate_limit(request)
     from datetime import datetime, timezone, timedelta
     try:
         db, user_id = auth
@@ -991,7 +1059,8 @@ async def get_customer_dues(customer_name: str, auth: tuple = Depends(get_user_c
         return {"customer_name": customer_name, "total_due": 0, "transactions": []}
 
 @app.get("/sales/today")
-async def get_todays_sales(auth: tuple = Depends(get_user_client)):
+async def get_todays_sales(request: Request, auth: tuple = Depends(get_user_client)):
+    check_rate_limit(request)
     from datetime import datetime, timezone, timedelta
     try:
         db, user_id = auth
@@ -1108,7 +1177,7 @@ from fastapi import FastAPI, HTTPException, Header, Depends, BackgroundTasks
 async def generate_aliases_task(item_name: str, user_id: str, db: Client):
     try:
         print(f"Generating aliases for: {item_name}")
-        model = genai.GenerativeModel('gemini-2.5-flash')
+        model = genai.GenerativeModel('gemini-2.0-flash')
         prompt = f"""
         Generate 5-10 common voice-to-text typos, phonetic misspellings, and Hindi/Hinglish synonyms for the grocery item '{item_name}'.
         Return ONLY a JSON array of lowercase strings.
@@ -1148,7 +1217,8 @@ class AddStockRequest(BaseModel):
     expiry_date: Optional[str] = None  # Format: YYYY-MM-DD
 
 @app.post("/add-stock")
-async def add_stock(req: AddStockRequest, background_tasks: BackgroundTasks, auth: tuple = Depends(get_user_client)):
+async def add_stock(req: AddStockRequest, background_tasks: BackgroundTasks, request: Request, auth: tuple = Depends(get_user_client)):
+    check_rate_limit(request)
     try:
         db, user_id = auth
         print(f"[add-stock] User {user_id} is adding item: {req.item_name}, qty: {req.quantity}, price: {req.price}")
@@ -1231,7 +1301,8 @@ class ReduceStockRequest(BaseModel):
     quantity: float = Field(gt=0)
 
 @app.post("/reduce-stock")
-async def reduce_stock(req: AddStockRequest, auth: tuple = Depends(get_user_client)):
+async def reduce_stock(req: AddStockRequest, request: Request, auth: tuple = Depends(get_user_client)):
+    check_rate_limit(request)
     # Simple reduce (for manual correction) - just reduces from ANY batch (latest/earliest?)
     # For manual correction, it's ambiguous which batch to reduce if we don't specify.
     # For now, let's implement FIFO reduction similar to sales.
@@ -1282,7 +1353,8 @@ class DeleteItemRequest(BaseModel):
     item_name: str = Field(min_length=1)
 
 @app.delete("/delete-item")
-async def delete_item(req: DeleteItemRequest, auth: tuple = Depends(get_user_client)):
+async def delete_item(req: DeleteItemRequest, request: Request, auth: tuple = Depends(get_user_client)):
+    check_rate_limit(request)
     try:
         db, user_id = auth
         item = req.item_name.strip().title()
@@ -1303,7 +1375,8 @@ class SettleDuesRequest(BaseModel):
     amount: Optional[float] = Field(default=None, gt=0)
 
 @app.post("/dues/settle")
-async def settle_dues(req: SettleDuesRequest, auth: tuple = Depends(get_user_client)):
+async def settle_dues(req: SettleDuesRequest, request: Request, auth: tuple = Depends(get_user_client)):
+    check_rate_limit(request)
     try:
         db, user_id = auth
         customer = req.customer_name.strip()
@@ -1353,7 +1426,8 @@ async def settle_dues(req: SettleDuesRequest, auth: tuple = Depends(get_user_cli
         return {"message": f"❌ Error: {str(e)}", "success": False}
 
 @app.get("/analytics/weekly")
-async def get_weekly_analytics(auth: tuple = Depends(get_user_client)):
+async def get_weekly_analytics(request: Request, auth: tuple = Depends(get_user_client)):
+    check_rate_limit(request)
     from datetime import datetime, timezone, timedelta
     try:
         db, user_id = auth
@@ -1403,7 +1477,8 @@ async def get_weekly_analytics(auth: tuple = Depends(get_user_client)):
         return {"success": False, "message": str(e)}
 
 @app.get("/sales/month")
-async def get_monthly_sales(month: int = None, year: int = None, auth: tuple = Depends(get_user_client)):
+async def get_monthly_sales(request: Request, month: int = None, year: int = None, auth: tuple = Depends(get_user_client)):
+    check_rate_limit(request)
     from datetime import datetime, timezone, timedelta
     try:
         db, user_id = auth
@@ -1501,7 +1576,8 @@ async def get_monthly_sales(month: int = None, year: int = None, auth: tuple = D
         return {"month": "", "month_revenue": 0, "month_orders": 0, "month_quantity": 0, "daily_totals": {}}
 
 @app.get("/sales/date/{date}")
-async def get_date_sales(date: str, auth: tuple = Depends(get_user_client)):
+async def get_date_sales(date: str, request: Request, auth: tuple = Depends(get_user_client)):
+    check_rate_limit(request)
     from datetime import datetime, timezone, timedelta
     try:
         db, user_id = auth
@@ -1549,7 +1625,8 @@ async def get_date_sales(date: str, auth: tuple = Depends(get_user_client)):
         return {"date": date, "display_date": date, "revenue": 0, "orders": 0, "quantity": 0, "items_sold": []}
 
 @app.get("/sales/year")
-async def get_yearly_sales(year: int = None, auth: tuple = Depends(get_user_client)):
+async def get_yearly_sales(request: Request, year: int = None, auth: tuple = Depends(get_user_client)):
+    check_rate_limit(request)
     from datetime import datetime, timezone, timedelta
     try:
         db, user_id = auth
@@ -1630,40 +1707,39 @@ async def get_yearly_sales(year: int = None, auth: tuple = Depends(get_user_clie
 # ============================================================================
 # UDHAAR STATEMENT — Beautiful HTML Statement for WhatsApp/PDF Sharing
 # ============================================================================
-from fastapi.responses import HTMLResponse
 
 @app.get("/dues/{customer_name}/statement")
-async def get_customer_statement(customer_name: str, authorization: str = "", phone: str = "", shop: str = "My Store"):
-    """Generates a beautiful HTML statement page that can be printed to PDF."""
+async def get_customer_statement(customer_name: str, request: Request, auth: tuple = Depends(get_user_client)):
+    check_rate_limit(request)
     from datetime import datetime, timezone, timedelta
+    import html as html_lib
     try:
-        # Parse auth from query param (since this opens in a new browser tab, can't use headers)
-        if not authorization or not authorization.startswith("Bearer "):
-            return HTMLResponse(content="<h1>Unauthorized</h1><p>Please access this page from AutoBill Buddy.</p>", status_code=401)
+        db, user_id = auth
         
-        token = authorization.replace("Bearer ", "")
+        # Get Shop Name based on User ID
+        shop_name = "My Store"
+        try:
+            profile = db.table("profiles").select("shop_name").eq("id", user_id).execute()
+            if profile.data and profile.data[0].get("shop_name"):
+                shop_name = profile.data[0]["shop_name"]
+        except:
+            if user_id == GUEST_USER_ID:
+                shop_name = "AutoBill Buddy Demo Store"
         
-        # Guest mode bypass
-        if token == GUEST_MAGIC_TOKEN:
-            db = create_client(SUPABASE_URL, SUPABASE_KEY)
-            user_id = GUEST_USER_ID
-        else:
-            db = create_client(SUPABASE_URL, SUPABASE_KEY)
-            try:
-                db.auth.set_session(token, token)
-                user_response = db.auth.get_user(token)
-                user_id = user_response.user.id
-            except Exception:
-                return HTMLResponse(content="<h1>Session Expired</h1><p>Please log in again.</p>", status_code=401)
-        
+        # FIX 15: Prevent HTML injection / XSS
+        safe_customer = html_lib.escape(customer_name)
+        safe_shop = html_lib.escape(shop_name)
+
+        # Get total outstanding
+        total_due = 0
+        dues_res = db.table("dues").select("total_due").eq("user_id", user_id).eq("customer_name", customer_name).execute()
+        if dues_res.data:
+            total_due = dues_res.data[0]["total_due"]
+            
         # Get transactions
         response = db.table("sales").select("item_name, quantity, total_price, created_at").eq(
             "user_id", user_id
         ).eq("customer_name", customer_name).eq("payment_mode", "Udhaar").order("created_at", desc=True).execute()
-        
-        # Get total due
-        dues_check = db.table("dues").select("total_due").eq("user_id", user_id).eq("customer_name", customer_name).execute()
-        total_due = dues_check.data[0]["total_due"] if dues_check.data else 0
         
         # Build transaction rows
         rows_html = ""
@@ -1695,8 +1771,8 @@ async def get_customer_statement(customer_name: str, authorization: str = "", ph
             
             rows_html += f"""
             <tr class="{price_class}">
-                <td>{date_str}</td>
-                <td>{item_name}</td>
+                <td>{html_lib.escape(date_str)}</td>
+                <td>{html_lib.escape(item_name)}</td>
                 <td class="center">{quantity}</td>
                 <td class="right">{price_display}</td>
             </tr>"""
@@ -1709,7 +1785,7 @@ async def get_customer_statement(customer_name: str, authorization: str = "", ph
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Statement — {customer_name}</title>
+    <title>Statement — {safe_customer}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
@@ -2075,7 +2151,7 @@ async def get_customer_statement(customer_name: str, authorization: str = "", ph
         <div class="header">
             <div class="shop-name">
                 <div class="shop-icon">🏪</div>
-                {shop}
+                {safe_shop}
             </div>
             <div class="header-sub">📋 Udhaar Statement — Transaction History & Outstanding Balance</div>
             <div class="header-slogan">"Aaj nagad, kal udhaar" — par hisaab toh rakhna padega! 😄</div>
@@ -2084,7 +2160,7 @@ async def get_customer_statement(customer_name: str, authorization: str = "", ph
         <div class="customer-bar">
             <div>
                 <div class="name-label">Customer</div>
-                <div class="name">{customer_name}</div>
+                <div class="name">{safe_customer}</div>
             </div>
             <div class="due">
                 <div class="due-label">Balance Due</div>
@@ -2140,12 +2216,12 @@ async def get_customer_statement(customer_name: str, authorization: str = "", ph
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script>
-        var PHONE = '{phone.replace(chr(39), "")}';
-        var CUSTOMER = '{customer_name.replace(chr(39), "")}';
-        var TOTAL_DUE = {round(total_due)};
-        var SHOP = '{shop.replace(chr(39), "")}';
-        var TOTAL_PURCHASES = {round(total_purchases)};
-        var TOTAL_PAYMENTS = {round(total_payments)};
+        var PHONE = ''; // Phone number is not passed to the backend for security reasons
+        var CUSTOMER = '{safe_customer}';
+        var TOTAL_DUE = {total_due};
+        var SHOP = '{safe_shop}';
+        var TOTAL_PURCHASES = {total_purchases};
+        var TOTAL_PAYMENTS = {total_payments};
         
         function getPdfOptions() {{
             return {{
