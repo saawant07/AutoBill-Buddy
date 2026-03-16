@@ -2,14 +2,7 @@
 .env
 .env.*
 *.env
-
-# Debug, test, and utility scripts
 debug_*.py
-check_*.py
-get_schema.py
-set_cost_prices.py
-test_*.py
-test_*.js
 
 # Python virtual environments
 venv/
