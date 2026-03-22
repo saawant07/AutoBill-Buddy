@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - AutoBill Buddy</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="/static/css/variables.css">
+    <link rel="stylesheet" href="/static/css/components.css">
+</head>
+<body>
+    <!-- Sidebar loaded dynamically -->
+    <div id="sidebar-placeholder"></div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Page Header -->
+        <header class="page-header">
+            <div class="page-header-left">
+                <h1 class="page-title">Store Overview</h1>
+                <p class="page-subtitle" id="header-date"></p>
+            </div>
+            <div class="page-header-right">
+                <!-- Date Filter Tabs -->
+                <div class="tab-group" id="date-filter">
+                    <button class="tab-btn active" data-filter="today">Today</button>
+                    <button class="tab-btn" data-filter="week">This Week</button>
+                    <button class="tab-btn" data-filter="month">This Month</button>
+                </div>
+                <button id="theme-toggle-btn" class="btn-icon btn-outline" title="Toggle theme">
+                    <i class="fas fa-moon"></i>
+                </button>
+                <button id="refresh-btn" class="btn btn-sm btn-outline" onclick="refreshDashboard()">
+                    <i class="fas fa-refresh"></i> Refresh
+                </button>
+            </div>
+        </header>
+
+        <!-- Page Content -->
+        <div class="page-content">
+            <!-- Stats Grid -->
+            <div class="stats-grid">
+                <!-- Revenue -->
+                <div class="stat-card" id="stat-revenue-card" style="background: linear-gradient(135deg, #059669, #10B981);">
+                    <div class="stat-icon-wrap" style="background:rgba(255,255,255,0.2);">
+                        <i class="fas fa-chart-line" style="color:white;"></i>
+                    </div>
+                    <div class="stat-info">
+                        <p class="stat-label" style="color:rgba(255,255,255,0.8);">Today's Revenue</p>
+                        <p class="stat-value" id="stat-revenue" style="color:white;">₹0</p>
+                    </div>
+                    <div id="stat-revenue-trend" style="margin-left:auto;padding:4px 8px;border-radius:8px;background:rgba(255,255,255,0.15);font-size:12px;font-weight:600;color:rgba(255,255,255,0.9);"></div>
+                </div>
+
+                <!-- Orders -->
+                <div class="stat-card">
+                    <div class="stat-icon-wrap" style="background:var(--accent-purple-light);">
+                        <i class="fas fa-receipt" style="color:var(--accent-purple);"></i>
+                    </div>
+                    <div class="stat-info">
+                        <p class="stat-label">Bills Created</p>
+                        <p class="stat-value" id="stat-orders">0</p>
+                        <p class="stat-sub" id="stat-orders-label">orders today</p>
+                    </div>
+                </div>
+
+                <!-- Items Sold -->
+                <div class="stat-card">
+                    <div class="stat-icon-wrap" style="background:var(--accent-blue-light);">
+                        <i class="fas fa-cubes" style="color:var(--accent-blue);"></i>
+                    </div>
+                    <div class="stat-info">
+                        <p class="stat-label">Items Sold</p>
+                        <p class="stat-value" id="stat-items">0</p>
+                        <p class="stat-sub" id="stat-skus">— SKUs in system</p>
+                    </div>
+                </div>
+
+                <!-- Low Stock -->
+                <div class="stat-card">
+                    <div class="stat-icon-wrap" style="background:var(--accent-red-light);">
+                        <i class="fas fa-triangle-exclamation" style="color:var(--accent-red);"></i>
+                    </div>
+                    <div class="stat-info">
+                        <p class="stat-label">Low Stock</p>
+                        <p class="stat-value" id="stat-low-stock">0</p>
+                        <p class="stat-sub">items need restock</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions + Revenue Chart -->
+            <div class="two-col-grid" style="margin-bottom:24px;">
+                <!-- Quick Actions -->
+                <div class="card card-p">
+                    <h3 class="card-title"><i class="fas fa-bolt" style="color:var(--accent-orange)"></i> Quick Actions</h3>
+                    <div class="quick-actions-grid">
+                        <a href="/billing.html" class="quick-action">
+                            <div class="quick-action-icon" style="background:var(--accent-green-light);">
+                                <i class="fas fa-plus" style="color:var(--accent-green);"></i>
+                            </div>
+                            <span class="quick-action-label">New Bill</span>
+                        </a>
+                        <a href="/inventory.html" class="quick-action">
+                            <div class="quick-action-icon" style="background:var(--accent-blue-light);">
+                                <i class="fas fa-boxes-packing" style="color:var(--accent-blue);"></i>
+                            </div>
+                            <span class="quick-action-label">Add Stock</span>
+                        </a>
+                        <a href="/billing.html" class="quick-action">
+                            <div class="quick-action-icon" style="background:var(--accent-orange-light);">
+                                <i class="fas fa-microphone" style="color:var(--accent-orange);"></i>
+                            </div>
+                            <span class="quick-action-label">Voice Bill</span>
+                        </a>
+                        <a href="/customers.html" class="quick-action">
+                            <div class="quick-action-icon" style="background:var(--accent-purple-light);">
+                                <i class="fas fa-hand-holding-dollar" style="color:var(--accent-purple);"></i>
+                            </div>
+                            <span class="quick-action-label">Collect Due</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Revenue Chart -->
+                <div class="card card-p">
+                    <h3 class="card-title"><i class="fas fa-chart-bar" style="color:var(--accent-green)"></i> Revenue — Last 7 Days</h3>
+                    <div style="height:200px;position:relative;">
+                        <canvas id="revenue-chart"></canvas>
+                        <div id="chart-loading" class="loading-state" style="position:absolute;inset:0;background:var(--card-bg);">
+                            <div class="spinner" style="margin:30px auto;border-top-color:var(--accent-green);"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Transactions -->
+            <div class="card card-p">
+                <div class="section-header">
+                    <h3 class="section-title">
+                        <i class="fas fa-clock-rotate-left" style="color:var(--accent-blue)"></i>
+                        Recent Sales
+                    </h3>
+                    <a href="/reports.html" class="btn btn-sm btn-outline">
+                        View All <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+                <div id="transactions-container">
+                    <div class="loading-state" id="tx-loading">
+                        <div class="spinner" style="margin:30px auto;border-top-color:var(--accent-green);"></div>
+                        <p style="margin-top:10px;">Loading transactions...</p>
+                    </div>
+                    <div id="tx-empty" class="empty-state" style="display:none;">
+                        <i class="fas fa-receipt"></i>
+                        <h3>No sales yet</h3>
+                        <p>Start billing to see transactions here</p>
+                    </div>
+                    <div id="tx-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Inline Prompt Modal -->
+    <div id="inline-prompt-modal" class="modal-overlay hidden" style="z-index:200;">
+        <div class="modal-box" style="max-width:400px;">
+            <div class="modal-header">
+                <h3 class="modal-title" id="inline-prompt-title">Edit</h3>
+                <button class="modal-close" onclick="app.closeInlinePrompt()"><i class="fas fa-times"></i></button>
+            </div>
+            <input type="text" id="inline-prompt-input" class="input" style="margin-bottom:16px;">
+            <div style="display:flex;gap:10px;">
+                <button class="btn btn-outline" style="flex:1" onclick="app.closeInlinePrompt()">Cancel</button>
+                <button id="inline-prompt-submit" class="btn btn-primary" style="flex:1">Submit</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Load app.js first so window.app is available
+        await import('/static/js/app.js');
+
+        // Load sidebar
+        const sidebarResp = await fetch('/static/components/sidebar.html');
+        const sidebarHtml = await sidebarResp.text();
+        document.getElementById('sidebar-placeholder').outerHTML = sidebarHtml;
+
+        // Init theme and sidebar
+        app.initTheme();
+        app.initSidebar();
+
+        // Set date
+        document.getElementById('header-date').textContent = new Date().toLocaleDateString('en-IN', {
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+        });
+
+        // Date filter tabs
+        let currentFilter = 'today';
+        document.querySelectorAll('#date-filter .tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('#date-filter .tab-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentFilter = btn.dataset.filter;
+                refreshDashboard();
+            });
+        });
+
+        async function updateStats(stats) {
+            const revEl = document.getElementById('stat-revenue');
+            const ordEl = document.getElementById('stat-orders');
+            const itmEl = document.getElementById('stat-items');
+            const lowEl = document.getElementById('stat-low-stock');
+
+            if (revEl) {
+                const rev = parseFloat(stats.total_revenue || 0);
+                revEl.textContent = '₹' + rev.toLocaleString('en-IN');
+            }
+            if (ordEl) ordEl.textContent = stats.total_sales || 0;
+            if (itmEl) itmEl.textContent = stats.total_quantity || 0;
+
+            // Count low stock
+            const inv = await app.api('/inventory');
+            if (inv && !inv.error) {
+                const low = inv.filter(i => i.stock_quantity <= 5).length;
+                if (lowEl) lowEl.textContent = low;
+                if (document.getElementById('stat-skus')) {
+                    document.getElementById('stat-skus').textContent = inv.length + ' SKUs in system';
+                }
+            }
+        }
+
+        async function refreshDashboard() {
+            const loading = document.getElementById('tx-loading');
+            const empty = document.getElementById('tx-empty');
+            const list = document.getElementById('tx-list');
+            const chartLoading = document.getElementById('chart-loading');
+
+            if (loading) loading.style.display = 'block';
+            if (empty) empty.style.display = 'none';
+            if (list) list.innerHTML = '';
+            if (chartLoading) chartLoading.style.display = 'flex';
+
+            try {
+                let stats;
+                if (currentFilter === 'today') {
+                    stats = await app.api('/sales/today');
+                } else if (currentFilter === 'month') {
+                    const monthRes = await app.api('/sales/month');
+                    if (monthRes && !monthRes.error) {
+                        // Transform month response to match what updateStats expects
+                        stats = {
+                            total_revenue: monthRes.month_revenue || 0,
+                            total_sales: monthRes.month_orders || 0,
+                            total_quantity: monthRes.month_quantity || 0,
+                            transactions: monthRes.transactions || []
+                        };
+                    } else {
+                        stats = { transactions: [] };
+                    }
+                } else {
+                    // week - get last 7 days manually
+                    stats = { transactions: [] };
+                    for (let i = 6; i >= 0; i--) {
+                        const d = new Date();
+                        d.setDate(d.getDate() - i);
+                        const ds = d.toISOString().split('T')[0];
+                        const dayStats = await app.api(`/sales/date/${ds}`);
+                        if (dayStats && !dayStats.error) {
+                            stats.transactions = [...(stats.transactions||[]), ...(dayStats.transactions||[])];
+                            stats.total_revenue = (stats.total_revenue||0) + (dayStats.revenue||0);
+                            stats.total_sales = (stats.total_sales||0) + (dayStats.orders||0);
+                            stats.total_quantity = (stats.total_quantity||0) + (dayStats.quantity||0);
+                        }
+                    }
+                }
+
+                if (stats && !stats.error) {
+                    updateStats(stats);
+                    renderTransactions(stats.transactions || []);
+                }
+
+                // Load weekly chart
+                const weekly = await app.api('/analytics/weekly');
+                if (weekly && !weekly.error && weekly.data) {
+                    const labels = weekly.data.dates || [];
+                    const values = weekly.data.cash || [];
+                    if (chartLoading) chartLoading.style.display = 'none';
+                    createRevenueChart('revenue-chart', labels, values, 'Revenue');
+                }
+            } catch (e) {
+                console.error(e);
+                app.showToast('Failed to load dashboard data', 'error');
+                if (chartLoading) chartLoading.style.display = 'none';
+                if (loading) loading.style.display = 'none';
+            }
+        }
+
+        // Expose refreshDashboard to window for inline onclick handler
+        window.refreshDashboard = refreshDashboard;
+
+        function renderTransactions(transactions) {
+            const loading = document.getElementById('tx-loading');
+            const empty = document.getElementById('tx-empty');
+            const list = document.getElementById('tx-list');
+
+            if (loading) loading.style.display = 'none';
+
+            if (!transactions || transactions.length === 0) {
+                if (empty) empty.style.display = 'block';
+                return;
+            }
+
+            if (empty) empty.style.display = 'none';
+            if (list) {
+                list.innerHTML = transactions.slice(0, 10).map(tx => {
+                    const amt = parseFloat(tx.price || 0);
+                    const isCash = (tx.payment_mode || '').toLowerCase() === 'cash';
+                    const items = tx.detailed_items ? tx.detailed_items.map(i => i.name).join(', ') : (tx.item || '');
+                    return `
+                        <div class="transaction-row">
+                            <div class="transaction-info">
+                                <span class="transaction-customer">${app.esc(tx.customer_name || 'Walk-in')}</span>
+                                <span class="transaction-meta">
+                                    ${tx.time || ''}${items ? ' &bull; ' + app.esc(items) : ''}
+                                </span>
+                            </div>
+                            <span class="transaction-amount">${app.formatCurrency(amt)}</span>
+                            <span class="transaction-status ${isCash ? 'badge-green' : 'badge-red'}">${app.esc(tx.payment_mode || 'Cash')}</span>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        // Page onLogin hook
+        window.onLogin = function(s) {
+            refreshDashboard();
+        };
+
+        // Initialize app
+        await app.initApp();
+    </script>
+    <script src="/static/js/charts.js" type="module"></script>
+</body>
+</html>

@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customers - AutoBill Buddy</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: { extend: { fontFamily: { sans: ['Plus Jakarta Sans', 'sans-serif'] } } }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/variables.css">
+    <link rel="stylesheet" href="/static/css/components.css">
+</head>
+<body>
+    <div id="sidebar-placeholder"></div>
+
+    <div class="main-content">
+        <!-- Page Header -->
+        <header class="page-header">
+            <div class="page-header-left">
+                <h1 class="page-title">Customers</h1>
+                <p class="page-subtitle" id="udhaar-summary">Loading...</p>
+            </div>
+            <div class="page-header-right">
+                <button id="theme-toggle-btn" class="btn-icon btn-outline"><i class="fas fa-moon"></i></button>
+            </div>
+        </header>
+
+        <!-- Page Content -->
+        <div class="page-content">
+            <!-- Customer List -->
+            <div class="card card-p" id="customers-card">
+                <div class="section-header">
+                    <h3 class="section-title">
+                        <i class="fas fa-users" style="color:var(--accent-purple)"></i>
+                        Customers with Outstanding Dues
+                    </h3>
+                    <button class="btn btn-sm btn-outline" onclick="loadCustomers()">
+                        <i class="fas fa-refresh"></i>
+                    </button>
+                </div>
+                <div id="customers-list">
+                    <div class="loading-state">
+                        <div class="spinner" style="margin:0 auto 16px;border-top-color:var(--accent-purple);"></div>
+                        <p>Loading customers...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Customer Detail Modal -->
+    <div id="customer-detail-modal" class="modal-overlay hidden" style="z-index:100;">
+        <div class="modal-box" style="max-width:600px;">
+            <div class="modal-header">
+                <h3 class="modal-title" id="detail-customer-name">
+                    <i class="fas fa-user" style="color:var(--accent-purple)"></i> Customer
+                </h3>
+                <div style="display:flex;gap:8px;">
+                    <button id="share-statement-btn" class="btn btn-sm btn-outline" onclick="shareStatement()" title="Share via WhatsApp">
+                        <i class="fas fa-share-nodes"></i> Share
+                    </button>
+                    <button class="modal-close" onclick="closeDetailModal()"><i class="fas fa-times"></i></button>
+                </div>
+            </div>
+            <div style="margin-bottom:16px;padding:14px;border-radius:12px;background:var(--accent-red-light);display:flex;align-items:center;justify-content:space-between;">
+                <div>
+                    <p style="font-size:12px;font-weight:600;color:var(--status-error);text-transform:uppercase;margin:0;">Total Outstanding</p>
+                    <p id="detail-total-due" style="font-size:24px;font-weight:800;color:var(--status-error);margin:4px 0 0;">₹0</p>
+                </div>
+                <button class="btn btn-sm" style="background:var(--status-success);color:white;" onclick="openSettleDues()">
+                    <i class="fas fa-check-circle"></i> Settle
+                </button>
+            </div>
+            <div id="detail-transactions"></div>
+        </div>
+    </div>
+
+    <!-- Settle Dues Modal -->
+    <div id="settle-modal" class="modal-overlay hidden" style="z-index:110;">
+        <div class="modal-box" style="max-width:400px;">
+            <div class="modal-header">
+                <h3 class="modal-title"><i class="fas fa-check-circle" style="color:var(--status-success)"></i> Settle Dues</h3>
+                <button class="modal-close" onclick="closeSettleModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <p style="font-size:14px;color:var(--text-muted);margin:0 0 16px;">
+                Amount received from <strong id="settle-customer"></strong>
+            </p>
+            <input type="number" id="settle-amount" class="input" placeholder="Enter amount (leave empty to settle full)" style="margin-bottom:16px;">
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">
+                Outstanding: <strong id="settle-outstanding"></strong>
+            </div>
+            <div style="display:flex;gap:10px;">
+                <button class="btn btn-outline" style="flex:1" onclick="closeSettleModal()">Cancel</button>
+                <button class="btn btn-primary" style="flex:1" onclick="submitSettle()">
+                    <i class="fas fa-check"></i> Confirm
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Inline Prompt Modal -->
+    <div id="inline-prompt-modal" class="modal-overlay hidden" style="z-index:200;">
+        <div class="modal-box" style="max-width:400px;">
+            <div class="modal-header">
+                <h3 class="modal-title" id="inline-prompt-title">Edit</h3>
+                <button class="modal-close" onclick="app.closeInlinePrompt()"><i class="fas fa-times"></i></button>
+            </div>
+            <input type="text" id="inline-prompt-input" class="input" style="margin-bottom:16px;">
+            <div style="display:flex;gap:10px;">
+                <button class="btn btn-outline" style="flex:1" onclick="app.closeInlinePrompt()">Cancel</button>
+                <button id="inline-prompt-submit" class="btn btn-primary" style="flex:1">Submit</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Load app.js first so window.app is available
+        await import('/static/js/app.js');
+
+        const resp = await fetch('/static/components/sidebar.html');
+        document.getElementById('sidebar-placeholder').outerHTML = await resp.text();
+        app.initTheme();
+        app.initSidebar();
+
+        let currentCustomer = null;
+
+        async function loadCustomers() {
+            const list = document.getElementById('customers-list');
+            list.innerHTML = `
+                <div class="loading-state">
+                    <div class="spinner" style="margin:0 auto 16px;border-top-color:var(--accent-purple);"></div>
+                    <p>Loading...</p>
+                </div>`;
+
+            const res = await app.api('/dues');
+            if (res && !res.error && res.dues) {
+                document.getElementById('udhaar-summary').textContent =
+                    `${res.dues.length} customers with ₹${res.dues.reduce((s,d)=>s+parseFloat(d.total_due||0),0).toLocaleString('en-IN')} outstanding`;
+
+                if (res.dues.length === 0) {
+                    list.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-users"></i>
+                            <h3>No outstanding dues</h3>
+                            <p>All customers are settled up!</p>
+                        </div>`;
+                    return;
+                }
+
+                list.innerHTML = res.dues.map((d, idx) => `
+                    <div class="transaction-row" style="cursor:pointer;" data-customer-name="${encodeURIComponent(d.customer_name)}">
+                        <div class="transaction-info">
+                            <span class="transaction-customer">${app.esc(d.customer_name)}</span>
+                            <span class="transaction-meta">
+                                Last updated: ${d.last_updated ? app.formatDate(d.last_updated) : 'N/A'}
+                            </span>
+                        </div>
+                        <span class="transaction-amount" style="color:var(--status-error);">
+                            ₹${parseFloat(d.total_due||0).toLocaleString('en-IN')}
+                        </span>
+                        <button class="btn btn-sm btn-settle" style="background:var(--status-success);color:white;" data-customer-name="${encodeURIComponent(d.customer_name)}">
+                            <i class="fas fa-check"></i> Settle
+                        </button>
+                    </div>`).join('');
+
+                // Delegated event handlers (XSS fix)
+                list.onclick = (e) => {
+                    const row = e.target.closest('.transaction-row');
+                    const settleBtn = e.target.closest('.btn-settle');
+                    if (settleBtn) {
+                        e.stopPropagation();
+                        openSettleDues(decodeURIComponent(settleBtn.dataset.customerName));
+                    } else if (row) {
+                        openCustomerDetail(decodeURIComponent(row.dataset.customerName));
+                    }
+                };
+            } else {
+                list.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle"></i><h3>Failed to load</h3></div>`;
+            }
+        }
+
+        window.openCustomerDetail = async (name) => {
+            currentCustomer = name;
+            const modal = document.getElementById('customer-detail-modal');
+            const nameEl = document.getElementById('detail-customer-name');
+            const totalEl = document.getElementById('detail-total-due');
+            const txEl = document.getElementById('detail-transactions');
+
+            modal.classList.remove('hidden');
+            if (nameEl) nameEl.innerHTML = `<i class="fas fa-user" style="color:var(--accent-purple)"></i> ${app.esc(name)}`;
+            if (txEl) txEl.innerHTML = `<div class="loading-state"><div class="spinner" style="margin:0 auto;border-top-color:var(--accent-purple);"></div></div>`;
+
+            const res = await app.api(`/dues/${encodeURIComponent(name)}`);
+            if (res && !res.error) {
+                if (totalEl) totalEl.textContent = '₹' + parseFloat(res.total_due || 0).toLocaleString('en-IN');
+                if (txEl) {
+                    if (!res.transactions || res.transactions.length === 0) {
+                        txEl.innerHTML = `<div class="empty-state"><p>No transactions found</p></div>`;
+                    } else {
+                        txEl.innerHTML = `
+                            <div class="table-wrap">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Item</th>
+                                            <th>Qty</th>
+                                            <th>Amount</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${res.transactions.map(tx => `
+                                            <tr>
+                                                <td>${app.formatDate(tx.date_time)}</td>
+                                                <td>${app.esc(tx.item_name || '')}</td>
+                                                <td>${tx.quantity || 1}</td>
+                                                <td style="color:var(--status-error);font-weight:600;">₹${parseFloat(tx.total_price||0).toLocaleString('en-IN')}</td>
+                                            </tr>`).join('')}
+                                    </tbody>
+                                </table>
+                            </div>`;
+                    }
+                }
+            } else {
+                if (txEl) txEl.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>Failed to load transactions</p></div>`;
+            }
+        };
+
+        window.closeDetailModal = () => {
+            document.getElementById('customer-detail-modal').classList.add('hidden');
+            currentCustomer = null;
+        };
+
+        window.openSettleDues = (name) => {
+            if (name) currentCustomer = name;
+            if (!currentCustomer) return;
+            document.getElementById('settle-modal').classList.remove('hidden');
+            document.getElementById('settle-customer').textContent = currentCustomer;
+            document.getElementById('settle-amount').value = '';
+        };
+
+        window.closeSettleModal = () => {
+            document.getElementById('settle-modal').classList.add('hidden');
+        };
+
+        window.submitSettle = async () => {
+            const amount = parseFloat(document.getElementById('settle-amount').value) || 0;
+            const res = await app.api('/dues/settle', 'POST', {
+                customer_name: currentCustomer,
+                amount: amount || undefined
+            });
+            if (res && !res.error) {
+                app.showToast(res.message || 'Dues settled!', 'success');
+                closeSettleModal();
+                closeDetailModal();
+                loadCustomers();
+            } else {
+                app.showToast('Failed to settle dues', 'error');
+            }
+        };
+
+        window.shareStatement = async () => {
+            if (!currentCustomer) return;
+            const phone = localStorage.getItem(`phone_${currentCustomer}`) || '';
+            const shop = localStorage.getItem('shop_name') || 'My Store';
+            // Fetch statement with auth header to avoid token leak
+            try {
+                const res = await fetch(`/dues/${encodeURIComponent(currentCustomer)}/statement?phone=${encodeURIComponent(phone)}&shop=${encodeURIComponent(shop)}`, {
+                    headers: { 'Authorization': `Bearer ${app.session?.access_token || ''}` }
+                });
+                if (res.ok) {
+                    const html = await res.text();
+                    const win = window.open('', '_blank');
+                    win.document.write(html);
+                    win.document.close();
+                } else {
+                    app.showToast('Failed to load statement', 'error');
+                }
+            } catch (e) {
+                app.showToast('Failed to load statement', 'error');
+            }
+        };
+
+        // Expose loadCustomers to window for inline onclick handlers
+        window.loadCustomers = loadCustomers;
+
+        window.onLogin = () => loadCustomers();
+        await app.initApp();
+    </script>
+</body>
+</html>

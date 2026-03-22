@@ -44,9 +44,28 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 
 @app.get("/")
 async def root():
-    return RedirectResponse(url="/static/index.html")
+    return RedirectResponse(url="/dashboard.html")
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# Page routes — serve HTML pages directly
+_PAGES = ["dashboard.html", "billing.html", "inventory.html", "customers.html", "reports.html", "settings.html"]
+
+@app.get("/dashboard.html")
+@app.get("/billing.html")
+@app.get("/inventory.html")
+@app.get("/customers.html")
+@app.get("/reports.html")
+@app.get("/settings.html")
+async def serve_page(request: Request):
+    """Serve any of the main app pages."""
+    from fastapi.responses import FileResponse
+    path = request.url.path.lstrip("/")
+    return FileResponse(f"static/{path}")
+
+@app.get("/index.html")
+async def serve_index():
+    return RedirectResponse(url="/dashboard.html")
 
 @app.get("/config")
 async def get_config():
@@ -589,25 +608,46 @@ def parse_message_locally(message, available_items, custom_aliases=None):
             detected_mode = 'Udhaar'
             break
             
+    # Build the keyword list for regex (pipe-separated for alternation)
+    credit_kws = 'udhaar|udhar|udhhaar|credit|khata|khate|khatte|uthaar|uthar|oodhar|oodaar|udhaari|udhari'
+    hindi_markers = 'ko|ka|ki|ke|se|kaa|kee|kai|kha|kh'
+
+    # Order MATTERS: most specific patterns first
+    # The key insight: greedy \s+ means the space BEFORE udhaar is consumed by \s+,
+    # so lazy [A-Za-z]+? tries minimum chars. After \s+ matches "anuj ", \d+ looks for
+    # "udhaar" starting at position after "anuj ". Since "udhaar" IS there, match succeeds.
     customer_patterns = [
-        r'(?:to|for)\s+([A-Za-z]+?)\s+(?:on|udhaar|udhar|credit|khata|khatte)',
-        r'([A-Za-z]+?)\s+(?:ko|ka|ki|ke|se)(?:\s|$)',
-        r'(?:to|for)\s+([A-Za-z]+?)(?:\s|$)',
-        r'([A-Za-z]+?)\s+(?:udhaar|udhar|credit|khata|khatte)',
+        # P1: "on/for ANUJ udhaar" — name directly before credit keyword
+        rf'(?:on|for)\s+([A-Za-z]+?)\s+(?:{credit_kws})',
+        # P2: "ANUJ ko udhaar" / "ANUJ ka udhaar" — Hindi: name + marker + credit
+        rf'([A-Za-z]+?)\s+(?:{hindi_markers})\s+(?:{credit_kws})',
+        # P3: "ANUJ udhaar" — name directly before credit (minimal chars tried first)
+        rf'([A-Za-z]+?)\s+(?:{credit_kws})',
+        # P4: "for/on ANUJ on" — "for anuj on" style (no credit kw after on, cleaned later)
+        r'(?:to|for)\s+([A-Za-z]+?)\s+on',
+        # P5: "ke naam se udhaar" — "anuj ke naam se udhaar"
+        r'(?:ke\s+naam\s+se|naam)\s+([A-Za-z]+?)\s+(?:on\s+)?(?:' + credit_kws + ')',
+        # P6: "ANUJ ke udhaar pe" — "anuj ke udhaar pe" (Hindi with pe)
+        r'([A-Za-z]+?)\s+(?:ke|kha)\s+(?:' + credit_kws + r')\s+(?:pe|par|on)',
+        # P7: "someone on someone else udhaar" — "on anuj on ram udhaar"
+        r'(?:on|for)\s+([A-Za-z]+?)\s+(?:on|for)\s+([A-Za-z]+?)\s+(?:' + credit_kws + ')',
     ]
     
     original_text = text
+    non_names = {'on', 'the', 'and', 'sold', 'sell', 'sale', 'give', 'some', 'also', 'more', 'cash', 'udhaar', 'milk', 'bread', 'sugar', 'rice', 'oil', 'eggs', 'butter', 'cheese', 'paneer', 'curd', 'atta', 'dal', 'tea', 'coffee', 'ghee', 'soap', 'chips', 'noodles', 'biscuits', 'toothpaste', 'detergent', 'flour', 'salt', 'wheat', 'maida', 'suji', 'poha', 'jeera', 'cumin', 'khatte', 'khata', 'ke', 'ka', 'ki', 'ko', 'se', 'pe', 'naam'}
     for pat in customer_patterns:
         m = re.search(pat, original_text, re.IGNORECASE)
         if m:
-            candidate = m.group(1).strip().title()
-            non_names = {'on', 'the', 'and', 'sold', 'sell', 'sale', 'give', 'some', 'also', 'more', 'cash', 'udhaar', 'milk', 'bread', 'sugar', 'rice', 'oil', 'eggs', 'butter', 'cheese', 'paneer', 'curd', 'atta', 'dal', 'tea', 'coffee', 'ghee', 'soap', 'chips', 'noodles', 'biscuits', 'toothpaste', 'detergent', 'flour', 'salt', 'wheat', 'maida', 'suji', 'poha', 'jeera', 'cumin', 'khatte', 'khata'}
+            # P7 has two capture groups: on ANUJ on RAM udhaar → use group(2) as actual customer
+            group_idx = 2 if m.lastindex == 2 else 1
+            candidate = m.group(group_idx).strip().title()
             if candidate.lower() not in non_names and len(candidate) >= 2 and not candidate.replace('.','').isdigit():
                 detected_customer = candidate
                 break
 
-    # Clean text
-    text = re.sub(r'\b(udhaar|udhar|credit|khata|khate|khatte|udhaari)\b', ' ', text, flags=re.IGNORECASE)
+    # Clean text — strip all credit keywords
+    text = re.sub(r'\b(udhaar|udhar|udhhaar|credit|khata|khate|khatte|udhaari|udhari|uthaar|uthar|oodhar|oodaar)\b', ' ', text, flags=re.IGNORECASE)
+    text = re.sub(r'\b(ke\s+naam\s+se|naam\s+)\b', ' ', text, flags=re.IGNORECASE)
     if detected_customer != 'Walk-in':
         text = re.sub(rf'\b{re.escape(detected_customer)}\b', ' ', text, flags=re.IGNORECASE)
     
@@ -1532,21 +1572,82 @@ async def get_date_sales(date: str, auth: tuple = Depends(get_user_client)):
             created = s.get("created_at", "")
             if created:
                 order_keys.add(created[:19])
-        
+
+        # Group sales into transactions
+        from collections import OrderedDict
+        orders = OrderedDict()
+        legacy_counter = 0
+
+        for s in reversed(sales):
+            created = s.get("created_at", "")
+            oid = s.get("transaction_id") or (created[:19] if created else None)
+            if not oid:
+                legacy_counter += 1
+                oid = f"LEGACY_{legacy_counter}"
+
+            if oid not in orders:
+                time_str = ""
+                if created:
+                    try:
+                        dt = datetime.fromisoformat(created.replace("Z", "+00:00"))
+                        ist = dt + timedelta(hours=5, minutes=30)
+                        time_str = ist.strftime("%I:%M %p")
+                    except Exception:
+                        pass
+
+                orders[oid] = {
+                    "items": [],
+                    "detailed_items": [],
+                    "total_price": 0,
+                    "order_id": oid,
+                    "time": time_str,
+                    "payment_mode": s.get("payment_mode", "Cash"),
+                    "customer_name": s.get("customer_name", "Walk-in")
+                }
+
+            qty = s.get('quantity', 0)
+            name = s.get('item_name', '?')
+            total = s.get('total_price', 0)
+            unit_price = total / qty if qty > 0 else 0
+
+            orders[oid]["items"].append(f"{qty} {name}")
+            orders[oid]["detailed_items"].append({
+                "qty": qty, "name": name, "unit_price": round(unit_price, 2), "total": round(total, 2)
+            })
+            orders[oid]["total_price"] += total
+
+        transactions = []
+        order_num = len(orders)
+        for oid, data in orders.items():
+            # Sum total units from all line items
+            total_qty = round(sum(item.get("qty", 1) for item in data["detailed_items"]), 2)
+            transactions.append({
+                "order": f"{order_num:04d}",
+                "item": ", ".join(data["items"]),
+                "detailed_items": data["detailed_items"],
+                "qty": total_qty,
+                "price": round(data["total_price"], 2),
+                "time": data["time"],
+                "payment_mode": data.get("payment_mode", "Cash"),
+                "customer_name": data.get("customer_name", "Walk-in")
+            })
+            order_num -= 1
+
         return {
             "date": date,
             "display_date": target_date.strftime("%d %b %Y"),
             "revenue": round(total_revenue, 2),
             "profit": round(total_profit, 2),
-            "orders": len(order_keys),
+            "orders": len(orders),
             "quantity": round(total_quantity, 2),
-            "items_sold": [{"name": k, "qty": round(v, 2)} for k, v in item_summary.items()]
+            "items_sold": [{"name": k, "qty": round(v, 2)} for k, v in item_summary.items()],
+            "transactions": transactions
         }
     except Exception as e:
         import traceback
         traceback.print_exc()
         print(f"Date Sales Error: {e}")
-        return {"date": date, "display_date": date, "revenue": 0, "orders": 0, "quantity": 0, "items_sold": []}
+        return {"date": date, "display_date": date, "revenue": 0, "orders": 0, "quantity": 0, "items_sold": [], "transactions": []}
 
 @app.get("/sales/year")
 async def get_yearly_sales(year: int = None, auth: tuple = Depends(get_user_client)):
@@ -2261,12 +2362,13 @@ async def get_customer_statement(customer_name: str, authorization: str = "", ph
 # ============================================================================
 
 
-async def _seed_demo_inventory(client: Client, user_id: str):
-    """Seeds demo inventory if empty."""
+async def _seed_demo_inventory_async(user_id: str):
+    """Async version that creates its own client."""
+    client: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
     try:
         res = client.table("inventory").select("id", count="exact").eq("user_id", user_id).limit(1).execute()
         count = res.count if res.count is not None else len(res.data)
-        
+
         if count == 0:
             print("[demo] Seeding demo inventory...")
             now = datetime.now()
@@ -2277,7 +2379,33 @@ async def _seed_demo_inventory(client: Client, user_id: str):
                 {"item_name": "Aashirvaad Atta",   "stock_quantity": 10,  "price": 450.0, "cost_price": 400.0, "expiry_date": (now + timedelta(days=60)).strftime('%Y-%m-%d'),  "user_id": user_id},
                 {"item_name": "Britannia Bread",   "stock_quantity": 20,  "price": 50.0,  "cost_price": 40.0,  "expiry_date": (now + timedelta(days=3)).strftime('%Y-%m-%d'),   "user_id": user_id},
             ]
-            client.table("inventory").insert(items).execute()
+            # Use upsert to prevent duplicates - conflict on (user_id, item_name)
+            client.table("inventory").upsert(items, on_conflict="user_id,item_name").execute()
+            print("[demo] ✅ Demo inventory seeded with 5 items!")
+        else:
+            print(f"[demo] Demo inventory already has {count} items — skipping seed.")
+    except Exception as e:
+        print(f"[demo] Inventory seed error: {e}")
+
+
+async def _seed_demo_inventory(client: Client, user_id: str):
+    """Seeds demo inventory if empty."""
+    try:
+        res = client.table("inventory").select("id", count="exact").eq("user_id", user_id).limit(1).execute()
+        count = res.count if res.count is not None else len(res.data)
+
+        if count == 0:
+            print("[demo] Seeding demo inventory...")
+            now = datetime.now()
+            items = [
+                {"item_name": "Amul Milk",        "stock_quantity": 50,  "price": 30.0,  "cost_price": 25.0,  "expiry_date": (now + timedelta(days=5)).strftime('%Y-%m-%d'),   "user_id": user_id},
+                {"item_name": "Maggi",             "stock_quantity": 100, "price": 14.0,  "cost_price": 11.0,  "expiry_date": (now + timedelta(days=180)).strftime('%Y-%m-%d'), "user_id": user_id},
+                {"item_name": "Coca Cola",         "stock_quantity": 25,  "price": 40.0,  "cost_price": 32.0,  "expiry_date": (now + timedelta(days=365)).strftime('%Y-%m-%d'), "user_id": user_id},
+                {"item_name": "Aashirvaad Atta",   "stock_quantity": 10,  "price": 450.0, "cost_price": 400.0, "expiry_date": (now + timedelta(days=60)).strftime('%Y-%m-%d'),  "user_id": user_id},
+                {"item_name": "Britannia Bread",   "stock_quantity": 20,  "price": 50.0,  "cost_price": 40.0,  "expiry_date": (now + timedelta(days=3)).strftime('%Y-%m-%d'),   "user_id": user_id},
+            ]
+            # Use upsert to prevent duplicates - conflict on (user_id, item_name)
+            client.table("inventory").upsert(items, on_conflict="user_id,item_name").execute()
             print("[demo] ✅ Demo inventory seeded with 5 items!")
         else:
             print(f"[demo] Demo inventory already has {count} items — skipping seed.")
@@ -2289,9 +2417,9 @@ async def _seed_demo_inventory(client: Client, user_id: str):
 async def startup_event():
     """Seeds demo inventory at startup using anon client — no Supabase Auth needed."""
     print("--- Demo Mode Setup (No Auth Required) ---")
-    client: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-    await _seed_demo_inventory(client, GUEST_USER_ID)
-    print("[demo] ✅ Ready! Demo uses shared GUEST_USER_ID, logged-in users get isolated data.")
+    # Run seed in background to avoid blocking server startup
+    asyncio.create_task(_seed_demo_inventory_async(GUEST_USER_ID))
+    print("[demo] ✅ Server ready! Demo uses shared GUEST_USER_ID, logged-in users get isolated data.")
 
 
 @app.post("/get-guest-token")

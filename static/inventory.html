@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventory - AutoBill Buddy</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: { extend: { fontFamily: { sans: ['Plus Jakarta Sans', 'sans-serif'] } } }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/variables.css">
+    <link rel="stylesheet" href="/static/css/components.css">
+    <style>
+        /* Inventory table styles */
+        .inv-table-wrap { background: var(--card-bg); border-radius: 14px; overflow: hidden; border: 1px solid var(--border-subtle); }
+        .inv-table { width: 100%; border-collapse: collapse; }
+        .inv-table thead tr { background: var(--bg-secondary); }
+        .inv-table thead th {
+            padding: 12px 16px; font-size: 11px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.06em;
+            color: var(--text-muted); text-align: left;
+            border-bottom: 1px solid var(--border-subtle); white-space: nowrap;
+        }
+        .inv-table tbody tr {
+            border-bottom: 1px solid var(--border-subtle);
+            transition: background 0.12s;
+        }
+        .inv-table tbody tr:last-child { border-bottom: none; }
+        .inv-table tbody tr:hover { background: var(--bg-secondary); }
+        .inv-table tbody td { padding: 13px 16px; font-size: 14px; vertical-align: middle; }
+        .inv-table .col-product { font-weight: 600; color: var(--text-heading); }
+        .inv-table .col-sku { font-size: 12px; color: var(--text-muted); font-family: monospace; }
+        .inv-table .col-category { font-size: 12px; }
+        .inv-table .col-price { font-weight: 600; color: var(--text-heading); }
+        .inv-table .col-stock { font-weight: 600; }
+        .inv-table .col-actions { text-align: right; white-space: nowrap; }
+        .inv-table .stock-pill {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600;
+        }
+        .inv-table .stock-pill.green { background: rgba(34,197,94,0.12); color: #22C55E; }
+        .inv-table .stock-pill.orange { background: rgba(245,158,11,0.12); color: #F59E0B; }
+        .inv-table .stock-pill.red { background: rgba(239,68,68,0.12); color: #EF4444; }
+        .inv-table .stock-pill.out { background: rgba(107,114,128,0.12); color: #9CA3AF; }
+        .inv-table .cat-pill {
+            display: inline-block; padding: 2px 8px; border-radius: 6px;
+            font-size: 11px; font-weight: 600; background: var(--bg-secondary);
+            color: var(--text-muted); border: 1px solid var(--border-subtle);
+        }
+        .inv-table .action-btn {
+            width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--border-subtle);
+            background: transparent; cursor: pointer; display: inline-flex; align-items: center;
+            justify-content: center; font-size: 12px; transition: all 0.15s; margin-left: 4px;
+            color: var(--text-muted);
+        }
+        .inv-table .action-btn:hover { background: var(--bg-secondary); border-color: var(--border-strong); }
+        .inv-table .action-btn.delete:hover { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); color: #EF4444; }
+        .inv-table .action-btn.stock:hover { background: rgba(34,197,94,0.1); border-color: rgba(34,197,94,0.3); color: #22C55E; }
+
+        /* Filter pills */
+        .filter-pills { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+        .filter-pill {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600;
+            cursor: pointer; border: 1.5px solid var(--border-subtle);
+            background: var(--card-bg); color: var(--text-muted);
+            transition: all 0.15s; white-space: nowrap;
+        }
+        .filter-pill:hover { border-color: var(--sidebar-accent); color: var(--sidebar-accent); }
+        .filter-pill.active { background: var(--sidebar-accent); border-color: var(--sidebar-accent); color: #fff; }
+        .filter-pill .count { background: rgba(255,255,255,0.2); padding: 1px 6px; border-radius: 10px; font-size: 11px; }
+        .filter-pill:not(.active) .count { background: var(--bg-secondary); color: var(--text-muted); }
+    </style>
+</head>
+<body>
+    <div id="sidebar-placeholder"></div>
+
+    <div class="main-content">
+        <!-- Page Header -->
+        <header class="page-header">
+            <div class="page-header-left">
+                <h1 class="page-title">Inventory</h1>
+                <p class="page-subtitle" id="inv-count">Loading...</p>
+            </div>
+            <div class="page-header-right">
+                <div class="search-bar" style="min-width:220px;">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="search-input" placeholder="Search items..." oninput="onSearch()">
+                </div>
+                <button id="theme-toggle-btn" class="btn-icon btn-outline"><i class="fas fa-moon"></i></button>
+                <button class="btn btn-outline btn-sm" onclick="importCSV()" style="gap:6px;">
+                    <i class="fas fa-file-import"></i> Import CSV
+                </button>
+                <button class="btn btn-primary btn-sm" onclick="openAddItem()">
+                    <i class="fas fa-plus"></i> Add Item
+                </button>
+            </div>
+        </header>
+
+        <!-- Page Content -->
+        <div class="page-content" style="padding-top:0;">
+
+            <!-- Filter Pills -->
+            <div class="filter-pills" id="filter-pills" style="margin-bottom:16px;"></div>
+
+            <!-- Inventory Table -->
+            <div class="inv-table-wrap">
+                <div id="inventory-table-container">
+                    <div style="padding:40px;text-align:center;color:var(--text-muted);">
+                        <i class="fas fa-spinner fa-spin" style="font-size:24px;margin-bottom:12px;display:block;"></i>
+                        Loading inventory...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Item Modal -->
+    <div id="add-item-modal" class="modal-overlay hidden" style="z-index:100;">
+        <div class="modal-box" style="max-width:500px;">
+            <div class="modal-header">
+                <h3 class="modal-title" id="add-item-title">
+                    <i class="fas fa-plus-circle" style="color:var(--accent-green)"></i> Add Item
+                </h3>
+                <button class="modal-close" onclick="closeAddItem()"><i class="fas fa-times"></i></button>
+            </div>
+            <div style="display:grid;gap:14px;">
+                <div>
+                    <label style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:6px;">Item Name *</label>
+                    <input type="text" id="ai-name" class="input" placeholder="e.g. Amul Milk 500ml" style="width:100%;">
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <div>
+                        <label style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:6px;">SKU</label>
+                        <input type="text" id="ai-sku" class="input" placeholder="SKU-001" style="width:100%;">
+                    </div>
+                    <div>
+                        <label style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:6px;">Category</label>
+                        <select id="ai-category" class="input" style="width:100%;">
+                            <option value="">Select category</option>
+                            <option value="Grocery">Grocery</option>
+                            <option value="Dairy">Dairy</option>
+                            <option value="Personal Care">Personal Care</option>
+                            <option value="Snacks">Snacks</option>
+                            <option value="Beverages">Beverages</option>
+                            <option value="Stationery">Stationery</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <div>
+                        <label style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:6px;">Stock Qty *</label>
+                        <input type="number" id="ai-qty" class="input" placeholder="50" min="0" style="width:100%;">
+                    </div>
+                    <div>
+                        <label style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:6px;">Selling Price (₹) *</label>
+                        <input type="number" id="ai-price" class="input" placeholder="60" min="0" step="0.5" style="width:100%;">
+                    </div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <div>
+                        <label style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:6px;">Cost Price (₹)</label>
+                        <input type="number" id="ai-cost" class="input" placeholder="45" min="0" step="0.5" style="width:100%;">
+                    </div>
+                    <div>
+                        <label style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:6px;">Expiry Date</label>
+                        <input type="date" id="ai-expiry" class="input" style="width:100%;">
+                    </div>
+                </div>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:20px;">
+                <button class="btn btn-outline" style="flex:1" onclick="closeAddItem()">Cancel</button>
+                <button id="ai-submit" class="btn btn-primary" style="flex:1" onclick="submitAddItem()">
+                    <i class="fas fa-plus"></i> Add Item
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Stock Modal -->
+    <div id="add-stock-modal" class="modal-overlay hidden" style="z-index:100;">
+        <div class="modal-box" style="max-width:400px;">
+            <div class="modal-header">
+                <h3 class="modal-title" id="add-stock-title">
+                    <i class="fas fa-boxes-stacked" style="color:var(--accent-green)"></i> Add Stock
+                </h3>
+                <button class="modal-close" onclick="closeAddStock()"><i class="fas fa-times"></i></button>
+            </div>
+            <div style="margin-bottom:14px;">
+                <label style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:6px;">Quantity to Add</label>
+                <input type="number" id="as-qty" class="input" placeholder="e.g. 50" min="1" style="width:100%;" autofocus>
+            </div>
+            <div style="margin-bottom:14px;">
+                <label style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:6px;">Expiry Date</label>
+                <input type="date" id="as-expiry" class="input" style="width:100%;">
+            </div>
+            <div style="display:flex;gap:10px;">
+                <button class="btn btn-outline" style="flex:1" onclick="closeAddStock()">Cancel</button>
+                <button class="btn btn-primary" style="flex:1" onclick="submitAddStock()">
+                    <i class="fas fa-plus"></i> Add Stock
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import CSV Modal -->
+    <div id="import-modal" class="modal-overlay hidden" style="z-index:100;">
+        <div class="modal-box" style="max-width:500px;">
+            <div class="modal-header">
+                <h3 class="modal-title">
+                    <i class="fas fa-file-import" style="color:var(--accent-blue)"></i> Import CSV
+                </h3>
+                <button class="modal-close" onclick="closeImport()"><i class="fas fa-times"></i></button>
+            </div>
+            <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">
+                Upload a CSV file with columns: <code style="background:var(--bg-secondary);padding:2px 6px;border-radius:4px;font-size:12px;">name, quantity, price, cost_price, category, sku</code>
+            </p>
+            <div style="border:2px dashed var(--border-subtle);border-radius:12px;padding:30px;text-align:center;margin-bottom:16px;cursor:pointer;" id="csv-drop-zone" onclick="document.getElementById('csv-file-input').click()" ondragover="event.preventDefault();this.style.borderColor='var(--sidebar-accent)'" ondragleave="this.style.borderColor='var(--border-subtle)'" ondrop="handleCSVDrop(event)">
+                <i class="fas fa-cloud-upload-alt" style="font-size:32px;color:var(--text-muted);margin-bottom:8px;display:block;"></i>
+                <p style="font-size:14px;color:var(--text-muted);margin:0;">Drop CSV here or click to browse</p>
+                <input type="file" id="csv-file-input" accept=".csv" style="display:none;" onchange="handleCSVFile(this)">
+            </div>
+            <div style="display:flex;gap:10px;">
+                <button class="btn btn-outline" style="flex:1" onclick="closeImport()">Cancel</button>
+                <button class="btn btn-primary" style="flex:1" onclick="downloadCSVTemplate()">
+                    <i class="fas fa-download"></i> Download Template
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Inline Prompt Modal -->
+    <div id="inline-prompt-modal" class="modal-overlay hidden" style="z-index:200;">
+        <div class="modal-box" style="max-width:400px;">
+            <div class="modal-header">
+                <h3 class="modal-title" id="inline-prompt-title">Edit</h3>
+                <button class="modal-close" onclick="app.closeInlinePrompt()"><i class="fas fa-times"></i></button>
+            </div>
+            <input type="text" id="inline-prompt-input" class="input" style="margin-bottom:16px;">
+            <div style="display:flex;gap:10px;">
+                <button class="btn btn-outline" style="flex:1" onclick="app.closeInlinePrompt()">Cancel</button>
+                <button id="inline-prompt-submit" class="btn btn-primary" style="flex:1">Submit</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Load app.js first so window.app is available
+        await import('/static/js/app.js');
+
+        const resp = await fetch('/static/components/sidebar.html');
+        document.getElementById('sidebar-placeholder').outerHTML = await resp.text();
+        app.initTheme();
+        app.initSidebar();
+
+        let allItems = [];
+        let currentFilter = 'all';
+        let editingItem = null;
+        let addingStockItem = null;
+        const _debouncedSearch = debounce(() => renderInventory(), 250);
+
+        function debounce(fn, delay = 300) {
+            let timer;
+            return (...args) => {
+                clearTimeout(timer);
+                timer = setTimeout(() => fn(...args), delay);
+            };
+        }
+
+        // Category metadata
+        const CATEGORY_COLORS = {
+            'Grocery': { bg: 'rgba(245,158,11,0.12)', color: '#F59E0B' },
+            'Dairy': { bg: 'rgba(96,165,250,0.12)', color: '#3B82F6' },
+            'Personal Care': { bg: 'rgba(236,72,153,0.12)', color: '#EC4899' },
+            'Snacks': { bg: 'rgba(34,197,94,0.12)', color: '#22C55E' },
+            'Beverages': { bg: 'rgba(139,92,246,0.12)', color: '#8B5CF6' },
+            'Stationery': { bg: 'rgba(14,165,233,0.12)', color: '#0EA5E9' },
+            'Other': { bg: 'rgba(156,163,175,0.12)', color: '#9CA3AF' },
+        };
+
+        function getCatStyle(category) {
+            const c = CATEGORY_COLORS[category] || CATEGORY_COLORS['Other'];
+            return `background:${c.bg};color:${c.color};`;
+        }
+
+        // Get item metadata (localStorage)
+        function getItemMeta(name) {
+            try {
+                const meta = JSON.parse(localStorage.getItem('inv_meta') || '{}');
+                return meta[name] || {};
+            } catch { return {}; }
+        }
+
+        function saveItemMeta(name, data) {
+            try {
+                const meta = JSON.parse(localStorage.getItem('inv_meta') || '{}');
+                meta[name] = { ...(meta[name] || {}), ...data };
+                localStorage.setItem('inv_meta', JSON.stringify(meta));
+            } catch {}
+        }
+
+        function generateSKU(name) {
+            const prefix = name.substring(0, 3).toUpperCase().replace(/[^A-Z]/g, 'X');
+            const num = Math.floor(100 + Math.random() * 900);
+            return `SKU-${prefix}${num}`;
+        }
+
+        async function loadInventory() {
+            const container = document.getElementById('inventory-table-container');
+            container.innerHTML = `<div style="padding:40px;text-align:center;color:var(--text-muted);"><i class="fas fa-spinner fa-spin" style="font-size:24px;margin-bottom:12px;display:block;"></i>Loading...</div>`;
+
+            const items = await app.api('/inventory');
+            if (items && !items.error) {
+                allItems = items;
+                const totalStock = items.reduce((s, i) => s + (i.stock_quantity || 0), 0);
+                document.getElementById('inv-count').textContent = `${items.length} items across ${totalStock.toLocaleString('en-IN')} units in stock`;
+                buildFilterPills();
+                renderInventory();
+            } else {
+                container.innerHTML = `<div style="padding:40px;text-align:center;"><i class="fas fa-exclamation-triangle" style="font-size:32px;color:var(--status-warning);margin-bottom:12px;display:block;"></i><p style="color:var(--text-muted);">Failed to load inventory.</p></div>`;
+            }
+        }
+
+        function buildFilterPills() {
+            const categories = {};
+            let lowCount = 0;
+            allItems.forEach(i => {
+                const meta = getItemMeta(i.item_name);
+                const cat = meta.category || '';
+                if (cat) categories[cat] = (categories[cat] || 0) + 1;
+                if ((i.stock_quantity || 0) <= 10) lowCount++;
+            });
+
+            const lowCount2 = allItems.filter(i => (i.stock_quantity || 0) <= 10).length;
+            let html = '';
+            html += `<button class="filter-pill ${currentFilter === 'all' ? 'active' : ''}" onclick="setFilter('all')">All <span class="count">${allItems.length}</span></button>`;
+            Object.keys(categories).sort().forEach(cat => {
+                html += `<button class="filter-pill ${currentFilter === cat ? 'active' : ''}" onclick="setFilter('${app.esc(cat)}')">${app.esc(cat)} <span class="count">${categories[cat]}</span></button>`;
+            });
+            html += `<button class="filter-pill ${currentFilter === 'low' ? 'active' : ''}" onclick="setFilter('low')" style="${currentFilter === 'low' ? '' : 'color:var(--status-warning);border-color:var(--status-warning);'}"><i class="fas fa-exclamation-triangle"></i> Low Stock <span class="count">${lowCount2}</span></button>`;
+
+            document.getElementById('filter-pills').innerHTML = html;
+        }
+
+        function renderInventory() {
+            const container = document.getElementById('inventory-table-container');
+            let items = allItems;
+
+            // Filter by category or low-stock
+            if (currentFilter === 'low') {
+                items = items.filter(i => (i.stock_quantity || 0) <= 10);
+            } else if (currentFilter !== 'all') {
+                items = items.filter(i => (getItemMeta(i.item_name).category || '') === currentFilter);
+            }
+
+            // Search
+            const q = (document.getElementById('search-input')?.value || '').toLowerCase().trim();
+            if (q) {
+                items = items.filter(i => {
+                    const meta = getItemMeta(i.item_name);
+                    return (i.item_name || '').toLowerCase().includes(q) ||
+                           (meta.sku || '').toLowerCase().includes(q) ||
+                           (meta.category || '').toLowerCase().includes(q);
+                });
+            }
+
+            if (items.length === 0) {
+                container.innerHTML = `<div style="padding:40px;text-align:center;"><i class="fas fa-boxes" style="font-size:32px;color:var(--text-muted);margin-bottom:12px;display:block;"></i><h3 style="color:var(--text-heading);margin:0 0 6px;font-size:16px;font-weight:700;">No items found</h3><p style="color:var(--text-muted);font-size:13px;margin:0;">Try adjusting filters or add new items</p></div>`;
+                return;
+            }
+
+            container.innerHTML = `
+            <table class="inv-table">
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>SKU</th>
+                        <th>Category</th>
+                        <th>Price</th>
+                        <th>Status</th>
+                        <th style="text-align:center;">Stock</th>
+                        <th style="text-align:right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${items.map((item, idx) => {
+                        const qty = item.stock_quantity || 0;
+                        const meta = getItemMeta(item.item_name);
+                        let pillClass, pillLabel, pillIcon;
+                        if (qty === 0) { pillClass = 'out'; pillLabel = 'Out of Stock'; pillIcon = 'fa-exclamation-circle'; }
+                        else if (qty <= 5) { pillClass = 'red'; pillLabel = 'Critical'; pillIcon = 'fa-triangle-exclamation'; }
+                        else if (qty <= 10) { pillClass = 'orange'; pillLabel = 'Low Stock'; pillIcon = 'fa-exclamation-triangle'; }
+                        else { pillClass = 'green'; pillLabel = 'In Stock'; pillIcon = 'fa-check-circle'; }
+
+                        const margin = item.price && item.cost_price ? (item.price - item.cost_price) : null;
+                        return `
+                        <tr data-name="${app.esc(item.item_name)}">
+                            <td class="col-product">
+                                <div style="display:flex;align-items:center;gap:8px;">
+                                    <div style="width:36px;height:36px;border-radius:10px;background:var(--bg-secondary);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                        <i class="fas fa-box" style="font-size:14px;color:var(--text-muted);"></i>
+                                    </div>
+                                    <div>
+                                        <div>${app.esc(item.item_name)}</div>
+                                        ${item.expiry_date ? `<div style="font-size:11px;color:var(--text-muted);margin-top:2px;"><i class="fas fa-calendar"></i> Exp: ${item.expiry_date}</div>` : ''}
+                                        ${margin !== null ? `<div style="font-size:11px;color:var(--status-success);margin-top:2px;">Margin: ₹${margin.toLocaleString('en-IN')}</div>` : ''}
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="col-sku">${meta.sku || '—'}</td>
+                            <td class="col-category">
+                                ${meta.category ? `<span class="cat-pill" style="${getCatStyle(meta.category)}">${app.esc(meta.category)}</span>` : `<span style="font-size:12px;color:var(--text-muted);">—</span>`}
+                            </td>
+                            <td class="col-price">₹${parseFloat(item.price || 0).toLocaleString('en-IN')}</td>
+                            <td><span class="stock-pill ${pillClass}"><i class="fas ${pillIcon}"></i>${pillLabel}</span></td>
+                            <td class="col-stock" style="text-align:center;">
+                                <div style="display:inline-flex;align-items:center;gap:4px;">
+                                    ${qty}
+                                    <span style="font-size:12px;color:var(--text-muted);">units</span>
+                                </div>
+                            </td>
+                            <td class="col-actions">
+                                <button class="action-btn stock" data-item-name="${encodeURIComponent(item.item_name)}" title="Add Stock">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                                <button class="action-btn" data-item-name="${encodeURIComponent(item.item_name)}" title="Edit">
+                                    <i class="fas fa-pen"></i>
+                                </button>
+                                <button class="action-btn delete" data-item-name="${encodeURIComponent(item.item_name)}" title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>`;
+                    }).join('')}
+                </tbody>
+            </table>`;
+
+            // Delegated event listeners for action buttons (XSS fix)
+            table.addEventListener('click', (e) => {
+                const btn = e.target.closest('[data-item-name]');
+                if (!btn) return;
+                const name = decodeURIComponent(btn.dataset.itemName);
+                if (btn.classList.contains('stock')) openAddStock(name);
+                else if (btn.classList.contains('delete')) deleteItem(name);
+                else openEditItem(name);
+            });
+        }
+
+        window.onSearch = () => _debouncedSearch();
+
+        window.setFilter = (f) => {
+            currentFilter = f;
+            renderInventory();
+        };
+
+        window.openAddItem = () => {
+            editingItem = null;
+            addingStockItem = null;
+            document.getElementById('add-item-title').innerHTML = `<i class="fas fa-plus-circle" style="color:var(--accent-green)"></i> Add New Item`;
+            document.getElementById('ai-name').value = '';
+            document.getElementById('ai-name').disabled = false;
+            document.getElementById('ai-sku').value = '';
+            document.getElementById('ai-category').value = '';
+            document.getElementById('ai-qty').value = '';
+            document.getElementById('ai-price').value = '';
+            document.getElementById('ai-cost').value = '';
+            document.getElementById('ai-expiry').value = '';
+            document.getElementById('ai-submit').innerHTML = '<i class="fas fa-plus"></i> Add Item';
+            document.getElementById('add-item-modal').classList.remove('hidden');
+            document.getElementById('ai-name')?.focus();
+        };
+
+        window.openEditItem = (itemName) => {
+            const item = allItems.find(i => i.item_name === itemName);
+            const meta = getItemMeta(itemName);
+            editingItem = itemName;
+            addingStockItem = null;
+            document.getElementById('add-item-title').innerHTML = `<i class="fas fa-pen" style="color:var(--accent-blue)"></i> Edit ${app.esc(itemName)}`;
+            document.getElementById('ai-name').value = itemName;
+            document.getElementById('ai-name').disabled = true;
+            document.getElementById('ai-sku').value = meta.sku || '';
+            document.getElementById('ai-category').value = meta.category || '';
+            document.getElementById('ai-qty').value = item?.stock_quantity || '';
+            document.getElementById('ai-price').value = item?.price || '';
+            document.getElementById('ai-cost').value = item?.cost_price || '';
+            document.getElementById('ai-expiry').value = item?.expiry_date || '';
+            document.getElementById('ai-submit').innerHTML = '<i class="fas fa-save"></i> Save Changes';
+            document.getElementById('add-item-modal').classList.remove('hidden');
+        };
+
+        window.closeAddItem = () => {
+            document.getElementById('add-item-modal').classList.add('hidden');
+            editingItem = null;
+        };
+
+        window.submitAddItem = async () => {
+            const name = document.getElementById('ai-name').value.trim();
+            const sku = document.getElementById('ai-sku').value.trim();
+            const category = document.getElementById('ai-category').value;
+            const qty = parseInt(document.getElementById('ai-qty').value) || 0;
+            const price = parseFloat(document.getElementById('ai-price').value) || 0;
+            const cost = parseFloat(document.getElementById('ai-cost').value) || 0;
+            const expiry = document.getElementById('ai-expiry').value || null;
+
+            if (!name) { app.showToast('Please enter an item name', 'warning'); return; }
+            if (editingItem) {
+                // Update item metadata (price, cost, expiry) via dedicated endpoint
+                const updateData = { item_name: name };
+                if (sku) updateData.sku = sku;
+                if (category) updateData.category = category;
+                if (price > 0) updateData.price = price;
+                if (cost > 0) updateData.cost_price = cost;
+                if (expiry) updateData.expiry_date = expiry;
+
+                const res = await app.api('/update-item', 'POST', updateData);
+                app.showToast('Item updated!', 'success');
+                closeAddItem();
+                loadInventory();
+                return;
+            }
+            if (qty <= 0) { app.showToast('Please enter a valid quantity', 'warning'); return; }
+
+            const finalSku = sku || generateSKU(name);
+            saveItemMeta(name, { sku: finalSku, category: category || null });
+
+            const body = { item_name: name, quantity: qty, price, cost_price: cost };
+            if (expiry) body.expiry_date = expiry;
+
+            const res = await app.api('/add-stock', 'POST', body);
+            if (res && !res.error) {
+                app.showToast(res.message || 'Item added!', 'success');
+                closeAddItem();
+                loadInventory();
+            } else {
+                app.showToast('Failed to add item', 'error');
+            }
+        };
+
+        window.openAddStock = (itemName) => {
+            addingStockItem = itemName;
+            editingItem = null;
+            const item = allItems.find(i => i.item_name === itemName);
+            document.getElementById('add-stock-title').innerHTML = `<i class="fas fa-boxes-stacked" style="color:var(--accent-green)"></i> Add Stock to ${app.esc(itemName)}`;
+            document.getElementById('as-qty').value = '';
+            document.getElementById('as-expiry').value = '';
+            document.getElementById('add-stock-modal').classList.remove('hidden');
+            document.getElementById('as-qty')?.focus();
+        };
+
+        window.closeAddStock = () => {
+            document.getElementById('add-stock-modal').classList.add('hidden');
+            addingStockItem = null;
+        };
+
+        window.submitAddStock = async () => {
+            if (!addingStockItem) return;
+            const qty = parseInt(document.getElementById('as-qty').value) || 0;
+            const expiry = document.getElementById('as-expiry').value || null;
+            if (qty <= 0) { app.showToast('Please enter a valid quantity', 'warning'); return; }
+
+            const body = { item_name: addingStockItem, quantity: qty };
+            if (expiry) body.expiry_date = expiry;
+
+            const res = await app.api('/add-stock', 'POST', body);
+            if (res && !res.error) {
+                app.showToast(`Added ${qty} units to ${addingStockItem}`, 'success');
+                closeAddStock();
+                loadInventory();
+            } else {
+                app.showToast('Failed to add stock', 'error');
+            }
+        };
+
+        window.deleteItem = async (itemName) => {
+            const val = await app.showInlinePrompt('Delete Item', `Type "delete" to permanently remove "${itemName}"`, '', 'text');
+            if (val !== 'delete') { if (val !== null) app.showToast('Confirmation required. Type "delete" to confirm.', 'warning'); return; }
+            const res = await app.api('/delete-item', 'DELETE', { item_name: itemName });
+            if (res && !res.error) {
+                app.showToast(`${itemName} deleted`, 'success');
+                // Clear meta
+                try {
+                    const meta = JSON.parse(localStorage.getItem('inv_meta') || '{}');
+                    delete meta[itemName];
+                    localStorage.setItem('inv_meta', JSON.stringify(meta));
+                } catch {}
+                loadInventory();
+            } else {
+                app.showToast('Failed to delete item', 'error');
+            }
+        };
+
+        // CSV Import
+        window.importCSV = () => document.getElementById('import-modal').classList.remove('hidden');
+        window.closeImport = () => document.getElementById('import-modal').classList.add('hidden');
+
+        window.downloadCSVTemplate = () => {
+            const csv = 'name,quantity,price,cost_price,category,sku\nAmul Milk 500ml,50,60,45,Dairy,\nTata Salt 1kg,100,22,18,Grocery,\nParle-G Biscuit,80,10,7,Grocery,';
+            downloadBlob(new Blob([csv], { type: 'text/csv' }), 'inventory_template.csv');
+        };
+
+        window.handleCSVFile = async (input) => {
+            if (!input.files?.[0]) return;
+            await parseAndImportCSV(input.files[0]);
+        };
+
+        window.handleCSVDrop = async (e) => {
+            e.preventDefault();
+            document.getElementById('csv-drop-zone').style.borderColor = 'var(--border-subtle)';
+            const file = e.dataTransfer.files[0];
+            if (file && file.name.endsWith('.csv')) {
+                await parseAndImportCSV(file);
+            } else {
+                app.showToast('Please drop a CSV file', 'warning');
+            }
+        };
+
+        async function parseAndImportCSV(file) {
+            const text = await file.text();
+            const lines = text.trim().split('\n');
+            if (lines.length < 2) { app.showToast('CSV file is empty or invalid', 'error'); return; }
+
+            const header = lines[0].split(',').map(h => h.trim().toLowerCase());
+            let imported = 0, failed = 0;
+            closeImport();
+
+            app.showToast(`Importing ${lines.length - 1} items...`, 'info');
+
+            for (let i = 1; i < lines.length; i++) {
+                const cols = lines[i].split(',').map(c => c.trim());
+                const row = {};
+                header.forEach((h, idx) => row[h] = cols[idx] || '');
+
+                if (!row.name || !row.quantity) { failed++; continue; }
+
+                const name = row.name;
+                const qty = parseInt(row.quantity) || 0;
+                const price = parseFloat(row.price) || 0;
+                const cost = parseFloat(row.cost_price) || 0;
+                const category = row.category || '';
+                const sku = row.sku || generateSKU(name);
+
+                saveItemMeta(name, { category, sku });
+
+                if (qty > 0) {
+                    const res = await app.api('/add-stock', 'POST', { item_name: name, quantity: qty, price, cost_price: cost });
+                    if (res && !res.error) imported++;
+                    else failed++;
+                } else {
+                    imported++;
+                }
+            }
+
+            app.showToast(`Imported ${imported} items${failed > 0 ? `, ${failed} failed` : ''}`, imported > 0 ? 'success' : 'warning');
+            loadInventory();
+        }
+
+        function downloadBlob(blob, filename) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = filename; a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        window.onLogin = () => loadInventory();
+        await app.initApp();
+    </script>
+</body>
+</html>

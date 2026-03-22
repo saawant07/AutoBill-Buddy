@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reports - AutoBill Buddy</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: { extend: { fontFamily: { sans: ['Plus Jakarta Sans', 'sans-serif'] } } }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="/static/css/variables.css">
+    <link rel="stylesheet" href="/static/css/components.css">
+    <style>
+        .reports-layout {
+            display: grid;
+            grid-template-columns: 1fr 280px;
+            gap: 24px;
+            align-items: start;
+        }
+        @media (max-width: 1024px) {
+            .reports-layout {
+                grid-template-columns: 1fr;
+            }
+            .reports-sidebar {
+                order: -1;
+            }
+        }
+        .kpi-card {
+            background: var(--card-bg);
+            border-radius: var(--card-radius);
+            padding: 20px;
+            box-shadow: var(--card-shadow);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            transition: box-shadow 0.2s ease, transform 0.2s ease;
+        }
+        .kpi-card:hover {
+            box-shadow: var(--card-shadow-hover);
+            transform: translateY(-2px);
+        }
+        .kpi-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+        .kpi-icon-green { background: var(--accent-green-light); color: var(--accent-green); }
+        .kpi-icon-blue { background: var(--accent-blue-light); color: var(--accent-blue); }
+        .kpi-icon-purple { background: var(--accent-purple-light); color: var(--accent-purple); }
+        .kpi-icon-orange { background: var(--accent-orange-light); color: var(--accent-orange); }
+        .kpi-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+        .kpi-value {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--text-heading);
+            line-height: 1.1;
+        }
+        .chart-card {
+            background: var(--card-bg);
+            border-radius: var(--card-radius);
+            padding: 20px;
+            box-shadow: var(--card-shadow);
+        }
+        .chart-card-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-heading);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .chart-wrap {
+            position: relative;
+            height: 220px;
+        }
+        .recent-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .recent-table th {
+            text-align: left;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+        .recent-table td {
+            padding: 14px 16px;
+            font-size: 13px;
+            color: var(--text-heading);
+            border-bottom: 1px solid var(--border-subtle);
+        }
+        .recent-table tr:last-child td {
+            border-bottom: none;
+        }
+        .recent-table tr:hover td {
+            background: var(--input-bg);
+        }
+        .payment-pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .payment-pill-cash {
+            background: var(--accent-green-light);
+            color: var(--accent-green);
+        }
+        .payment-pill-udhaar {
+            background: var(--accent-red-light);
+            color: var(--accent-red);
+        }
+        .sidebar-card {
+            background: var(--card-bg);
+            border-radius: var(--card-radius);
+            padding: 20px;
+            box-shadow: var(--card-shadow);
+        }
+        .calendar-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+        .calendar-month {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-heading);
+        }
+        .calendar-nav {
+            display: flex;
+            gap: 6px;
+        }
+        .calendar-nav-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            border: 1px solid var(--border-subtle);
+            background: var(--card-bg);
+            color: var(--text-muted);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s ease;
+        }
+        .calendar-nav-btn:hover {
+            background: var(--input-bg);
+            color: var(--text-heading);
+        }
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+        }
+        .calendar-day-header {
+            text-align: center;
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--text-muted);
+            padding: 6px 0;
+            text-transform: uppercase;
+        }
+        .calendar-day {
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-muted);
+            position: relative;
+        }
+        .calendar-day:hover {
+            background: var(--input-bg);
+        }
+        .calendar-day.empty {
+            cursor: default;
+        }
+        .calendar-day.empty:hover {
+            background: transparent;
+        }
+        .calendar-day.has-sales {
+            background: var(--accent-green-light);
+            color: var(--accent-green);
+            font-weight: 600;
+        }
+        .calendar-day.has-sales:hover {
+            background: rgba(16, 185, 129, 0.2);
+        }
+        .calendar-day.today {
+            border: 2px solid var(--accent-orange);
+            color: var(--accent-orange);
+            font-weight: 700;
+        }
+        .calendar-day.today.has-sales {
+            color: var(--accent-orange);
+        }
+        .calendar-day.today.has-sales {
+            background: var(--accent-orange-light);
+        }
+        .calendar-day-amount {
+            font-size: 8px;
+            font-weight: 700;
+            margin-top: 1px;
+        }
+        .quick-filter-btn {
+            width: 100%;
+            padding: 10px 16px;
+            border-radius: 10px;
+            border: 1px solid var(--border-subtle);
+            background: var(--card-bg);
+            color: var(--text-heading);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.15s ease;
+            margin-bottom: 8px;
+        }
+        .quick-filter-btn:last-child {
+            margin-bottom: 0;
+        }
+        .quick-filter-btn:hover {
+            background: var(--input-bg);
+            border-color: var(--accent-green);
+            color: var(--accent-green);
+        }
+        .quick-filter-btn.active {
+            background: var(--accent-green-light);
+            border-color: var(--accent-green);
+            color: var(--accent-green);
+        }
+        .quick-filter-btn i {
+            width: 18px;
+            text-align: center;
+        }
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+        .section-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-heading);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .view-all-link {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--accent-green);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: opacity 0.15s;
+        }
+        .view-all-link:hover {
+            opacity: 0.8;
+        }
+        .table-wrap {
+            overflow-x: auto;
+            border-radius: 12px;
+            border: 1px solid var(--border-subtle);
+        }
+    </style>
+</head>
+<body>
+    <div id="sidebar-placeholder"></div>
+
+    <div class="main-content">
+        <!-- Page Header -->
+        <header class="page-header">
+            <div class="page-header-left">
+                <h1 class="page-title">Reports</h1>
+                <p class="page-subtitle" id="report-period">Loading analytics...</p>
+            </div>
+            <div class="page-header-right">
+                <button id="theme-toggle-btn" class="btn-icon btn-outline"><i class="fas fa-moon"></i></button>
+                <button class="btn btn-sm btn-outline" onclick="loadReport()">
+                    <i class="fas fa-refresh"></i> Refresh
+                </button>
+            </div>
+        </header>
+
+        <!-- Page Content -->
+        <div class="page-content">
+            <div class="reports-layout">
+                <!-- LEFT COLUMN: KPIs + Charts + Recent Transactions -->
+                <div class="reports-main">
+                    <!-- KPI Cards -->
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px;" class="kpi-grid">
+                        <!-- Total Revenue -->
+                        <div class="kpi-card">
+                            <div class="kpi-icon kpi-icon-green">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                            <div>
+                                <p class="kpi-label">Total Revenue</p>
+                                <p class="kpi-value" id="kpi-revenue">₹0</p>
+                            </div>
+                        </div>
+                        <!-- Total Orders -->
+                        <div class="kpi-card">
+                            <div class="kpi-icon kpi-icon-blue">
+                                <i class="fas fa-receipt"></i>
+                            </div>
+                            <div>
+                                <p class="kpi-label">Total Orders</p>
+                                <p class="kpi-value" id="kpi-orders">0</p>
+                            </div>
+                        </div>
+                        <!-- Avg Order Value -->
+                        <div class="kpi-card">
+                            <div class="kpi-icon kpi-icon-purple">
+                                <i class="fas fa-coins"></i>
+                            </div>
+                            <div>
+                                <p class="kpi-label">Avg Order Value</p>
+                                <p class="kpi-value" id="kpi-avg">₹0</p>
+                            </div>
+                        </div>
+                        <!-- Active Customers -->
+                        <div class="kpi-card">
+                            <div class="kpi-icon kpi-icon-orange">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <div>
+                                <p class="kpi-label">Active Customers</p>
+                                <p class="kpi-value" id="kpi-customers">0</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Chart Row -->
+                    <div style="display: grid; grid-template-columns: 3fr 2fr; gap: 20px; margin-bottom: 24px;" class="charts-row">
+                        <!-- Revenue Bar Chart -->
+                        <div class="chart-card">
+                            <h3 class="chart-card-title">
+                                <i class="fas fa-chart-bar" style="color: var(--accent-green);"></i>
+                                Daily Revenue
+                            </h3>
+                            <div class="chart-wrap">
+                                <canvas id="revenue-chart"></canvas>
+                                <div id="chart-loading" class="loading-state" style="position:absolute;inset:0;background:var(--card-bg);display:flex;align-items:center;justify-content:center;">
+                                    <div class="spinner" style="border-top-color:var(--accent-green);"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Payment Mode Doughnut -->
+                        <div class="chart-card">
+                            <h3 class="chart-card-title">
+                                <i class="fas fa-chart-pie" style="color: var(--accent-blue);"></i>
+                                Payment Modes
+                            </h3>
+                            <div class="chart-wrap">
+                                <canvas id="payment-chart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Transactions Table -->
+                    <div class="chart-card">
+                        <div class="section-header">
+                            <h3 class="section-title">
+                                <i class="fas fa-clock-rotate-left" style="color: var(--accent-blue);"></i>
+                                Recent Sales
+                            </h3>
+                            <a href="/reports.html" class="view-all-link">
+                                View All <i class="fas fa-arrow-right"></i>
+                            </a>
+                        </div>
+                        <div id="transactions-container">
+                            <div class="loading-state" id="tx-loading" style="padding: 40px;">
+                                <div class="spinner" style="margin: 0 auto; border-top-color: var(--accent-green);"></div>
+                                <p style="margin-top: 12px; color: var(--text-muted); font-size: 13px;">Loading transactions...</p>
+                            </div>
+                            <div id="tx-empty" class="empty-state" style="display: none; padding: 40px;">
+                                <i class="fas fa-receipt" style="font-size: 32px; opacity: 0.3;"></i>
+                                <p style="margin-top: 10px;">No sales yet</p>
+                            </div>
+                            <div id="tx-list"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RIGHT COLUMN: Calendar Sidebar -->
+                <div class="reports-sidebar">
+                    <!-- Calendar Card -->
+                    <div class="sidebar-card" style="margin-bottom: 16px;">
+                        <div class="calendar-header">
+                            <span class="calendar-month" id="calendar-month-label">March 2026</span>
+                            <div class="calendar-nav">
+                                <button class="calendar-nav-btn" onclick="changeMonth(-1)">
+                                    <i class="fas fa-chevron-left" style="font-size: 10px;"></i>
+                                </button>
+                                <button class="calendar-nav-btn" onclick="changeMonth(1)">
+                                    <i class="fas fa-chevron-right" style="font-size: 10px;"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="calendar-grid" id="calendar-grid">
+                            <!-- Filled by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Quick Date Filters -->
+                    <div class="sidebar-card">
+                        <h3 class="chart-card-title" style="margin-bottom: 12px;">
+                            <i class="fas fa-filter" style="color: var(--accent-purple);"></i>
+                            Quick Filters
+                        </h3>
+                        <button class="quick-filter-btn active" id="filter-today" onclick="setQuickFilter('today')">
+                            <i class="fas fa-calendar-day"></i>
+                            Today
+                        </button>
+                        <button class="quick-filter-btn" id="filter-yesterday" onclick="setQuickFilter('yesterday')">
+                            <i class="fas fa-calendar-minus"></i>
+                            Yesterday
+                        </button>
+                        <button class="quick-filter-btn" id="filter-week" onclick="setQuickFilter('week')">
+                            <i class="fas fa-calendar-week"></i>
+                            Last 7 Days
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Day Detail Modal -->
+    <div id="day-detail-modal" class="modal-overlay hidden" style="z-index: 100;">
+        <div class="modal-box" style="max-width: 560px;">
+            <div class="modal-header">
+                <h3 class="modal-title" id="day-detail-title">
+                    <i class="fas fa-calendar-day" style="color: var(--accent-blue);"></i>
+                    Day Details
+                </h3>
+                <button class="modal-close" onclick="closeDayDetail()"><i class="fas fa-times"></i></button>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+                <div style="padding: 14px; border-radius: 12px; background: var(--accent-green-light); text-align: center;">
+                    <p style="font-size: 10px; font-weight: 700; color: var(--accent-green); text-transform: uppercase; margin: 0; letter-spacing: 0.5px;">Revenue</p>
+                    <p id="day-revenue" style="font-size: 18px; font-weight: 800; color: var(--accent-green); margin: 6px 0 0;">₹0</p>
+                </div>
+                <div style="padding: 14px; border-radius: 12px; background: var(--accent-purple-light); text-align: center;">
+                    <p style="font-size: 10px; font-weight: 700; color: var(--accent-purple); text-transform: uppercase; margin: 0; letter-spacing: 0.5px;">Orders</p>
+                    <p id="day-orders" style="font-size: 18px; font-weight: 800; color: var(--accent-purple); margin: 6px 0 0;">0</p>
+                </div>
+                <div style="padding: 14px; border-radius: 12px; background: var(--accent-blue-light); text-align: center;">
+                    <p style="font-size: 10px; font-weight: 700; color: var(--accent-blue); text-transform: uppercase; margin: 0; letter-spacing: 0.5px;">Items</p>
+                    <p id="day-items" style="font-size: 18px; font-weight: 800; color: var(--accent-blue); margin: 6px 0 0;">0</p>
+                </div>
+            </div>
+            <div id="day-transactions"></div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Inline Prompt Modal -->
+    <div id="inline-prompt-modal" class="modal-overlay hidden" style="z-index: 200;">
+        <div class="modal-box" style="max-width: 400px;">
+            <div class="modal-header">
+                <h3 class="modal-title" id="inline-prompt-title">Edit</h3>
+                <button class="modal-close" onclick="app.closeInlinePrompt()"><i class="fas fa-times"></i></button>
+            </div>
+            <input type="text" id="inline-prompt-input" class="input" style="margin-bottom: 16px;">
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-outline" style="flex: 1" onclick="app.closeInlinePrompt()">Cancel</button>
+                <button id="inline-prompt-submit" class="btn btn-primary" style="flex: 1">Submit</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Load app.js first so window.app is available
+        await import('/static/js/app.js');
+
+        const sidebarResp = await fetch('/static/components/sidebar.html');
+        document.getElementById('sidebar-placeholder').outerHTML = await sidebarResp.text();
+        app.initTheme();
+        app.initSidebar();
+
+        // Calendar state
+        let calendarYear = new Date().getFullYear();
+        let calendarMonth = new Date().getMonth(); // 0-indexed
+        let currentQuickFilter = 'today';
+        let dailyTotalsCache = {};
+
+        // Load all data on page load
+        await loadReport();
+
+        async function loadReport() {
+            const chartLoading = document.getElementById('chart-loading');
+            if (chartLoading) chartLoading.style.display = 'flex';
+
+            try {
+                // Load weekly analytics for chart
+                const weeklyRes = await app.api('/analytics/weekly');
+                if (weeklyRes && weeklyRes.data) {
+                    const { dates, cash, udhaar } = weeklyRes.data;
+
+                    // Calculate totals
+                    const totalCash = (cash || []).reduce((s, v) => s + (v || 0), 0);
+                    const totalUdhaar = (udhaar || []).reduce((s, v) => s + (v || 0), 0);
+                    const totalRevenue = totalCash + totalUdhaar;
+                    const totalOrders = dates.length > 0 ? dates.length : 1;
+                    const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+
+                    // Update KPI cards
+                    document.getElementById('kpi-revenue').textContent = '₹' + totalRevenue.toLocaleString('en-IN');
+                    document.getElementById('kpi-orders').textContent = totalOrders.toLocaleString('en-IN');
+                    document.getElementById('kpi-avg').textContent = '₹' + avgOrderValue.toLocaleString('en-IN', { maximumFractionDigits: 0 });
+
+                    // Create revenue bar chart
+                    if (chartLoading) chartLoading.style.display = 'none';
+                    createRevenueChart('revenue-chart', dates, cash, 'Revenue');
+
+                    // Create payment doughnut
+                    createPaymentDoughnut('payment-chart', totalCash, totalUdhaar);
+
+                    // Update period label
+                    if (dates && dates.length > 0) {
+                        const firstDate = new Date(dates[0]);
+                        const lastDate = new Date(dates[dates.length - 1]);
+                        const formatter = new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short' });
+                        document.getElementById('report-period').textContent =
+                            formatter.format(firstDate) + ' - ' + formatter.format(lastDate);
+                    }
+                } else {
+                    if (chartLoading) chartLoading.style.display = 'none';
+                    createRevenueChart('revenue-chart', [], [], 'Revenue');
+                    createPaymentDoughnut('payment-chart', 0, 0);
+                }
+
+                // Load today's stats for KPI cards
+                const todayRes = await app.api('/sales/today');
+                if (todayRes && !todayRes.error) {
+                    const revenue = parseFloat(todayRes.total_revenue || 0);
+                    const orders = parseInt(todayRes.total_sales || 0);
+                    const avgVal = orders > 0 ? revenue / orders : 0;
+                    document.getElementById('kpi-revenue').textContent = '₹' + revenue.toLocaleString('en-IN');
+                    document.getElementById('kpi-orders').textContent = orders.toLocaleString('en-IN');
+                    document.getElementById('kpi-avg').textContent = '₹' + avgVal.toLocaleString('en-IN', { maximumFractionDigits: 0 });
+                }
+
+                // Load active customers count
+                const customersRes = await app.api('/customers');
+                if (customersRes && Array.isArray(customersRes)) {
+                    const activeCustomers = customersRes.filter(c => (c.total_due || 0) > 0 || c.total_purchases > 0).length;
+                    document.getElementById('kpi-customers').textContent = activeCustomers.toLocaleString('en-IN');
+                }
+
+                // Load recent transactions
+                const todaySales = await app.api('/sales/today');
+                if (todaySales && !todaySales.error) {
+                    renderTransactions(todaySales.transactions || []);
+                } else {
+                    renderTransactions([]);
+                }
+
+                // Render calendar
+                await renderCalendar();
+
+            } catch (e) {
+                console.error('Failed to load report:', e);
+                if (chartLoading) chartLoading.style.display = 'none';
+                renderTransactions([]);
+            }
+        }
+
+        function renderTransactions(transactions) {
+            const loading = document.getElementById('tx-loading');
+            const empty = document.getElementById('tx-empty');
+            const list = document.getElementById('tx-list');
+
+            if (loading) loading.style.display = 'none';
+
+            if (!transactions || transactions.length === 0) {
+                if (empty) empty.style.display = 'block';
+                if (list) list.innerHTML = '';
+                return;
+            }
+
+            if (empty) empty.style.display = 'none';
+            if (list) {
+                list.innerHTML = `
+                    <div class="table-wrap">
+                        <table class="recent-table">
+                            <thead>
+                                <tr>
+                                    <th>Order ID</th>
+                                    <th>Customer</th>
+                                    <th>Date</th>
+                                    <th>Amount</th>
+                                    <th>Mode</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${transactions.slice(0, 10).map((tx, i) => {
+                                    const amt = parseFloat(tx.price || 0);
+                                    const isCash = (tx.payment_mode || 'cash').toLowerCase() === 'cash';
+                                    const date = tx.time || '-';
+                                    const orderId = tx.order_id || tx.id || `#${String(i + 1).padStart(4, '0')}`;
+                                    return `
+                                        <tr>
+                                            <td style="font-weight: 600; color: var(--text-muted);">${app.esc(orderId)}</td>
+                                            <td style="font-weight: 600;">${app.esc(tx.customer_name || 'Walk-in')}</td>
+                                            <td style="color: var(--text-muted); font-size: 12px;">${date}</td>
+                                            <td style="font-weight: 700; color: var(--accent-green);">₹${amt.toLocaleString('en-IN')}</td>
+                                            <td>
+                                                <span class="payment-pill ${isCash ? 'payment-pill-cash' : 'payment-pill-udhaar'}">
+                                                    ${app.esc(tx.payment_mode || 'Cash')}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+        }
+
+        async function renderCalendar() {
+            const grid = document.getElementById('calendar-grid');
+            const monthLabel = document.getElementById('calendar-month-label');
+
+            const months = ['January', 'February', 'March', 'April', 'May', 'June',
+                           'July', 'August', 'September', 'October', 'November', 'December'];
+            const monthName = months[calendarMonth];
+            const year = calendarYear;
+
+            if (monthLabel) {
+                monthLabel.textContent = monthName + ' ' + year;
+            }
+
+            const firstDay = new Date(year, calendarMonth, 1).getDay();
+            const daysInMonth = new Date(year, calendarMonth + 1, 0).getDate();
+            const today = new Date();
+            const todayStr = today.toISOString().split('T')[0];
+
+            // Get monthly data
+            let monthData;
+            const cacheKey = `${year}-${calendarMonth}`;
+            if (dailyTotalsCache[cacheKey]) {
+                monthData = dailyTotalsCache[cacheKey];
+            } else {
+                const monthRes = await app.api(`/sales/month?year=${year}&month=${calendarMonth + 1}`);
+                monthData = monthRes?.daily_totals || {};
+                dailyTotalsCache[cacheKey] = monthData;
+            }
+
+            const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            let html = dayNames.map(d => `<div class="calendar-day-header">${d}</div>`).join('');
+
+            // Empty cells for days before first of month
+            for (let i = 0; i < firstDay; i++) {
+                html += '<div class="calendar-day empty"></div>';
+            }
+
+            // Days of the month
+            for (let day = 1; day <= daysInMonth; day++) {
+                const ds = `${year}-${String(calendarMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const dayData = monthData[ds];
+                const isToday = ds === todayStr;
+                const hasSales = dayData && dayData.revenue > 0;
+
+                let classes = 'calendar-day';
+                if (isToday) classes += ' today';
+                if (hasSales) classes += ' has-sales';
+
+                let amountHtml = '';
+                if (hasSales) {
+                    const rev = dayData.revenue || 0;
+                    const displayAmt = rev >= 1000 ? (rev / 1000).toFixed(1) + 'k' : rev;
+                    amountHtml = `<span class="calendar-day-amount">₹${displayAmt}</span>`;
+                }
+
+                html += `
+                    <div class="${classes}" onclick="openDayDetail('${ds}')" title="${ds}">
+                        <span>${day}</span>
+                        ${amountHtml}
+                    </div>
+                `;
+            }
+
+            if (grid) grid.innerHTML = html;
+        }
+
+        window.changeMonth = async (delta) => {
+            calendarMonth += delta;
+            if (calendarMonth > 11) { calendarMonth = 0; calendarYear++; }
+            if (calendarMonth < 0) { calendarMonth = 11; calendarYear--; }
+            await renderCalendar();
+        };
+
+        window.setQuickFilter = async (filter) => {
+            currentQuickFilter = filter;
+            document.querySelectorAll('.quick-filter-btn').forEach(b => b.classList.remove('active'));
+            const btn = document.getElementById(`filter-${filter}`);
+            if (btn) btn.classList.add('active');
+
+            const today = new Date();
+            let targetDate;
+            let label = '';
+
+            if (filter === 'today') {
+                targetDate = today;
+                label = 'Today';
+            } else if (filter === 'yesterday') {
+                targetDate = new Date(today);
+                targetDate.setDate(today.getDate() - 1);
+                label = 'Yesterday';
+            } else if (filter === 'week') {
+                // Get last 7 days
+                label = 'Last 7 Days';
+            }
+
+            document.getElementById('report-period').textContent = label;
+
+            try {
+                let revenue = 0, orders = 0;
+                let allTransactions = [];
+
+                if (filter === 'week') {
+                    // Fetch all 7 days
+                    for (let i = 6; i >= 0; i--) {
+                        const d = new Date(today);
+                        d.setDate(today.getDate() - i);
+                        const ds = d.toISOString().split('T')[0];
+                        const dayRes = await app.api(`/sales/date/${ds}`);
+                        if (dayRes && !dayRes.error) {
+                            revenue += parseFloat(dayRes.revenue || 0);
+                            orders += parseInt(dayRes.orders || 0);
+                            allTransactions = [...allTransactions, ...(dayRes.transactions || [])];
+                        }
+                    }
+                } else {
+                    const dateStr = targetDate.toISOString().split('T')[0];
+                    const res = await app.api(`/sales/date/${dateStr}`);
+                    if (res && !res.error) {
+                        revenue = parseFloat(res.revenue || 0);
+                        orders = parseInt(res.orders || 0);
+                        allTransactions = res.transactions || [];
+                    }
+                }
+
+                const avgVal = orders > 0 ? revenue / orders : 0;
+                document.getElementById('kpi-revenue').textContent = '₹' + revenue.toLocaleString('en-IN');
+                document.getElementById('kpi-orders').textContent = orders.toLocaleString('en-IN');
+                document.getElementById('kpi-avg').textContent = '₹' + avgVal.toLocaleString('en-IN', { maximumFractionDigits: 0 });
+
+                renderTransactions(allTransactions);
+            } catch (e) {
+                console.error('Failed to load filtered data:', e);
+            }
+        };
+
+        window.openDayDetail = async (dateStr) => {
+            const modal = document.getElementById('day-detail-modal');
+            modal.classList.remove('hidden');
+
+            const titleEl = document.getElementById('day-detail-title');
+            if (titleEl) {
+                const date = new Date(dateStr);
+                const formatted = date.toLocaleDateString('en-IN', {
+                    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+                });
+                titleEl.innerHTML = `<i class="fas fa-calendar-day" style="color: var(--accent-blue);"></i> ${formatted}`;
+            }
+
+            const txEl = document.getElementById('day-transactions');
+            if (txEl) {
+                txEl.innerHTML = `<div class="loading-state" style="padding: 20px;"><div class="spinner" style="margin: 0 auto;"></div></div>`;
+            }
+
+            try {
+                const res = await app.api(`/sales/date/${dateStr}`);
+                if (res && !res.error) {
+                    const revEl = document.getElementById('day-revenue');
+                    const ordEl = document.getElementById('day-orders');
+                    const itmEl = document.getElementById('day-items');
+
+                    if (revEl) revEl.textContent = '₹' + parseFloat(res.revenue || 0).toLocaleString('en-IN');
+                    if (ordEl) ordEl.textContent = res.orders || 0;
+                    if (itmEl) itmEl.textContent = res.quantity || 0;
+
+                    if (txEl) {
+                        if (!res.transactions || res.transactions.length === 0) {
+                            txEl.innerHTML = `<div class="empty-state" style="padding: 30px;"><i class="fas fa-receipt" style="font-size: 28px; opacity: 0.3;"></i><p style="margin-top: 10px;">No sales on this day</p></div>`;
+                        } else {
+                            txEl.innerHTML = `
+                                <div class="table-wrap">
+                                    <table class="recent-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Customer</th>
+                                                <th>Item</th>
+                                                <th>Amount</th>
+                                                <th>Mode</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${res.transactions.map(tx => {
+                                                const amt = parseFloat(tx.price || 0);
+                                                const isCash = (tx.payment_mode || 'cash').toLowerCase() === 'cash';
+                                                const items = tx.detailed_items ? tx.detailed_items.map(i => i.name).join(', ') : (tx.item || '');
+                                                return `
+                                                    <tr>
+                                                        <td style="font-weight: 600;">${app.esc(tx.customer_name || 'Walk-in')}</td>
+                                                        <td>${app.esc(items)} x${tx.qty || 1}</td>
+                                                        <td style="font-weight: 700; color: var(--accent-green);">₹${amt.toLocaleString('en-IN')}</td>
+                                                        <td>
+                                                            <span class="payment-pill ${isCash ? 'payment-pill-cash' : 'payment-pill-udhaar'}">
+                                                                ${app.esc(tx.payment_mode || 'Cash')}
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                `;
+                                            }).join('')}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            `;
+                        }
+                    }
+                } else {
+                    if (txEl) txEl.innerHTML = `<div class="empty-state" style="padding: 30px;"><i class="fas fa-exclamation-circle" style="font-size: 28px; opacity: 0.5;"></i><p style="margin-top: 10px;">Failed to load data</p></div>`;
+                }
+            } catch (e) {
+                console.error('Failed to load day detail:', e);
+                if (txEl) txEl.innerHTML = `<div class="empty-state" style="padding: 30px;"><i class="fas fa-exclamation-circle" style="font-size: 28px; opacity: 0.5;"></i><p style="margin-top: 10px;">Error loading data</p></div>`;
+            }
+        };
+
+        window.closeDayDetail = () => {
+            document.getElementById('day-detail-modal').classList.add('hidden');
+        };
+
+        // Close modal on overlay click
+        document.getElementById('day-detail-modal').addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal-overlay')) {
+                closeDayDetail();
+            }
+        });
+
+        // Page onLogin hook
+        window.onLogin = function() {
+            loadReport();
+        };
+
+        // Initialize app
+        await app.initApp();
+
+        // Expose module functions to window for inline onclick handlers
+        window.loadReport = loadReport;
+        window.changeMonth = changeMonth;
+        window.setQuickFilter = setQuickFilter;
+    </script>
+    <script src="/static/js/charts.js" type="module"></script>
+</body>
+</html>
