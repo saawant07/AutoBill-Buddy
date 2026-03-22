@@ -3655,14 +3655,14 @@
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
         // --- CONFIG ---
-        const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:8000' : '';
+        const API_BASE = window.API_BASE || (window.location.hostname === 'localhost' ? 'http://localhost:8000' : '');
 
         // --- fetch config from backend first
         async function initSupabase() {
-            const res = await fetch('/config');
+            const res = await fetch(`${API_BASE}/config`);
             const cfg = await res.json();
             return createClient(
-                window.location.origin + '/supabase-proxy',  // keep your proxy
+                cfg.supabase_url,
                 cfg.anon_key
             );
         }
@@ -3766,7 +3766,7 @@
             // 1. If no token, get a Guest Token immediately
             if (!token) {
                 try {
-                    const res = await fetch('/get-guest-token', { method: 'POST' });
+                    const res = await fetch(`${API_BASE}/get-guest-token`, { method: 'POST' });
                     if (res.ok) {
                         const data = await res.json();
                         token = data.access_token;
@@ -3809,7 +3809,7 @@
                             console.log("Stored token invalid, switching to guest mode...");
                             localStorage.removeItem('token');
                             try {
-                                const res = await fetch('/get-guest-token', { method: 'POST' });
+                                const res = await fetch(`${API_BASE}/get-guest-token`, { method: 'POST' });
                                 if (res.ok) {
                                     const freshData = await res.json();
                                     token = freshData.access_token;
@@ -5680,7 +5680,7 @@
 
             try {
                 // Call server-side guest login endpoint
-                const res = await fetch('/login/guest', { method: 'POST' });
+                const res = await fetch(`${API_BASE}/login/guest`, { method: 'POST' });
 
                 if (!res.ok) {
                     const errText = await res.text();

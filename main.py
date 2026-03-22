@@ -42,6 +42,10 @@ GUEST_USER_ID = "933fc862-30f9-45ef-b83f-c9d57f1ebfc6"
 app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
 @app.get("/")
 async def root():
     return RedirectResponse(url="/dashboard.html")

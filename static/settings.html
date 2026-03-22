@@ -132,6 +132,7 @@
     </div>
 
     <script type="module">
+        window.API_BASE = window.API_BASE || '';
         // Load app.js first so window.app is available
         await import('/static/js/app.js');
 
@@ -162,7 +163,7 @@
         };
 
         window.resetDemo = async () => {
-            const res = await fetch('/reset-demo-inventory', { method: 'POST' });
+            const res = await fetch(`${window.API_BASE || ''}/reset-demo-inventory`, { method: 'POST' });
             if (res.ok) {
                 app.showToast('Demo inventory reset!', 'success');
             } else {

@@ -122,6 +122,7 @@
     </div>
 
     <script type="module">
+        window.API_BASE = window.API_BASE || '';
         // Load app.js first so window.app is available
         await import('/static/js/app.js');
 
@@ -273,7 +274,7 @@
             const shop = localStorage.getItem('shop_name') || 'My Store';
             // Fetch statement with auth header to avoid token leak
             try {
-                const res = await fetch(`/dues/${encodeURIComponent(currentCustomer)}/statement?phone=${encodeURIComponent(phone)}&shop=${encodeURIComponent(shop)}`, {
+                const res = await fetch(`${window.API_BASE || ''}/dues/${encodeURIComponent(currentCustomer)}/statement?phone=${encodeURIComponent(phone)}&shop=${encodeURIComponent(shop)}`, {
                     headers: { 'Authorization': `Bearer ${app.session?.access_token || ''}` }
                 });
                 if (res.ok) {

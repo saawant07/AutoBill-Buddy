@@ -34,6 +34,11 @@ function debounce(fn, delay = 300) {
     };
 }
 
+// ---- API BASE URL ----
+// Set window.API_BASE before loading app.js for deployed backend
+// e.g., <script>window.API_BASE = 'https://autobillbuddy-api.onrender.com';</script>
+const API_BASE = window.API_BASE || '';
+
 // ---- API CALL WRAPPER ----
 async function api(endpoint, method = 'GET', body = null) {
     if (!_session) {
@@ -49,7 +54,7 @@ async function api(endpoint, method = 'GET', body = null) {
         const opts = { method, headers };
         if (body) opts.body = JSON.stringify(body);
 
-        const res = await fetch(endpoint, opts);
+        const res = await fetch(API_BASE + endpoint, opts);
         if (!res.ok) {
             const text = await res.text();
             if (res.status === 401) {
@@ -153,12 +158,12 @@ async function initApp() {
     // Load Supabase from config
     if (!_supabase) {
         try {
-            const cfgRes = await fetch('/config');
+            const cfgRes = await fetch(API_BASE + '/config');
             const cfg = await cfgRes.json();
 
             const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
             _supabase = createClient(
-                window.location.origin + '/supabase-proxy',
+                cfg.supabase_url,
                 cfg.anon_key
             );
         } catch (e) {
@@ -185,7 +190,7 @@ async function initApp() {
     // Get guest token if none
     if (!token) {
         try {
-            const res = await fetch('/get-guest-token', { method: 'POST' });
+            const res = await fetch(API_BASE + '/get-guest-token', { method: 'POST' });
             if (res.ok) {
                 const data = await res.json();
                 token = data.access_token;

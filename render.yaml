@@ -1,0 +1,19 @@
+# AutoBill Buddy - Render Deployment
+# Free tier: sleeps after 15 min inactivity, wakes on request
+services:
+  - type: web
+    name: autobillbuddy-api
+    env: python
+    region: singapore  # closest to India
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
