@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <!-- Set your deployed backend URL here after Render deployment -->
+    <script>window.API_BASE = window.API_BASE || 'https://autobillbuddy-api.onrender.com';</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - AutoBill Buddy</title>
@@ -195,7 +197,6 @@
     </div>
 
     <script type="module">
-        window.API_BASE = window.API_BASE || '';
         // Load app.js first so window.app is available
         await import('/static/js/app.js');
 
