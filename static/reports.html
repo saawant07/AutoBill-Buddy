@@ -542,31 +542,24 @@
             if (chartLoading) chartLoading.style.display = 'flex';
 
             try {
-                // Load weekly analytics for chart
-                const weeklyRes = await app.api('/analytics/weekly');
+                // Fetch all data in parallel (was sequential + duplicate /sales/today)
+                const [weeklyRes, todayRes, customersRes, duesRes] = await Promise.all([
+                    app.api('/analytics/weekly'),
+                    app.api('/sales/today'),
+                    app.api('/customers'),
+                    app.api('/dues')
+                ]);
+
+                // --- Weekly chart ---
                 if (weeklyRes && weeklyRes.data) {
                     const { dates, cash, udhaar } = weeklyRes.data;
-
-                    // Calculate totals
                     const totalCash = (cash || []).reduce((s, v) => s + (v || 0), 0);
                     const totalUdhaar = (udhaar || []).reduce((s, v) => s + (v || 0), 0);
-                    const totalRevenue = totalCash + totalUdhaar;
-                    const totalOrders = dates.length > 0 ? dates.length : 1;
-                    const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
-                    // Update KPI cards
-                    document.getElementById('kpi-revenue').textContent = '₹' + totalRevenue.toLocaleString('en-IN');
-                    document.getElementById('kpi-orders').textContent = totalOrders.toLocaleString('en-IN');
-                    document.getElementById('kpi-avg').textContent = '₹' + avgOrderValue.toLocaleString('en-IN', { maximumFractionDigits: 0 });
-
-                    // Create revenue bar chart
                     if (chartLoading) chartLoading.style.display = 'none';
                     createRevenueChart('revenue-chart', dates, cash, 'Revenue');
-
-                    // Create payment doughnut
                     createPaymentDoughnut('payment-chart', totalCash, totalUdhaar);
 
-                    // Update period label
                     if (dates && dates.length > 0) {
                         const firstDate = new Date(dates[0]);
                         const lastDate = new Date(dates[dates.length - 1]);
@@ -580,8 +573,7 @@
                     createPaymentDoughnut('payment-chart', 0, 0);
                 }
 
-                // Load today's stats for KPI cards
-                const todayRes = await app.api('/sales/today');
+                // --- Today's KPIs (single call, used for both KPIs + transactions) ---
                 if (todayRes && !todayRes.error) {
                     const revenue = parseFloat(todayRes.total_revenue || 0);
                     const orders = parseInt(todayRes.total_sales || 0);
@@ -589,28 +581,21 @@
                     document.getElementById('kpi-revenue').textContent = '₹' + revenue.toLocaleString('en-IN');
                     document.getElementById('kpi-orders').textContent = orders.toLocaleString('en-IN');
                     document.getElementById('kpi-avg').textContent = '₹' + avgVal.toLocaleString('en-IN', { maximumFractionDigits: 0 });
+                    renderTransactions(todayRes.transactions || []);
+                } else {
+                    renderTransactions([]);
                 }
 
-                // Load active customers count
-                const customersRes = await app.api('/customers');
+                // --- Active customers ---
                 if (customersRes && Array.isArray(customersRes)) {
                     const activeCustomers = customersRes.filter(c => (c.total_due || 0) > 0 || c.total_purchases > 0).length;
                     document.getElementById('kpi-customers').textContent = activeCustomers.toLocaleString('en-IN');
                 }
 
-                // Load total dues
-                const duesRes = await app.api('/dues');
+                // --- Total dues ---
                 if (duesRes && duesRes.dues && Array.isArray(duesRes.dues)) {
                     const totalDues = duesRes.dues.reduce((sum, d) => sum + (d.total_due || 0), 0);
                     document.getElementById('kpi-dues').textContent = '₹' + totalDues.toLocaleString('en-IN');
-                }
-
-                // Load recent transactions
-                const todaySales = await app.api('/sales/today');
-                if (todaySales && !todaySales.error) {
-                    renderTransactions(todaySales.transactions || []);
-                } else {
-                    renderTransactions([]);
                 }
 
                 // Render calendar
