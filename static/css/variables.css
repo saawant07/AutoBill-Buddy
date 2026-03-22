@@ -1,0 +1,134 @@
+/* ============================================================================
+   AutoBill Buddy - CSS Custom Properties
+   Light & Dark Theme Variables + Sidebar Theme
+============================================================================ */
+
+/* === PREMIUM LIGHT THEME === */
+:root {
+    /* Page & Card Backgrounds */
+    --bg-page: #F8FAFC;
+    --card-bg: #FFFFFF;
+    --card-radius: 16px;
+    --card-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 4px 12px rgba(0,0,0,0.03);
+    --card-shadow-hover: 0 4px 16px rgba(0,0,0,0.08), 0 12px 32px rgba(0,0,0,0.06);
+
+    /* Sidebar Theme (Reference Design) */
+    --sidebar-bg: #1F1B16;
+    --sidebar-accent: #F59E0B;
+    --sidebar-text: rgba(255,255,255,0.7);
+    --sidebar-text-active: #FFFFFF;
+    --sidebar-hover: rgba(255,255,255,0.06);
+    --sidebar-active-bg: rgba(245,158,11,0.15);
+    --sidebar-section-label: rgba(255,255,255,0.3);
+    --sidebar-border: rgba(255,255,255,0.08);
+    --sidebar-footer-bg: rgba(255,255,255,0.03);
+
+    /* Modern Accent Colors */
+    --accent-green: #10B981;
+    --accent-green-light: rgba(16,185,129,0.12);
+    --accent-purple: #8B5CF6;
+    --accent-purple-light: rgba(139,92,246,0.12);
+    --accent-blue: #3B82F6;
+    --accent-blue-light: rgba(59,130,246,0.12);
+    --accent-orange: #F59E0B;
+    --accent-orange-light: rgba(245,158,11,0.12);
+    --accent-red: #EF4444;
+    --accent-red-light: rgba(239,68,68,0.12);
+    --accent-pink: #EC4899;
+    --accent-teal: #14B8A6;
+
+    /* Premium Gradients */
+    --gradient-green: linear-gradient(135deg, #10B981 0%, #059669 100%);
+    --gradient-green-dark: linear-gradient(135deg, #059669 0%, #047857 100%);
+    --gradient-purple: linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%);
+    --gradient-blue: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%);
+    --gradient-orange: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+    --gradient-red: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+    --gradient-pink: linear-gradient(135deg, #EC4899 0%, #DB2777 100%);
+
+    /* Typography */
+    --text-heading: #111827;
+    --text-label: #4B5563;
+    --text-muted: #9CA3AF;
+
+    /* Glassmorphism */
+    --glass-bg: rgba(255,255,255,0.82);
+    --glass-border: rgba(255,255,255,0.6);
+    --glass-shadow: 0 8px 32px rgba(0,0,0,0.04);
+
+    /* Transitions */
+    --transition-spring: cubic-bezier(0.34,1.56,0.64,1);
+    --transition-smooth: cubic-bezier(0.4,0,0.2,1);
+
+    /* Inputs */
+    --input-bg: #F9FAFB;
+    --input-border: #E5E7EB;
+    --border-subtle: #E5E7EB;
+
+    /* Status Colors */
+    --status-success: #10B981;
+    --status-warning: #F59E0B;
+    --status-error: #EF4444;
+    --status-info: #3B82F6;
+
+    /* Spacing */
+    --sidebar-width: 260px;
+    --header-height: 72px;
+    --page-padding: 28px;
+}
+
+/* === DARK MODE === */
+[data-theme="dark"] {
+    --bg-page: #0F172A;
+    --card-bg: #1E293B;
+    --card-shadow: 0 1px 3px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.2);
+    --card-shadow-hover: 0 4px 16px rgba(0,0,0,0.4), 0 12px 32px rgba(0,0,0,0.3);
+
+    --sidebar-bg: #1F1B16;
+
+    --text-heading: #F9FAFB;
+    --text-label: #D1D5DB;
+    --text-muted: #9CA3AF;
+
+    --glass-bg: rgba(30,41,59,0.82);
+    --glass-border: rgba(255,255,255,0.08);
+    --glass-shadow: 0 8px 32px rgba(0,0,0,0.3);
+
+    --input-bg: #334155;
+    --input-border: #475569;
+    --border-subtle: #334155;
+
+    --status-success: #34D399;
+    --status-warning: #FBBF24;
+    --status-error: #F87171;
+    --status-info: #60A5FA;
+}
+
+/* === BASE BODY === */
+body {
+    background: var(--bg-page);
+    color: var(--text-heading);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+/* Animated ambient background */
+body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background:
+        radial-gradient(ellipse 80% 50% at 20% 10%, rgba(16,185,129,0.07) 0%, transparent 50%),
+        radial-gradient(ellipse 60% 40% at 80% 20%, rgba(59,130,246,0.05) 0%, transparent 50%),
+        radial-gradient(ellipse 50% 30% at 60% 80%, rgba(139,92,246,0.04) 0%, transparent 50%);
+    pointer-events: none;
+}
+
+[data-theme="dark"] body::before {
+    background:
+        radial-gradient(ellipse 80% 50% at 20% 10%, rgba(16,185,129,0.1) 0%, transparent 50%),
+        radial-gradient(ellipse 60% 40% at 80% 20%, rgba(59,130,246,0.08) 0%, transparent 50%),
+        radial-gradient(ellipse 50% 30% at 60% 80%, rgba(139,92,246,0.06) 0%, transparent 50%);
+}

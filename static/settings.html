@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - AutoBill Buddy</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: { extend: { fontFamily: { sans: ['Plus Jakarta Sans', 'sans-serif'] } } }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/variables.css">
+    <link rel="stylesheet" href="/static/css/components.css">
+</head>
+<body>
+    <div id="sidebar-placeholder"></div>
+
+    <div class="main-content">
+        <!-- Page Header -->
+        <header class="page-header">
+            <div class="page-header-left">
+                <h1 class="page-title">Settings</h1>
+                <p class="page-subtitle">Configure your store preferences</p>
+            </div>
+            <div class="page-header-right">
+                <button id="theme-toggle-btn" class="btn-icon btn-outline"><i class="fas fa-moon"></i></button>
+            </div>
+        </header>
+
+        <!-- Page Content -->
+        <div class="page-content">
+            <div style="max-width:640px;">
+
+                <!-- Store Profile -->
+                <div class="card card-p" style="margin-bottom:20px;">
+                    <h3 class="card-title"><i class="fas fa-store" style="color:var(--accent-green)"></i> Store Profile</h3>
+                    <div style="margin-bottom:16px;">
+                        <label style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:6px;">Shop Name</label>
+                        <div style="display:flex;gap:10px;">
+                            <input type="text" id="shop-name-input" class="input" placeholder="My Store" style="flex:1;">
+                            <button class="btn btn-primary btn-sm" onclick="saveShopName()">
+                                <i class="fas fa-save"></i> Save
+                            </button>
+                        </div>
+                        <p style="font-size:12px;color:var(--text-muted);margin:6px 0 0;">Shown on invoices and WhatsApp statements</p>
+                    </div>
+                    <div>
+                        <label style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:6px;">Your Email</label>
+                        <input type="text" id="user-email-display" class="input" readonly style="background:var(--input-bg);cursor:not-allowed;">
+                    </div>
+                </div>
+
+                <!-- Appearance -->
+                <div class="card card-p" style="margin-bottom:20px;">
+                    <h3 class="card-title"><i class="fas fa-palette" style="color:var(--accent-purple)"></i> Appearance</h3>
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border-subtle);">
+                        <div>
+                            <p style="font-weight:600;color:var(--text-heading);margin:0;font-size:14px;">Dark Mode</p>
+                            <p style="font-size:12px;color:var(--text-muted);margin:2px 0 0;">Switch between light and dark theme</p>
+                        </div>
+                        <button id="theme-switch-btn" class="btn btn-sm btn-outline" onclick="toggleTheme()">
+                            <i class="fas fa-moon"></i> Dark
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Demo & Data -->
+                <div class="card card-p" style="margin-bottom:20px;">
+                    <h3 class="card-title"><i class="fas fa-database" style="color:var(--accent-orange)"></i> Demo & Data</h3>
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border-subtle);">
+                        <div>
+                            <p style="font-weight:600;color:var(--text-heading);margin:0;font-size:14px;">Reset Demo Inventory</p>
+                            <p style="font-size:12px;color:var(--text-muted);margin:2px 0 0;">Restore default demo stock items</p>
+                        </div>
+                        <button class="btn btn-sm btn-outline" onclick="resetDemo()">
+                            <i class="fas fa-refresh"></i> Reset
+                        </button>
+                    </div>
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;">
+                        <div>
+                            <p style="font-weight:600;color:var(--text-heading);margin:0;font-size:14px;">Logout</p>
+                            <p style="font-size:12px;color:var(--text-muted);margin:2px 0 0;">Sign out and clear session data</p>
+                        </div>
+                        <button class="btn btn-sm btn-outline" onclick="doLogout()" style="color:var(--status-error);">
+                            <i class="fas fa-right-from-bracket"></i> Logout
+                        </button>
+                    </div>
+                </div>
+
+                <!-- About -->
+                <div class="card card-p">
+                    <h3 class="card-title"><i class="fas fa-info-circle" style="color:var(--accent-blue)"></i> About</h3>
+                    <div style="text-align:center;padding:20px 0;">
+                        <div style="width:64px;height:64px;background:var(--gradient-orange);border-radius:18px;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;box-shadow:0 4px 16px rgba(245,158,11,0.3);">
+                            <i class="fas fa-bolt" style="font-size:28px;color:white;"></i>
+                        </div>
+                        <h3 style="font-size:18px;font-weight:800;color:var(--text-heading);margin:0 0 4px;">AutoBill Buddy</h3>
+                        <p style="font-size:13px;color:var(--text-muted);margin:0 0 4px;">Voice-Powered Billing</p>
+                        <p style="font-size:12px;color:var(--text-muted);margin:0;">Version 2.0 &bull; Built with FastAPI + Supabase</p>
+                        <div style="margin-top:16px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+                            <span class="badge badge-green"><i class="fas fa-microphone"></i> Voice Input</span>
+                            <span class="badge badge-blue"><i class="fas fa-bolt"></i> AI Parsing</span>
+                            <span class="badge badge-purple"><i class="fas fa-chart-line"></i> Analytics</span>
+                            <span class="badge badge-orange"><i class="fas fa-hand-holding-dollar"></i> Udhaar</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Inline Prompt Modal -->
+    <div id="inline-prompt-modal" class="modal-overlay hidden" style="z-index:200;">
+        <div class="modal-box" style="max-width:400px;">
+            <div class="modal-header">
+                <h3 class="modal-title" id="inline-prompt-title">Edit</h3>
+                <button class="modal-close" onclick="app.closeInlinePrompt()"><i class="fas fa-times"></i></button>
+            </div>
+            <input type="text" id="inline-prompt-input" class="input" style="margin-bottom:16px;">
+            <div style="display:flex;gap:10px;">
+                <button class="btn btn-outline" style="flex:1" onclick="app.closeInlinePrompt()">Cancel</button>
+                <button id="inline-prompt-submit" class="btn btn-primary" style="flex:1">Submit</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Load app.js first so window.app is available
+        await import('/static/js/app.js');
+
+        const resp = await fetch('/static/components/sidebar.html');
+        document.getElementById('sidebar-placeholder').outerHTML = await resp.text();
+        app.initTheme();
+        app.initSidebar();
+        updateThemeBtn();
+
+        function updateThemeBtn() {
+            const btn = document.getElementById('theme-switch-btn');
+            if (!btn) return;
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            btn.innerHTML = `<i class="fas ${isDark ? 'fa-sun' : 'fa-moon'}"></i> ${isDark ? 'Light' : 'Dark'}`;
+        }
+
+        window.toggleTheme = () => {
+            const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+            updateThemeBtn();
+        };
+
+        window.saveShopName = () => {
+            const name = document.getElementById('shop-name-input').value.trim();
+            localStorage.setItem('shop_name', name);
+            app.showToast('Shop name saved!', 'success');
+        };
+
+        window.resetDemo = async () => {
+            const res = await fetch('/reset-demo-inventory', { method: 'POST' });
+            if (res.ok) {
+                app.showToast('Demo inventory reset!', 'success');
+            } else {
+                app.showToast('Failed to reset inventory', 'error');
+            }
+        };
+
+        window.doLogout = async () => {
+            localStorage.clear();
+            if (_supabase) await _supabase.auth.signOut();
+            window.location.reload();
+        };
+
+        window.onLogin = (s) => {
+            const email = s?.user?.email || 'guest@autobill.com';
+            const shopName = s?.user?.user_metadata?.shop_name || localStorage.getItem('shop_name') || '';
+            document.getElementById('shop-name-input').value = shopName;
+            document.getElementById('user-email-display').value = email;
+        };
+
+        await app.initApp();
+    </script>
+</body>
+</html>
