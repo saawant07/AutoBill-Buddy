@@ -184,8 +184,8 @@
 
         window.doLogout = async () => {
             localStorage.clear();
-            if (_supabase) await _supabase.auth.signOut();
-            window.location.reload();
+            if (app.supabase) await app.supabase.auth.signOut();
+            window.location.href = '/dashboard.html';
         };
 
         window.onLogin = (s) => {
