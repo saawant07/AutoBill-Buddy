@@ -157,9 +157,19 @@
             updateThemeBtn();
         };
 
-        window.saveShopName = () => {
+        window.saveShopName = async () => {
             const name = document.getElementById('shop-name-input').value.trim();
+            if (!name) { app.showToast('Please enter a shop name', 'error'); return; }
             localStorage.setItem('shop_name', name);
+            // Persist to Supabase user_metadata
+            if (app.supabase && app.session && app.session.access_token !== 'GUEST_MODE_NO_AUTH') {
+                try {
+                    await app.supabase.auth.updateUser({ data: { shop_name: name } });
+                } catch (e) { console.error('Failed to update shop name in Supabase:', e); }
+            }
+            // Update sidebar display
+            const sidebarName = document.getElementById('sidebar-user-name');
+            if (sidebarName) sidebarName.textContent = name;
             app.showToast('Shop name saved!', 'success');
         };
 

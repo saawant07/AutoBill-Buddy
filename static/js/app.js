@@ -562,6 +562,7 @@ window.app = {
     loadDashboardData,
     openLoginModal,
     closeLoginModal,
+    get supabase() { return _supabase; },
     get session() { return _session; },
     get inventory() { return _allInventoryItems; },
     set inventory(v) { _allInventoryItems = v; },
