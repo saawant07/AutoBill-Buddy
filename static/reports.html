@@ -324,7 +324,7 @@
                 <!-- LEFT COLUMN: KPIs + Charts + Recent Transactions -->
                 <div class="reports-main">
                     <!-- KPI Cards -->
-                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px;" class="kpi-grid">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px;" class="kpi-grid">
                         <!-- Total Revenue -->
                         <div class="kpi-card">
                             <div class="kpi-icon kpi-icon-green">
@@ -363,6 +363,16 @@
                             <div>
                                 <p class="kpi-label">Active Customers</p>
                                 <p class="kpi-value" id="kpi-customers">0</p>
+                            </div>
+                        </div>
+                        <!-- Total Due Amount -->
+                        <div class="kpi-card">
+                            <div class="kpi-icon" style="background: var(--accent-red-light); color: var(--accent-red);">
+                                <i class="fas fa-hand-holding-dollar"></i>
+                            </div>
+                            <div>
+                                <p class="kpi-label">Total Dues</p>
+                                <p class="kpi-value" id="kpi-dues">₹0</p>
                             </div>
                         </div>
                     </div>
@@ -586,6 +596,13 @@
                 if (customersRes && Array.isArray(customersRes)) {
                     const activeCustomers = customersRes.filter(c => (c.total_due || 0) > 0 || c.total_purchases > 0).length;
                     document.getElementById('kpi-customers').textContent = activeCustomers.toLocaleString('en-IN');
+                }
+
+                // Load total dues
+                const duesRes = await app.api('/dues');
+                if (duesRes && duesRes.dues && Array.isArray(duesRes.dues)) {
+                    const totalDues = duesRes.dues.reduce((sum, d) => sum + (d.total_due || 0), 0);
+                    document.getElementById('kpi-dues').textContent = '₹' + totalDues.toLocaleString('en-IN');
                 }
 
                 // Load recent transactions
