@@ -411,7 +411,7 @@
                                 <i class="fas fa-clock-rotate-left" style="color: var(--accent-blue);"></i>
                                 Recent Sales
                             </h3>
-                            <a href="/reports.html" class="view-all-link">
+                            <a href="javascript:void(0)" class="view-all-link" id="view-all-btn" onclick="viewAllTransactions()">
                                 View All <i class="fas fa-arrow-right"></i>
                             </a>
                         </div>
@@ -533,6 +533,7 @@
         let calendarMonth = new Date().getMonth(); // 0-indexed
         let currentQuickFilter = 'today';
         let dailyTotalsCache = {};
+        let _allTransactions = [];
 
         // Load all data on page load
         await loadReport();
@@ -608,20 +609,28 @@
             }
         }
 
-        function renderTransactions(transactions) {
+        function renderTransactions(transactions, showAll = false) {
+            _allTransactions = transactions;
             const loading = document.getElementById('tx-loading');
             const empty = document.getElementById('tx-empty');
             const list = document.getElementById('tx-list');
+            const viewAllBtn = document.getElementById('view-all-btn');
 
             if (loading) loading.style.display = 'none';
 
             if (!transactions || transactions.length === 0) {
                 if (empty) empty.style.display = 'block';
                 if (list) list.innerHTML = '';
+                if (viewAllBtn) viewAllBtn.style.display = 'none';
                 return;
             }
 
             if (empty) empty.style.display = 'none';
+            // Show/hide View All button
+            if (viewAllBtn) {
+                viewAllBtn.style.display = (!showAll && transactions.length > 10) ? 'flex' : 'none';
+            }
+            const displayList = showAll ? transactions : transactions.slice(0, 10);
             if (list) {
                 list.innerHTML = `
                     <div class="table-wrap">
@@ -636,7 +645,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                ${transactions.slice(0, 10).map((tx, i) => {
+                                ${displayList.map((tx, i) => {
                                     const amt = parseFloat(tx.price || 0);
                                     const isCash = (tx.payment_mode || 'cash').toLowerCase() === 'cash';
                                     const date = tx.time || '-';
@@ -897,6 +906,9 @@
         window.loadReport = loadReport;
         window.changeMonth = changeMonth;
         window.setQuickFilter = setQuickFilter;
+        window.viewAllTransactions = () => {
+            renderTransactions(_allTransactions, true);
+        };
     </script>
     <script src="/static/js/charts.js" type="module"></script>
 </body>
