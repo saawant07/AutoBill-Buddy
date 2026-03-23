@@ -394,19 +394,29 @@ def fuzzy_match_item(word, available_items, custom_aliases=None, debug=False):
     VOICE_TYPOS = {
         'keji': 'kg', 'kaji': 'kg', 'kilo': 'kg', 'kilos': 'kg', 'kilogram': 'kg',
         'rise': 'rice', 'rais': 'rice', 'raice': 'rice', 'chaawal': 'rice', 'chaval': 'rice',
-        'tee': 'tea', 'chai': 'tea',
-        'melk': 'milk', 'melku': 'milk', 'doodh': 'milk', 'dudh': 'milk',
-        'suger': 'sugar', 'sugur': 'sugar',
+        'chawal': 'rice', 'ricee': 'rice',
+        'tee': 'tea', 'chai': 'tea', 'patti': 'tea',
+        'melk': 'milk', 'melku': 'milk', 'doodh': 'milk', 'dudh': 'milk', 'dudth': 'milk', 'malk': 'milk', 'milkk': 'milk',
+        'suger': 'sugar', 'sugur': 'sugar', 'cheeni': 'sugar', 'chini': 'sugar', 'shakkar': 'sugar',
         'flor': 'flour', 'flower': 'flour',
-        'bred': 'bread', 'brad': 'bread',
-        'ags': 'eggs', 'aggs': 'eggs',
+        'bred': 'bread', 'brad': 'bread', 'roti': 'bread',
+        'ags': 'eggs', 'aggs': 'eggs', 'anda': 'eggs', 'ande': 'eggs', 'anday': 'eggs', 'eggz': 'eggs',
         'ghea': 'ghee', 'ghi': 'ghee',
-        'panir': 'paneer', 'paner': 'paneer',
+        'panir': 'paneer', 'paner': 'paneer', 'panneer': 'paneer', 'pneer': 'paneer',
         'coffe': 'coffee', 'koffee': 'coffee', 'cofee': 'coffee',
-        'biskit': 'biscuits', 'biscuit': 'biscuits',
+        'biskit': 'biscuits', 'biscuit': 'biscuits', 'biskut': 'biscuits', 'biskoot': 'biscuits',
         'chiips': 'chips', 'chip': 'chips',
         'noodle': 'noodles',
         'maggie': 'maggi', 'maagi': 'maggi',
+        'namak': 'salt', 'tel': 'oil', 'teil': 'oil',
+        'makhan': 'butter', 'makkhan': 'butter', 'buttar': 'butter',
+        'dahi': 'curd', 'dahee': 'curd',
+        'daal': 'dal', 'dhaal': 'dal', 'dhal': 'dal',
+        'ataa': 'atta', 'aata': 'atta',
+        'sabun': 'soap', 'saabun': 'soap',
+        'aloo': 'potato', 'alu': 'potato',
+        'pyaz': 'onion', 'pyaaz': 'onion', 'kanda': 'onion',
+        'jeera': 'cumin', 'jira': 'cumin', 'zeera': 'cumin',
     }
 
     if custom_aliases is None:
@@ -442,7 +452,14 @@ def fuzzy_match_item(word, available_items, custom_aliases=None, debug=False):
             _log(f"exact match: '{item}'")
             return item
 
-    # 4. Partial match — ONLY if len(word) >= 4
+    # 4. Short-word exact match (<=5 chars) — ensures "rice", "milk", "eggs", "oil", "dal" always match
+    if len(word_lower) <= 5:
+        for item in available_items:
+            if item.lower() == word_lower:
+                _log(f"short-word exact match: '{item}'")
+                return item
+
+    # 5. Partial match — ONLY if len(word) >= 4
     if len(word_lower) >= 4:
         for item in available_items:
             if item.lower() in word_lower or word_lower in item.lower():
@@ -451,7 +468,7 @@ def fuzzy_match_item(word, available_items, custom_aliases=None, debug=False):
                     _log(f"partial match (>=40%): '{item}' (overlap={pct:.2f})")
                     return item
 
-    # 5. Prefix match — min len 5, prefix must be >= 60% of item name length
+    # 6. Prefix match — min len 5, prefix must be >= 60% of item name length
     if len(word_lower) >= 5:
         for item in available_items:
             if len(item.lower()) >= 3 and (item.lower().startswith(word_lower) or word_lower.startswith(item.lower())):
@@ -618,7 +635,7 @@ def parse_message_locally(message, available_items, custom_aliases=None):
     EXPANDED_VOICE_TYPOS = {
         'keji': 'kg', 'kaji': 'kg', 'kaji': 'kg', 'kilo': 'kg', 'kilos': 'kg', 'kilogram': 'kg',
         'doodh': 'milk', 'dudh': 'milk', 'dudth': 'milk', 'melk': 'milk', 'malk': 'milk', 'milkk': 'milk',
-        'chawal': 'rice', 'chaawal': 'rice', 'chaval': 'rice', 'rise': 'rice', 'rais': 'rice', 'raice': 'rice', 'ricee': 'rice', 'rice': 'rice',
+        'chawal': 'rice', 'chaawal': 'rice', 'chaval': 'rice', 'rise': 'rice', 'rais': 'rice', 'raice': 'rice', 'ricee': 'rice',
         'cheeni': 'sugar', 'chini': 'sugar', 'shakkar': 'sugar', 'suger': 'sugar', 'sugur': 'sugar', 'sugarr': 'sugar',
         'aloo': 'potato', 'alu': 'potato', 'aaloo': 'potato',
         'pyaz': 'onion', 'pyaaz': 'onion', 'kanda': 'onion',
@@ -643,8 +660,9 @@ def parse_message_locally(message, available_items, custom_aliases=None):
         'jeera': 'cumin', 'jira': 'cumin', 'zeera': 'cumin',
     }
     
-    # Merge custom aliases
-    EXPANDED_VOICE_TYPOS.update(custom_aliases)
+    # NOTE: Do NOT merge custom_aliases into EXPANDED_VOICE_TYPOS.
+    # DB aliases may contain corrupted entries that overwrite hardcoded mappings.
+    # custom_aliases are only passed to fuzzy_match_item() for lookup resolution.
 
 
     # Detect Payment Mode & Customer
