@@ -691,35 +691,47 @@
                 pBtn.innerHTML = '<i class="fas fa-stop" style="font-size:20px;"></i>';
             }
 
+            // Track when we last heard speech — always restart a 3s silence timer
+            let lastSpeechTime = Date.now();
+
             recognition.onstart = () => {
                 console.log('[Voice] onstart - listening started');
+                lastSpeechTime = Date.now();
+                // Kick off the first silence timer
+                scheduleSilenceStop();
             };
 
-            recognition.onresult = (event) => {
-                console.log('[Voice] onresult, results so far:', event.results.length);
-                // Reset silence timer on any speech result
+            function scheduleSilenceStop() {
                 clearTimeout(persistentSilenceTimer);
                 persistentSilenceTimer = setTimeout(() => {
                     if (voiceMode !== 'persistent') return;
-                    console.log('[Voice] Silence timeout - accumulating transcript and stopping');
-                    // Capture transcript BEFORE stopping
+                    const elapsed = Date.now() - lastSpeechTime;
+                    console.log(`[Voice] Silence timer fired (${elapsed}ms since last speech)`);
+                    // Capture all results we've heard so far (include interim too — safer on webkit)
                     let transcript = '';
                     for (let i = 0; i < recognition.results.length; i++) {
                         const r = recognition.results[i];
-                        if (r.isFinal) transcript += r[0].transcript + ' ';
+                        // On webkit, interim results are still useful — include them
+                        transcript += (r[0].transcript || '').trim() + ' ';
                     }
                     const text = transcript.trim();
-                    console.log('[Voice] Final transcript:', text);
-                    if (!text || text.length < 2) {
+                    console.log('[Voice] Transcript captured:', JSON.stringify(text));
+                    if (!text || text.length < 1) {
                         app.showToast('No speech detected, try again.', 'warning');
-                        stopVoice();
+                        try { recognition?.stop(); } catch(e) {}
                         return;
                     }
-                    // Stop recognition
                     try { recognition.stop(); } catch(e) {}
-                    // Show review modal after stop() (onend will fire but be a no-op)
                     showVoiceReviewModal(text);
                 }, 3000);
+            }
+
+            recognition.onresult = (event) => {
+                lastSpeechTime = Date.now();
+                console.log('[Voice] onresult, results:', event.results.length,
+                    'latest:', event.results[event.results.length - 1]?.[0]?.transcript);
+                // Restart silence timer on any speech
+                scheduleSilenceStop();
             };
 
             recognition.onend = () => {
@@ -799,61 +811,47 @@
                 qBtn.classList.add('listening');
             }
 
+            // Track when we last heard speech — always restart a 4s silence timer
+            let lastQuickSpeechTime = Date.now();
+
             recognition.onstart = () => {
                 console.log('[QuickAdd] onstart - listening started');
+                lastQuickSpeechTime = Date.now();
+                scheduleQuickSilenceStop();
             };
 
-            // Silence timer: auto-stop after 4 seconds of no speech
-            clearTimeout(quickSilenceTimer);
-            quickSilenceTimer = setTimeout(() => {
-                if (voiceMode !== 'quick') return;
-                console.log('[QuickAdd] Silence timeout - stopping');
-                // Capture transcript BEFORE stopping
-                let transcript = '';
-                for (let i = 0; i < recognition.results.length; i++) {
-                    const r = recognition.results[i];
-                    if (r.isFinal) transcript += r[0].transcript + ' ';
-                }
-                const text = transcript.trim();
-                console.log('[QuickAdd] Final transcript:', text);
-                const qBtn = document.getElementById('quick-add-btn');
-                if (qBtn) qBtn.classList.remove('listening');
-                isListening = false;
-                voiceMode = null;
-                try { recognition.stop(); } catch(e) {}
-                if (!text || text.length < 2) {
-                    app.showToast('Tap mic and speak clearly', 'warning');
-                    return;
-                }
-                processQuickAdd(text);
-            }, 4000);
+            function scheduleQuickSilenceStop() {
+                clearTimeout(quickSilenceTimer);
+                quickSilenceTimer = setTimeout(() => {
+                    if (voiceMode !== 'quick') return;
+                    const elapsed = Date.now() - lastQuickSpeechTime;
+                    console.log(`[QuickAdd] Silence timer fired (${elapsed}ms since last speech)`);
+                    // Capture all results — include interim on webkit
+                    let transcript = '';
+                    for (let i = 0; i < recognition.results.length; i++) {
+                        const r = recognition.results[i];
+                        transcript += (r[0].transcript || '').trim() + ' ';
+                    }
+                    const text = transcript.trim();
+                    console.log('[QuickAdd] Transcript:', JSON.stringify(text));
+                    const qBtn = document.getElementById('quick-add-btn');
+                    if (qBtn) qBtn.classList.remove('listening');
+                    isListening = false;
+                    voiceMode = null;
+                    try { recognition.stop(); } catch(e) {}
+                    if (!text || text.length < 1) {
+                        app.showToast('Tap mic and speak clearly', 'warning');
+                        return;
+                    }
+                    processQuickAdd(text);
+                }, 4000);
+            }
 
             recognition.onresult = (event) => {
-                console.log('[QuickAdd] onresult, interim:', event.results[event.results.length - 1]?.[0]?.transcript);
-                // Reset silence timer on each final result
-                if (event.results[event.results.length - 1]?.isFinal) {
-                    clearTimeout(quickSilenceTimer);
-                    quickSilenceTimer = setTimeout(() => {
-                        if (voiceMode !== 'quick') return;
-                        console.log('[QuickAdd] Silence after final result - stopping');
-                        let transcript = '';
-                        for (let i = 0; i < recognition.results.length; i++) {
-                            const r = recognition.results[i];
-                            if (r.isFinal) transcript += r[0].transcript + ' ';
-                        }
-                        const text = transcript.trim();
-                        const qBtn = document.getElementById('quick-add-btn');
-                        if (qBtn) qBtn.classList.remove('listening');
-                        isListening = false;
-                        voiceMode = null;
-                        try { recognition.stop(); } catch(e) {}
-                        if (!text || text.length < 2) {
-                            app.showToast('Tap mic and speak clearly', 'warning');
-                            return;
-                        }
-                        processQuickAdd(text);
-                    }, 2000);
-                }
+                lastQuickSpeechTime = Date.now();
+                console.log('[QuickAdd] onresult:', event.results[event.results.length - 1]?.[0]?.transcript);
+                // Restart silence timer on any result
+                scheduleQuickSilenceStop();
             };
 
             recognition.onend = () => {
