@@ -43,6 +43,145 @@
             50% { height: 24px; }
         }
 
+        /* Persistent Round Mic Button (Control A) */
+        #voice-persistent-btn {
+            position: fixed;
+            bottom: 32px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            border: none;
+            background: linear-gradient(135deg, #10B981, #059669);
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 6px 20px rgba(16,185,129,0.35);
+            transition: transform 0.2s, box-shadow 0.2s;
+            z-index: 100;
+        }
+        #voice-persistent-btn:hover {
+            transform: translateX(-50%) scale(1.05);
+            box-shadow: 0 8px 28px rgba(16,185,129,0.45);
+        }
+        #voice-persistent-btn:active {
+            transform: translateX(-50%) scale(0.95);
+        }
+        #voice-persistent-btn.listening {
+            background: linear-gradient(135deg, #DC2626, #B91C1C);
+            box-shadow: 0 6px 20px rgba(220,38,38,0.35);
+        }
+        #voice-persistent-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        /* Pulse ring animation for active mic */
+        #voice-persistent-btn.listening::after {
+            content: '';
+            position: absolute;
+            inset: -8px;
+            border-radius: 50%;
+            border: 3px solid rgba(220,38,38,0.4);
+            animation: pulseRing 1.2s ease-out infinite;
+        }
+        @keyframes pulseRing {
+            0% { transform: scale(1); opacity: 0.8; }
+            100% { transform: scale(1.5); opacity: 0; }
+        }
+        #voice-persistent-btn.listening::before {
+            content: '';
+            position: absolute;
+            inset: -14px;
+            border-radius: 50%;
+            border: 2px solid rgba(220,38,38,0.2);
+            animation: pulseRing 1.2s ease-out 0.4s infinite;
+        }
+
+        /* Quick Add button (Control B) - near search bar */
+        .quick-add-btn {
+            padding: 4px 10px;
+            border-radius: 8px;
+            border: none;
+            background: var(--accent-green-light);
+            color: var(--accent-green);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            transition: all 0.15s;
+        }
+        .quick-add-btn:hover {
+            background: var(--accent-green);
+            color: white;
+        }
+        .quick-add-btn.listening {
+            background: var(--accent-red-light);
+            color: var(--accent-red);
+            animation: quickPulse 0.8s ease-in-out infinite;
+        }
+        @keyframes quickPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        /* Voice review modal */
+        #voice-review-modal .modal-box {
+            max-width: 420px;
+        }
+        .voice-review-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            border-radius: 10px;
+            background: var(--input-bg);
+            margin-bottom: 6px;
+        }
+        .voice-review-item:last-child { margin-bottom: 0; }
+        .voice-review-qty {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .voice-review-qty input {
+            width: 50px;
+            padding: 4px 8px;
+            border-radius: 6px;
+            border: 1px solid var(--border-subtle);
+            background: var(--card-bg);
+            text-align: center;
+            font-weight: 700;
+            font-size: 14px;
+        }
+        .voice-remove-btn {
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            border: none;
+            background: var(--accent-red-light);
+            color: var(--accent-red);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+        }
+        .voice-remove-btn:hover {
+            background: var(--accent-red);
+            color: white;
+        }
+        #voice-review-empty {
+            padding: 20px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+
         /* Payment tiles */
         .payment-tile {
             padding: 12px 6px;
@@ -198,7 +337,8 @@
                 <div style="position:relative;flex:1;max-width:500px;">
                     <i class="fas fa-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:11px;pointer-events:none;"></i>
                     <input type="text" id="product-search" class="input" placeholder="Search or scan products..." style="padding-left:32px;padding-right:44px;font-size:13px;height:38px;" oninput="handleSearch(this.value)" onkeydown="handleSearchKey(event)">
-                    <button onclick="openVoiceSearch()" id="voice-search-btn" title="Voice search" style="position:absolute;right:5px;top:50%;transform:translateY(-50%);width:28px;height:28px;border-radius:8px;border:none;background:var(--accent-orange-light);color:var(--accent-orange);cursor:pointer;display:flex;align-items:center;justify-content:center;" onmouseover="this.style.background='var(--accent-orange)';this.style.color='white'" onmouseout="this.style.background='var(--accent-orange-light)';this.style.color='var(--accent-orange)'">
+                    <button onclick="startQuickAdd()" id="quick-add-btn" class="quick-add-btn" title="Quick Add - single item" style="position:absolute;right:5px;top:50%;transform:translateY(-50%);">
+                        <i class="fas fa-bolt" style="font-size:9px;"></i>
                         <i class="fas fa-microphone" style="font-size:10px;"></i>
                     </button>
                     <div id="search-results" style="position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:50;display:none;max-height:260px;overflow-y:auto;background:var(--card-bg);border:1px solid var(--border-subtle);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.08);"></div>
@@ -217,32 +357,8 @@
             <!-- LEFT: Bill Items -->
             <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;">
 
-                <!-- Transcript Banner -->
-                <div id="transcript-banner" style="display:none;margin:6px 10px 0;padding:8px 12px;border-radius:12px;background:linear-gradient(90deg, rgba(16,185,129,0.08), rgba(16,185,129,0.02));display:flex;align-items:center;gap:10px;">
-                    <div style="display:flex;gap:2px;align-items:center;">
-                        <span style="width:3px;height:10px;background:var(--accent-green);border-radius:3px;animation:waveAnim 1s ease-in-out infinite;"></span>
-                        <span style="width:3px;height:16px;background:var(--accent-green);border-radius:3px;animation:waveAnim 1s ease-in-out 0.1s infinite;"></span>
-                        <span style="width:3px;height:12px;background:var(--accent-green);border-radius:3px;animation:waveAnim 1s ease-in-out 0.2s infinite;"></span>
-                    </div>
-                    <div style="flex:1;min-width:0;">
-                        <p style="font-size:11px;font-weight:600;color:var(--accent-green);margin:0;">Listening...</p>
-                        <p id="voice-text" style="font-size:11px;font-style:italic;color:var(--text-muted);margin:1px 0 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">"..."</p>
-                    </div>
-                    <button onclick="stopVoiceInput()" style="padding:4px 10px;border-radius:7px;border:none;background:var(--accent-red-light);color:var(--status-error);font-size:11px;font-weight:600;cursor:pointer;">
-                        <i class="fas fa-stop"></i>
-                    </button>
-                </div>
-
-                <!-- Content Area: Voice bar + Bill list -->
-                <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;padding:6px 10px 10px;">
-
-                    <!-- Voice + Mic Bar -->
-                    <div style="display:flex;gap:6px;margin-bottom:6px;align-items:center;">
-                        <button onclick="openVoiceInput()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:9px 14px;border-radius:12px;border:none;background:linear-gradient(135deg,#fea619,#f59e0b);color:white;cursor:pointer;font-size:13px;font-weight:700;transition:all 0.2s;box-shadow:0 4px 12px rgba(254,166,25,0.2);" onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 6px 16px rgba(254,166,25,0.3)'" onmouseout="this.style.transform='none';this.style.boxShadow='0 4px 12px rgba(254,166,25,0.2)'">
-                            <i class="fas fa-microphone" style="font-size:13px;"></i>
-                            <span id="mic-btn-text">Add by voice</span>
-                        </button>
-                    </div>
+                <!-- Content Area: Bill list only (voice controls are separate) -->
+                <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;padding:6px 10px 80px;">
 
                     <!-- Bill Items Card -->
                     <div id="bill-items-list-container" style="flex:1;overflow-y:auto;background:var(--card-bg);border-radius:14px;border:1px solid var(--border-subtle);">
@@ -383,6 +499,28 @@
     <!-- Toast Container -->
     <div id="toast-container" class="toast-container"></div>
 
+    <!-- CONTROL A: Persistent Round Mic Button -->
+    <button id="voice-persistent-btn" onclick="togglePersistentVoice()" title="Voice billing - tap to start/stop" style="display:none;">
+        <i class="fas fa-microphone" style="font-size:20px;"></i>
+    </button>
+
+    <!-- Voice Review Modal (shown after persistent voice dictation) -->
+    <div id="voice-review-modal" class="modal-overlay hidden" style="z-index:200;">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3 class="modal-title"><i class="fas fa-list-check" style="color:var(--accent-green);margin-right:6px;"></i>Review Voice Order</h3>
+                <button class="modal-close" onclick="closeVoiceReview()"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="voice-review-content" style="max-height:320px;overflow-y:auto;margin-bottom:12px;"></div>
+            <div style="display:flex;gap:10px;">
+                <button class="btn btn-outline" style="flex:1" onclick="closeVoiceReview()">Cancel</button>
+                <button id="voice-review-confirm" class="btn btn-primary" style="flex:1" onclick="confirmVoiceReview()">
+                    <i class="fas fa-check"></i> Add to Bill
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Receipt Preview Modal -->
     <div id="receipt-preview-modal" class="modal-overlay hidden" style="z-index:300;">
         <div class="modal-box" style="max-width:360px;padding:0;overflow:hidden;">
@@ -438,13 +576,17 @@
         let paymentMethod = 'Cash';
         let discountAmount = 0;
         let discountType = 'rupees';
-        let currentBillNumber = 'Bill #' + Math.floor(Math.random() * 9000 + 1000);
+        let currentBillNumber = null; // Set from backend transaction_id after first order
         let inventoryItems = [];
         let recognition = null;
         let isListening = false;
         let voiceError = false;
+        let voiceMode = null; // 'persistent' | 'quick' | null
+        let pendingVoiceItems = []; // items from persistent dictation awaiting review
+        let persistentSilenceTimer = null;
+        let quickSilenceTimer = null;
 
-        document.getElementById('bill-number').textContent = currentBillNumber;
+        document.getElementById('bill-number').textContent = currentBillNumber || 'New Bill';
 
         // ---- LOAD INVENTORY ----
         async function loadInventory() {
@@ -504,100 +646,210 @@
             app.showToast(`Added ${name}`, 'success');
         };
 
-        // ---- VOICE INPUT ----
-        window.openVoiceInput = function() {
+        // ---- VOICE INPUT (Two Controls) ----
+
+        // CONTROL A: Persistent Round Mic Button - full order dictation
+        window.togglePersistentVoice = function() {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (!SpeechRecognition) { app.showToast('Speech not supported. Use Chrome.', 'warning'); return; }
-            if (isListening) { stopVoiceInput(); return; }
+
+            if (isListening && voiceMode === 'persistent') {
+                stopVoice();
+                return;
+            }
+
+            // If quick add is active, stop it first
+            if (isListening && voiceMode === 'quick') {
+                stopVoice();
+            }
+
             voiceError = false;
+            voiceMode = 'persistent';
+            pendingVoiceItems = [];
 
             recognition = new SpeechRecognition();
-            recognition.continuous = false;
+            recognition.continuous = true;
             recognition.interimResults = true;
             recognition.lang = 'en-IN';
 
-            const banner = document.getElementById('transcript-banner');
-            if (banner) banner.style.display = 'flex';
-
-            const micText = document.getElementById('mic-btn-text');
-            if (micText) micText.textContent = 'Listening...';
+            // Show the persistent button with listening state
+            const pBtn = document.getElementById('voice-persistent-btn');
+            if (pBtn) {
+                pBtn.classList.add('listening');
+                pBtn.innerHTML = '<i class="fas fa-stop" style="font-size:20px;"></i>';
+            }
 
             recognition.onresult = (event) => {
-                let transcript = '';
-                for (let i = 0; i < event.results.length; i++) transcript += event.results[i][0].transcript;
-                const tv = document.getElementById('voice-text');
-                if (tv) tv.textContent = '"' + transcript + '"';
+                // Reset silence timer on any speech result
+                clearTimeout(persistentSilenceTimer);
+                persistentSilenceTimer = setTimeout(() => {
+                    if (voiceMode === 'persistent') {
+                        try { recognition?.stop(); } catch(e) {}
+                    }
+                }, 3000);
             };
 
             recognition.onend = async () => {
-                if (voiceError) { stopVoiceInput(); return; }
-                await new Promise(r => setTimeout(r, 100));
-                stopVoiceInput();
-                const rawText = document.getElementById('voice-text')?.textContent || '';
-                const text = rawText.replace(/^"|"$/g, '').trim();
-                if (!text || text === '...' || text.length < 2) {
-                    app.showToast('No speech detected.', 'warning');
+                if (voiceError) { stopVoice(); return; }
+                clearTimeout(persistentSilenceTimer);
+                stopVoice();
+                // Get transcript
+                let transcript = '';
+                for (let i = 0; i < recognition?.results?.length; i++) {
+                    transcript += recognition.results[i][0].transcript;
+                }
+                const text = transcript.trim();
+                if (!text || text.length < 2) {
+                    app.showToast('No speech detected, try again.', 'warning');
                     return;
                 }
-                await processVoiceOrder(text);
+                // Show review modal
+                await showVoiceReviewModal(text);
             };
 
             recognition.onerror = (event) => {
                 voiceError = true;
-                if (banner) banner.style.display = 'none';
+                clearTimeout(persistentSilenceTimer);
+                const pBtn = document.getElementById('voice-persistent-btn');
+                if (pBtn) {
+                    pBtn.classList.remove('listening');
+                    pBtn.innerHTML = '<i class="fas fa-microphone" style="font-size:20px;"></i>';
+                }
                 if (event.error === 'not-allowed') {
                     app.showToast('Mic permission denied.', 'error');
                 } else if (event.error === 'network') {
                     app.showToast('Network error.', 'error');
                 } else {
-                    app.showToast('Could not hear. Try again.', 'error');
+                    app.showToast('Mic error. Try again.', 'error');
                 }
-                const mt = document.getElementById('mic-btn-text');
-                if (mt) mt.textContent = 'Add by voice';
+                voiceMode = null;
             };
 
             isListening = true;
             recognition.start();
-            setTimeout(() => { if (isListening) { try { recognition?.stop(); } catch(e) {} } }, 15000);
+
+            // Auto-stop after 60 seconds max
+            setTimeout(() => { if (isListening && voiceMode === 'persistent') { try { recognition?.stop(); } catch(e) {} } }, 60000);
         };
 
-        window.openVoiceSearch = function() {
+        // CONTROL B: Quick Add - single item fast entry (max 4 sec)
+        window.startQuickAdd = function() {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (!SpeechRecognition) { app.showToast('Speech not supported. Use Chrome.', 'warning'); return; }
-            if (isListening) { stopVoiceInput(); return; }
+
+            if (isListening && voiceMode === 'quick') {
+                stopVoice();
+                return;
+            }
+
+            // If persistent is active, stop it first
+            if (isListening && voiceMode === 'persistent') {
+                stopVoice();
+            }
+
+            voiceError = false;
+            voiceMode = 'quick';
+
             recognition = new SpeechRecognition();
             recognition.continuous = false;
             recognition.interimResults = true;
             recognition.lang = 'en-IN';
 
-            const btn = document.getElementById('voice-search-btn');
-            if (btn) { btn.style.background='var(--status-error)'; btn.style.color='white'; }
+            const qBtn = document.getElementById('quick-add-btn');
+            if (qBtn) {
+                qBtn.classList.add('listening');
+            }
+
+            // Silence timer: auto-stop after 4 seconds of no speech
+            clearTimeout(quickSilenceTimer);
+            quickSilenceTimer = setTimeout(() => {
+                if (voiceMode === 'quick') {
+                    try { recognition?.stop(); } catch(e) {}
+                }
+            }, 4000);
 
             recognition.onresult = (event) => {
-                let transcript = '';
-                for (let i = 0; i < event.results.length; i++) transcript += event.results[i][0].transcript;
-                document.getElementById('product-search').value = transcript;
-                handleSearch(transcript);
+                // Reset silence timer on each result
+                clearTimeout(quickSilenceTimer);
+                quickSilenceTimer = setTimeout(() => {
+                    if (voiceMode === 'quick') {
+                        try { recognition?.stop(); } catch(e) {}
+                    }
+                }, 4000);
             };
 
             recognition.onend = () => {
-                if (btn) { btn.style.background='var(--accent-orange-light)'; btn.style.color='var(--accent-orange)'; }
+                clearTimeout(quickSilenceTimer);
+                if (voiceError) {
+                    stopVoice();
+                    return;
+                }
+                let transcript = '';
+                for (let i = 0; i < recognition?.results?.length; i++) {
+                    transcript += recognition.results[i][0].transcript;
+                }
+                const text = transcript.trim();
+                const qBtn = document.getElementById('quick-add-btn');
+                if (qBtn) qBtn.classList.remove('listening');
                 isListening = false;
+                voiceMode = null;
+
+                if (!text || text.length < 2) {
+                    app.showToast('Didn\'t catch that, try again.', 'warning');
+                    return;
+                }
+
+                // Parse and directly add to bill
+                processQuickAdd(text);
             };
 
-            recognition.onerror = () => {
-                if (btn) { btn.style.background='var(--accent-orange-light)'; btn.style.color='var(--accent-orange)'; }
+            recognition.onerror = (event) => {
+                voiceError = true;
+                clearTimeout(quickSilenceTimer);
+                const qBtn = document.getElementById('quick-add-btn');
+                if (qBtn) qBtn.classList.remove('listening');
+                if (event.error === 'not-allowed') {
+                    app.showToast('Mic permission denied.', 'error');
+                } else {
+                    app.showToast('Couldn\'t hear, try again.', 'error');
+                }
                 isListening = false;
+                voiceMode = null;
             };
 
             isListening = true;
             recognition.start();
-            setTimeout(() => { if (isListening) { try { recognition?.stop(); } catch(e) {} } }, 15000);
+            // Safety cutoff at 15 seconds
+            setTimeout(() => { if (isListening && voiceMode === 'quick') { try { recognition?.stop(); } catch(e) {} } }, 15000);
         };
 
+        // Stop any active voice (shared by both controls)
+        window.stopVoice = function() {
+            clearTimeout(persistentSilenceTimer);
+            clearTimeout(quickSilenceTimer);
+            isListening = false;
+            try { recognition?.stop(); } catch(e) {}
+
+            // Reset persistent button
+            const pBtn = document.getElementById('voice-persistent-btn');
+            if (pBtn) {
+                pBtn.classList.remove('listening');
+                pBtn.innerHTML = '<i class="fas fa-microphone" style="font-size:20px;"></i>';
+            }
+
+            // Reset quick add button
+            const qBtn = document.getElementById('quick-add-btn');
+            if (qBtn) qBtn.classList.remove('listening');
+
+            voiceMode = null;
+        };
+
+        // Customer voice (existing, now respects active voice mode)
         window.openCustomerVoice = function() {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (!SpeechRecognition) { app.showToast('Speech not supported.', 'warning'); return; }
+            // Stop any active voice before starting customer voice
+            if (isListening) stopVoice();
             const btn = document.getElementById('customer-mic-btn');
             if (btn) btn.classList.add('recording');
             recognition = new SpeechRecognition();
@@ -609,23 +861,126 @@
                 for (let i = 0; i < event.results.length; i++) transcript += event.results[i][0].transcript;
                 document.getElementById('customer-name').value = transcript.trim();
             };
-            recognition.onend = () => { if (btn) btn.classList.remove('recording'); isListening = false; };
-            recognition.onerror = () => { if (btn) btn.classList.remove('recording'); isListening = false; };
-            isListening = true;
+            recognition.onend = () => { if (btn) btn.classList.remove('recording'); };
+            recognition.onerror = () => { if (btn) btn.classList.remove('recording'); };
             recognition.start();
-            setTimeout(() => { if (isListening) { try { recognition?.stop(); } catch(e) {} } }, 10000);
+            setTimeout(() => { try { recognition?.stop(); } catch(e) {} }, 10000);
         };
 
-        window.stopVoiceInput = function() {
-            isListening = false;
-            try { recognition?.stop(); } catch(e) {}
-            const banner = document.getElementById('transcript-banner');
-            if (banner) banner.style.display = 'none';
-            const vsBtn = document.getElementById('voice-search-btn');
-            if (vsBtn) { vsBtn.style.background='var(--accent-orange-light)'; vsBtn.style.color='var(--accent-orange)'; }
-            const mt = document.getElementById('mic-btn-text');
-            if (mt) mt.textContent = 'Add by voice';
+        // Show review modal with parsed items (Control A flow)
+        async function showVoiceReviewModal(text) {
+            const result = await app.api('/parse-order', 'POST', { message: text });
+            if (!result || result.error || !result.items || result.items.length === 0) {
+                app.showToast('Couldn\'t understand. Try again.', 'error');
+                return;
+            }
+            pendingVoiceItems = result.items.map(item => ({
+                name: item.item_name || item.name,
+                price: item.unit_price || item.price || 0,
+                qty: item.quantity || 1
+            }));
+
+            const content = document.getElementById('voice-review-content');
+            const modal = document.getElementById('voice-review-modal');
+            if (!pendingVoiceItems.length) {
+                content.innerHTML = '<div id="voice-review-empty">No items parsed. Try again.</div>';
+            } else {
+                content.innerHTML = pendingVoiceItems.map((item, idx) => `
+                    <div class="voice-review-item">
+                        <div>
+                            <div style="font-weight:600;font-size:13px;">${app.esc(item.name)}</div>
+                            <div style="font-size:11px;color:var(--text-muted);">₹${parseFloat(item.price).toLocaleString('en-IN')} each</div>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:6px;">
+                            <input type="number" id="vri-qty-${idx}" value="${item.qty}" min="1" style="width:50px;padding:4px 6px;border-radius:6px;border:1px solid var(--border-subtle);background:var(--card-bg);text-align:center;font-weight:700;font-size:13px;">
+                            <button onclick="removeVoiceReviewItem(${idx})" class="voice-remove-btn"><i class="fas fa-xmark"></i></button>
+                        </div>
+                    </div>`).join('');
+            }
+            modal.classList.remove('hidden');
+        }
+
+        window.removeVoiceReviewItem = (idx) => {
+            pendingVoiceItems.splice(idx, 1);
+            if (pendingVoiceItems.length === 0) {
+                closeVoiceReview();
+            } else {
+                showVoiceReviewModal_updateList();
+            }
         };
+
+        function showVoiceReviewModal_updateList() {
+            const content = document.getElementById('voice-review-content');
+            content.innerHTML = pendingVoiceItems.map((item, idx) => `
+                <div class="voice-review-item">
+                    <div>
+                        <div style="font-weight:600;font-size:13px;">${app.esc(item.name)}</div>
+                        <div style="font-size:11px;color:var(--text-muted);">₹${parseFloat(item.price).toLocaleString('en-IN')} each</div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:6px;">
+                        <input type="number" id="vri-qty-${idx}" value="${item.qty}" min="1" style="width:50px;padding:4px 6px;border-radius:6px;border:1px solid var(--border-subtle);background:var(--card-bg);text-align:center;font-weight:700;font-size:13px;">
+                        <button onclick="removeVoiceReviewItem(${idx})" class="voice-remove-btn"><i class="fas fa-xmark"></i></button>
+                    </div>
+                </div>`).join('');
+        }
+
+        window.closeVoiceReview = () => {
+            document.getElementById('voice-review-modal').classList.add('hidden');
+            pendingVoiceItems = [];
+        };
+
+        window.confirmVoiceReview = () => {
+            if (!pendingVoiceItems.length) {
+                app.showToast('No items to add.', 'warning');
+                return;
+            }
+            // Update quantities from inputs
+            pendingVoiceItems.forEach((item, idx) => {
+                const qtyInput = document.getElementById('vri-qty-' + idx);
+                if (qtyInput) item.qty = parseInt(qtyInput.value) || 1;
+            });
+
+            pendingVoiceItems.forEach(item => {
+                const existing = billItems.find(i => i.name === item.name);
+                if (existing) {
+                    existing.qty += item.qty;
+                    existing.total = existing.qty * existing.unit_price;
+                } else {
+                    billItems.push({ name: item.name, qty: item.qty, unit_price: item.price, total: item.price * item.qty });
+                }
+            });
+
+            closeVoiceReview();
+            renderBillItems();
+            app.showToast('Added: ' + pendingVoiceItems.map(i => i.qty + ' ' + i.name).join(', '), 'success');
+        };
+
+        // Process Quick Add (Control B - directly add to bill)
+        async function processQuickAdd(text) {
+            const result = await app.api('/parse-order', 'POST', { message: text });
+            if (!result || result.error || !result.items || result.items.length === 0) {
+                app.showToast('Couldn\'t understand. Try again.', 'error');
+                return;
+            }
+            // Take first item only for quick add
+            const item = result.items[0];
+            const name = item.item_name || item.name;
+            const price = item.unit_price || item.price || 0;
+            const qty = item.quantity || 1;
+
+            const existing = billItems.find(i => i.name === name);
+            if (existing) {
+                existing.qty += qty;
+                existing.total = existing.qty * existing.unit_price;
+            } else {
+                billItems.push({ name, qty, unit_price: price, total: price * qty });
+            }
+            renderBillItems();
+            app.showToast('Added: ' + qty + ' ' + name + ' ✓', 'success');
+        }
+
+        // Also expose stopVoice on window for inline handlers
+        window.stopVoiceInput = stopVoice;
 
         // ---- PROCESS VOICE ORDER ----
         async function processVoiceOrder(text) {
@@ -840,7 +1195,14 @@
                 app.showToast('Bill confirmed! ₹' + total.toLocaleString('en-IN'), 'success');
                 billItems = [];
                 document.getElementById('customer-name').value = '';
-                currentBillNumber = 'Bill #' + Math.floor(Math.random() * 9000 + 1000);
+                // Use transaction_id from backend as the confirmed bill number (source of truth)
+                const confirmedTxId = result.transaction_id;
+                if (confirmedTxId) {
+                    currentBillNumber = '#' + confirmedTxId.toUpperCase();
+                } else {
+                    // Fallback only if backend didn't return transaction_id
+                    currentBillNumber = 'New Bill';
+                }
                 document.getElementById('bill-number').textContent = currentBillNumber;
                 setPaymentMethod('Cash');
                 discountAmount = 0;
@@ -976,7 +1338,7 @@
             const amt = parseFloat(tx.price || 0);
             const customer = app.esc(tx.customer_name || 'Walk-in');
             const method = app.esc(tx.payment_mode || 'Cash');
-            const billNo = tx.order || currentBillNumber;
+            const billNo = tx.transaction_id ? '#' + tx.transaction_id.toUpperCase() : (tx.order || currentBillNumber || 'New Bill');
             const time = tx.time || new Date().toLocaleString('en-IN');
             const items = tx.detailed_items || [];
 
@@ -1180,7 +1542,14 @@
         });
 
         // ---- INIT ----
-        window.onLogin = () => { loadInventory(); loadRecentTransactions(); loadDues(); };
+        window.onLogin = () => {
+            loadInventory();
+            loadRecentTransactions();
+            loadDues();
+            // Show the persistent voice button after login (never auto-start mic)
+            const pBtn = document.getElementById('voice-persistent-btn');
+            if (pBtn) pBtn.style.display = 'flex';
+        };
         await app.initApp();
         await loadInventory();
         await loadRecentTransactions();

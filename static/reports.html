@@ -408,7 +408,7 @@
                             const amt = parseFloat(tx.price || 0);
                             const isCash = (tx.payment_mode || 'cash').toLowerCase() === 'cash';
                             return `<tr>
-                                <td style="font-weight:600;color:var(--text-muted);">${tx.order_id || tx.id || '#' + String(i+1).padStart(4,'0')}</td>
+                                <td style="font-weight:600;color:var(--text-muted);">${tx.transaction_id ? '#' + tx.transaction_id.toUpperCase() : (tx.order_id || tx.id || '#' + String(i+1).padStart(4,'0'))}</td>
                                 <td style="font-weight:600;">${app.esc(tx.customer_name || 'Walk-in')}</td>
                                 <td style="color:var(--text-muted);font-size:12px;">${tx.time || '-'}</td>
                                 <td style="font-weight:700;color:var(--accent-green);">₹${amt.toLocaleString('en-IN')}</td>

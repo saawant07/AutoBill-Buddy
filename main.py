@@ -376,12 +376,26 @@ def generate_multilingual_aliases(word):
 # ============================================================================
 # STEP 4: FUZZY MATCHING — Searches BOTH inventory names AND DB aliases
 # ============================================================================
-def fuzzy_match_item(word, available_items, custom_aliases=None):
+def _character_overlap_pct(word1: str, word2: str) -> float:
+    """Return percentage (0-1) of characters from shorter word found in longer word."""
+    if not word1 or not word2:
+        return 0.0
+    s1, s2 = set(word1.lower()), set(word2.lower())
+    shorter = min(len(s1), len(s2))
+    if shorter == 0:
+        return 0.0
+    overlap = len(s1 & s2)
+    return overlap / shorter
+
+
+def fuzzy_match_item(word, available_items, custom_aliases=None, debug=False):
+    # NOTE: VOICE_TYPOS is kept here for local-only calls (backward compat).
+    # parse_message_locally uses its own EXPANDED_VOICE_TYPOS which includes all these.
     VOICE_TYPOS = {
         'keji': 'kg', 'kaji': 'kg', 'kilo': 'kg', 'kilos': 'kg', 'kilogram': 'kg',
-        'rise': 'rice', 'rais': 'rice', 'raice': 'rice',
+        'rise': 'rice', 'rais': 'rice', 'raice': 'rice', 'chaawal': 'rice', 'chaval': 'rice',
         'tee': 'tea', 'chai': 'tea',
-        'melk': 'milk', 'melku': 'milk',
+        'melk': 'milk', 'melku': 'milk', 'doodh': 'milk', 'dudh': 'milk',
         'suger': 'sugar', 'sugur': 'sugar',
         'flor': 'flour', 'flower': 'flour',
         'bred': 'bread', 'brad': 'bread',
@@ -394,67 +408,98 @@ def fuzzy_match_item(word, available_items, custom_aliases=None):
         'noodle': 'noodles',
         'maggie': 'maggi', 'maagi': 'maggi',
     }
-    
+
     if custom_aliases is None:
         custom_aliases = {}
-    
+
     word_lower = word.lower().strip()
+
+    def _log(msg):
+        if debug:
+            print(f"[FUZZY] input='{word}' | {msg}")
+
+    # 1. Alias/typo dict match (from local VOICE_TYPOS) — BEFORE any fuzzy
     if word_lower in VOICE_TYPOS:
-        word_lower = VOICE_TYPOS[word_lower].lower()
-    
-    # Check DB aliases (exact match: alias -> item_name)
-    if word_lower in custom_aliases:
-        mapped_name = custom_aliases[word_lower]
+        mapped = VOICE_TYPOS[word_lower].lower()
+        _log(f"typo dict VOICE_TYPOS: '{word}' -> '{mapped}'")
         for item in available_items:
-            if item.lower() == mapped_name.lower():
-                return item
-    
-    # Exact match against inventory names
-    for item in available_items:
-        if item.lower() == word_lower:
-            return item
-    
-    # Partial match
-    for item in available_items:
-        if item.lower() in word_lower or word_lower in item.lower():
-            return item
-            
-    # Prefix match
-    if len(word_lower) >= 3:
-        for item in available_items:
-            if item.lower().startswith(word_lower[:3]) or word_lower.startswith(item.lower()[:3]):
+            if item.lower() == mapped:
+                _log(f"matched item: '{item}'")
                 return item
 
-    # Token-based fuzzy match (matches typoed single words against multi-word inventory items)
+    # 2. Check DB aliases (exact match: alias -> item_name)
+    if word_lower in custom_aliases:
+        mapped_name = custom_aliases[word_lower]
+        _log(f"typo dict custom_aliases: '{word}' -> '{mapped_name}'")
+        for item in available_items:
+            if item.lower() == mapped_name.lower():
+                _log(f"matched item: '{item}'")
+                return item
+
+    # 3. Exact match against inventory names (case-insensitive)
+    for item in available_items:
+        if item.lower() == word_lower:
+            _log(f"exact match: '{item}'")
+            return item
+
+    # 4. Partial match — ONLY if len(word) >= 4
+    if len(word_lower) >= 4:
+        for item in available_items:
+            if item.lower() in word_lower or word_lower in item.lower():
+                pct = _character_overlap_pct(word_lower, item.lower())
+                if pct >= 0.40:
+                    _log(f"partial match (>=40%): '{item}' (overlap={pct:.2f})")
+                    return item
+
+    # 5. Prefix match — min len 5, prefix must be >= 60% of item name length
+    if len(word_lower) >= 5:
+        for item in available_items:
+            if len(item.lower()) >= 3 and (item.lower().startswith(word_lower) or word_lower.startswith(item.lower())):
+                required = int(len(item.lower()) * 0.60)
+                if len(word_lower) >= required:
+                    pct = _character_overlap_pct(word_lower, item.lower())
+                    if pct >= 0.40:
+                        _log(f"prefix match (>=60% len, >=40% overlap): '{item}' (overlap={pct:.2f})")
+                        return item
+
+    # 6. Token-based fuzzy match (SequenceMatcher ratio: 0.82)
     if len(word_lower) >= 3:
         import difflib
         for item in available_items:
             item_words = item.lower().split()
             for iw in item_words:
                 if len(iw) >= 3:
-                    if difflib.SequenceMatcher(None, word_lower, iw).ratio() >= 0.7:
-                        return item
-    
-    # difflib fuzzy fallback — search BOTH item names AND alias strings
+                    ratio = difflib.SequenceMatcher(None, word_lower, iw).ratio()
+                    if ratio >= 0.82:
+                        pct = _character_overlap_pct(word_lower, iw)
+                        if pct >= 0.40:
+                            _log(f"seqmatch (ratio={ratio:.2f}, overlap={pct:.2f}): '{item}' (iw='{iw}')")
+                            return item
+
+    # 7. difflib fuzzy fallback — cutoff: 0.75
     if len(word_lower) >= 3:
         import difflib
         inventory_lower = [it.lower() for it in available_items]
         alias_strings = list(custom_aliases.keys())
         all_candidates = inventory_lower + alias_strings
-        
-        matches = difflib.get_close_matches(word_lower, all_candidates, n=1, cutoff=0.6)
+
+        matches = difflib.get_close_matches(word_lower, all_candidates, n=1, cutoff=0.75)
         if matches:
             match = matches[0]
-            # Check if matched an inventory name
-            for item in available_items:
-                if item.lower() == match:
-                    return item
-            # Check if matched an alias — resolve to actual item
-            if match in custom_aliases:
-                mapped_name = custom_aliases[match]
+            pct = _character_overlap_pct(word_lower, match)
+            if pct >= 0.40:
+                _log(f"difflib fallback (cutoff=0.75, overlap={pct:.2f}): '{match}'")
+                # Check if matched an inventory name
                 for item in available_items:
-                    if item.lower() == mapped_name.lower():
+                    if item.lower() == match:
                         return item
+                # Check if matched an alias — resolve to actual item
+                if match in custom_aliases:
+                    mapped_name = custom_aliases[match]
+                    for item in available_items:
+                        if item.lower() == mapped_name.lower():
+                            return item
+    _log("no match")
     return None
 
 def parse_message_locally(message, available_items, custom_aliases=None):
@@ -573,7 +618,7 @@ def parse_message_locally(message, available_items, custom_aliases=None):
     EXPANDED_VOICE_TYPOS = {
         'keji': 'kg', 'kaji': 'kg', 'kaji': 'kg', 'kilo': 'kg', 'kilos': 'kg', 'kilogram': 'kg',
         'doodh': 'milk', 'dudh': 'milk', 'dudth': 'milk', 'melk': 'milk', 'malk': 'milk', 'milkk': 'milk',
-        'chawal': 'rice', 'chaawal': 'rice', 'chaval': 'rice', 'rise': 'rice', 'rais': 'rice', 'raice': 'rice', 'ricee': 'rice',
+        'chawal': 'rice', 'chaawal': 'rice', 'chaval': 'rice', 'rise': 'rice', 'rais': 'rice', 'raice': 'rice', 'ricee': 'rice', 'rice': 'rice',
         'cheeni': 'sugar', 'chini': 'sugar', 'shakkar': 'sugar', 'suger': 'sugar', 'sugur': 'sugar', 'sugarr': 'sugar',
         'aloo': 'potato', 'alu': 'potato', 'aaloo': 'potato',
         'pyaz': 'onion', 'pyaaz': 'onion', 'kanda': 'onion',
@@ -689,7 +734,7 @@ def parse_message_locally(message, available_items, custom_aliases=None):
             if (i + 2 < len(words) and (i+1) not in consumed_indices and (i+2) not in consumed_indices
                     and not words[i+1].replace('.','').isdigit() and not words[i+2].replace('.','').isdigit()):
                 combo2 = f"{words[i+1]} {words[i+2]}"
-                match2 = fuzzy_match_item(combo2, available_items)
+                match2 = fuzzy_match_item(combo2, available_items, EXPANDED_VOICE_TYPOS)
                 if match2 and not any(it["item"] == match2 for it in items_found):
                     items_found.append({"item": match2, "qty": qty})
                     consumed_indices.update({i, i+1, i+2})
@@ -698,7 +743,7 @@ def parse_message_locally(message, available_items, custom_aliases=None):
             
             # Try 1-word item: "2 milk"
             if not matched and i + 1 < len(words) and (i+1) not in consumed_indices:
-                match1 = fuzzy_match_item(words[i+1], available_items)
+                match1 = fuzzy_match_item(words[i+1], available_items, EXPANDED_VOICE_TYPOS)
                 if match1 and not any(it["item"] == match1 for it in items_found):
                     items_found.append({"item": match1, "qty": qty})
                     consumed_indices.update({i, i+1})
@@ -722,7 +767,7 @@ def parse_message_locally(message, available_items, custom_aliases=None):
             num_match = re.match(r'^(\d+(?:\.\d+)?)$', words[i+2])
             if num_match:
                 combo = f"{words[i]} {words[i+1]}"
-                match2 = fuzzy_match_item(combo, available_items)
+                match2 = fuzzy_match_item(combo, available_items, EXPANDED_VOICE_TYPOS)
                 if match2 and not any(it["item"] == match2 for it in items_found):
                     items_found.append({"item": match2, "qty": float(num_match.group(1))})
                     consumed_indices.update({i, i+1, i+2})
@@ -733,7 +778,7 @@ def parse_message_locally(message, available_items, custom_aliases=None):
         if i + 1 < len(words) and (i+1) not in consumed_indices:
             num_match = re.match(r'^(\d+(?:\.\d+)?)$', words[i+1])
             if num_match and not words[i].replace('.', '').isdigit():
-                match1 = fuzzy_match_item(words[i], available_items)
+                match1 = fuzzy_match_item(words[i], available_items, EXPANDED_VOICE_TYPOS)
                 if match1 and not any(it["item"] == match1 for it in items_found):
                     items_found.append({"item": match1, "qty": float(num_match.group(1))})
                     consumed_indices.update({i, i+1})
@@ -752,7 +797,7 @@ def parse_message_locally(message, available_items, custom_aliases=None):
         combo = f"{words[i]} {words[i+1]} {words[i+2]}"
         if combo.replace('.', '').replace(' ', '').isdigit():
             continue
-        matched_item = fuzzy_match_item(combo, available_items)
+        matched_item = fuzzy_match_item(combo, available_items, EXPANDED_VOICE_TYPOS)
         if matched_item and not any(it["item"] == matched_item for it in items_found):
             items_found.append({"item": matched_item, "qty": 1.0})
             consumed_indices.update({i, i+1, i+2})
@@ -764,7 +809,7 @@ def parse_message_locally(message, available_items, custom_aliases=None):
         combo = f"{words[i]} {words[i+1]}"
         if combo.replace('.', '').replace(' ', '').isdigit():
             continue
-        matched_item = fuzzy_match_item(combo, available_items)
+        matched_item = fuzzy_match_item(combo, available_items, EXPANDED_VOICE_TYPOS)
         if matched_item and not any(it["item"] == matched_item for it in items_found):
             items_found.append({"item": matched_item, "qty": 1.0})
             consumed_indices.update({i, i+1})
@@ -774,7 +819,7 @@ def parse_message_locally(message, available_items, custom_aliases=None):
         if i in consumed_indices:
             continue
         if not word.replace('.', '').isdigit():
-            matched_item = fuzzy_match_item(word, available_items)
+            matched_item = fuzzy_match_item(word, available_items, EXPANDED_VOICE_TYPOS)
             if matched_item and not any(it["item"] == matched_item for it in items_found):
                 items_found.append({"item": matched_item, "qty": 1.0})
                 
@@ -849,7 +894,7 @@ async def parse_order_endpoint(req: ChatRequest, request: Request, auth: tuple =
                 for item_data in ai_items:
                     item_name = item_data.get("item", "").strip().title()
                     qty = float(item_data.get("qty", 1))
-                    matched = fuzzy_match_item(item_name, available_items)
+                    matched = fuzzy_match_item(item_name, available_items, custom_aliases)
                     if matched and qty > 0:
                         items_to_sell.append({"item": matched, "qty": qty})
             except Exception as ai_err:
