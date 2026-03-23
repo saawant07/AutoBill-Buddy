@@ -582,6 +582,8 @@
         let voiceError = false;
         let voiceMode = null; // 'persistent' | 'quick' | null
         let pendingVoiceItems = []; // items from persistent dictation awaiting review
+        let pendingVoicePaymentMode = null; // detected payment mode from voice
+        let pendingVoiceCustomer = null; // detected customer name from voice
         let persistentSilenceTimer = null;
         let quickSilenceTimer = null;
 
@@ -680,7 +682,7 @@
             recognition = new SpeechRecognition();
             recognition.continuous = false; // false = browser auto-stops on silence
             recognition.interimResults = true;
-            recognition.lang = 'en-IN';
+            recognition.lang = 'hi-IN'; // Supports Hindi + Hinglish (English names/numbers work fine)
             recognition.maxAlternatives = 1;
 
             // Show the persistent button with listening state
@@ -811,7 +813,7 @@
             recognition = new SpeechRecognition();
             recognition.continuous = false;
             recognition.interimResults = true;
-            recognition.lang = 'en-IN';
+            recognition.lang = 'hi-IN'; // Supports Hindi + Hinglish
             recognition.maxAlternatives = 1;
 
             const qBtn = document.getElementById('quick-add-btn');
@@ -939,6 +941,7 @@
 
         // Show review modal with parsed items (Control A flow)
         async function showVoiceReviewModal(text) {
+            app.showToast('Processing voice...', 'info');
             const result = await app.api('/parse-order', 'POST', { message: text });
             if (!result || result.error || !result.items || result.items.length === 0) {
                 app.showToast('Couldn\'t understand. Try again.', 'error');
@@ -950,12 +953,33 @@
                 qty: item.quantity || 1
             }));
 
+            // Store detected payment mode and customer from backend
+            pendingVoicePaymentMode = result.payment_mode || null;
+            pendingVoiceCustomer = result.customer_name || null;
+
             const content = document.getElementById('voice-review-content');
             const modal = document.getElementById('voice-review-modal');
             if (!pendingVoiceItems.length) {
                 content.innerHTML = '<div id="voice-review-empty">No items parsed. Try again.</div>';
             } else {
-                content.innerHTML = pendingVoiceItems.map((item, idx) => `
+                // Build review list with detected mode/customer info at top
+                let headerHtml = '';
+                if (pendingVoicePaymentMode && pendingVoicePaymentMode.toLowerCase() !== 'cash') {
+                    const modeLabel = pendingVoicePaymentMode;
+                    const isUdhaar = modeLabel.toLowerCase().includes('udhaar') || modeLabel.toLowerCase().includes('credit');
+                    headerHtml += `<div style="display:flex;align-items:center;gap:6px;padding:8px 12px;margin-bottom:8px;border-radius:10px;background:${isUdhaar ? 'rgba(239,68,68,0.08)' : 'rgba(59,130,246,0.08)'};border:1px solid ${isUdhaar ? 'rgba(239,68,68,0.2)' : 'rgba(59,130,246,0.2)'}">
+                        <i class="fas ${isUdhaar ? 'fa-hand-holding-dollar' : 'fa-credit-card'}" style="color:${isUdhaar ? '#EF4444' : '#3B82F6'};font-size:12px;"></i>
+                        <span style="font-size:12px;font-weight:700;color:${isUdhaar ? '#DC2626' : '#2563EB'};">Payment: ${app.esc(modeLabel)}</span>
+                    </div>`;
+                }
+                if (pendingVoiceCustomer && pendingVoiceCustomer !== 'Walk-in') {
+                    headerHtml += `<div style="display:flex;align-items:center;gap:6px;padding:8px 12px;margin-bottom:8px;border-radius:10px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2)">
+                        <i class="fas fa-user" style="color:#10B981;font-size:12px;"></i>
+                        <span style="font-size:12px;font-weight:700;color:#059669;">Customer: ${app.esc(pendingVoiceCustomer)}</span>
+                    </div>`;
+                }
+
+                content.innerHTML = headerHtml + pendingVoiceItems.map((item, idx) => `
                     <div class="voice-review-item">
                         <div>
                             <div style="font-weight:600;font-size:13px;">${app.esc(item.name)}</div>
@@ -1020,33 +1044,77 @@
                 }
             });
 
+            // Apply detected payment mode from voice
+            if (pendingVoicePaymentMode) {
+                const mode = pendingVoicePaymentMode.toLowerCase();
+                if (mode.includes('udhaar') || mode.includes('credit')) {
+                    setPaymentMethod('Udhaar');
+                } else if (mode.includes('upi')) {
+                    setPaymentMethod('UPI');
+                } else if (mode.includes('card')) {
+                    setPaymentMethod('Card');
+                }
+            }
+
+            // Apply detected customer name from voice
+            if (pendingVoiceCustomer && pendingVoiceCustomer !== 'Walk-in') {
+                const cName = pendingVoiceCustomer.trim();
+                if (cName.length > 0 && cName.length < 30) {
+                    document.getElementById('customer-name').value = cName;
+                }
+            }
+
+            const itemSummary = pendingVoiceItems.map(i => i.qty + ' ' + i.name).join(', ');
             closeVoiceReview();
             renderBillItems();
-            app.showToast('Added: ' + pendingVoiceItems.map(i => i.qty + ' ' + i.name).join(', '), 'success');
+            app.showToast('Added: ' + itemSummary, 'success');
         };
 
         // Process Quick Add (Control B - directly add to bill)
         async function processQuickAdd(text) {
+            app.showToast('Processing...', 'info');
             const result = await app.api('/parse-order', 'POST', { message: text });
             if (!result || result.error || !result.items || result.items.length === 0) {
                 app.showToast('Couldn\'t understand. Try again.', 'error');
                 return;
             }
-            // Take first item only for quick add
-            const item = result.items[0];
-            const name = item.item_name || item.name;
-            const price = item.unit_price || item.price || 0;
-            const qty = item.quantity || 1;
+            // Add ALL items (not just the first one)
+            for (const item of result.items) {
+                const name = item.item_name || item.name;
+                const price = item.unit_price || item.price || 0;
+                const qty = item.quantity || 1;
 
-            const existing = billItems.find(i => i.name === name);
-            if (existing) {
-                existing.qty += qty;
-                existing.total = existing.qty * existing.unit_price;
-            } else {
-                billItems.push({ name, qty, unit_price: price, total: price * qty });
+                const existing = billItems.find(i => i.name === name);
+                if (existing) {
+                    existing.qty += qty;
+                    existing.total = existing.qty * existing.unit_price;
+                } else {
+                    billItems.push({ name, qty, unit_price: price, total: price * qty });
+                }
             }
+
+            // Apply detected payment mode from voice
+            if (result.payment_mode) {
+                const mode = result.payment_mode.toLowerCase();
+                if (mode.includes('udhaar') || mode.includes('credit')) {
+                    setPaymentMethod('Udhaar');
+                } else if (mode.includes('upi')) {
+                    setPaymentMethod('UPI');
+                } else if (mode.includes('card')) {
+                    setPaymentMethod('Card');
+                }
+            }
+
+            // Apply detected customer name from voice
+            if (result.customer_name && result.customer_name !== 'Walk-in') {
+                const cName = result.customer_name.trim();
+                if (cName.length > 0 && cName.length < 30) {
+                    document.getElementById('customer-name').value = cName;
+                }
+            }
+
             renderBillItems();
-            app.showToast('Added: ' + qty + ' ' + name + ' ✓', 'success');
+            app.showToast(`Added ${result.items.length} item(s)!`, 'success');
         }
 
         // Also expose stopVoice on window for inline handlers
