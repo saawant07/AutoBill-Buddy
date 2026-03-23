@@ -40,9 +40,9 @@
             <div class="page-header-right">
                 <!-- Date Filter Tabs -->
                 <div class="tab-group" id="date-filter">
-                    <button class="tab-btn active" data-filter="today">Today</button>
-                    <button class="tab-btn" data-filter="week">This Week</button>
-                    <button class="tab-btn" data-filter="month">This Month</button>
+                    <button class="tab-btn active" data-filter="day">Day</button>
+                    <button class="tab-btn" data-filter="week">Week</button>
+                    <button class="tab-btn" data-filter="year">Year</button>
                 </div>
                 <button id="theme-toggle-btn" class="btn-icon btn-outline" title="Toggle theme">
                     <i class="fas fa-moon"></i>
@@ -104,6 +104,31 @@
                         <p class="stat-sub">items need restock</p>
                     </div>
                 </div>
+
+                <!-- Sales by Item (Pie Chart) -->
+                <div class="stat-card">
+                    <div class="stat-icon-wrap" style="background:var(--accent-blue-light);">
+                        <i class="fas fa-chart-pie" style="color:var(--accent-blue);"></i>
+                    </div>
+                    <div class="stat-info">
+                        <p class="stat-label">Sales by Item</p>
+                        <div style="height:160px;margin-top:8px;">
+                            <canvas id="pie-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Credit Due -->
+                <div class="stat-card" id="stat-credit-card" style="background:linear-gradient(135deg,#D97706,#F59E0B);cursor:pointer;" onclick="window.location.href='/customers.html'">
+                    <div class="stat-icon-wrap" style="background:rgba(255,255,255,0.2);">
+                        <i class="fas fa-hand-holding-dollar" style="color:white;"></i>
+                    </div>
+                    <div class="stat-info">
+                        <p class="stat-label" style="color:rgba(255,255,255,0.8);">Credit Due</p>
+                        <p class="stat-value" id="stat-credit-due" style="color:white;">₹0</p>
+                        <p class="stat-sub" style="color:rgba(255,255,255,0.7);">outstanding balance</p>
+                    </div>
+                </div>
             </div>
 
             <!-- Quick Actions + Revenue Chart -->
@@ -158,7 +183,7 @@
                         <i class="fas fa-clock-rotate-left" style="color:var(--accent-blue)"></i>
                         Recent Sales
                     </h3>
-                    <a href="/reports.html" class="btn btn-sm btn-outline">
+                    <a href="/reports.html?scrollTo=transactions" class="btn btn-sm btn-outline">
                         View All <i class="fas fa-arrow-right"></i>
                     </a>
                 </div>
@@ -215,12 +240,12 @@
         });
 
         // Date filter tabs
-        let currentFilter = 'today';
+        let activeFilter = 'day';
         document.querySelectorAll('#date-filter .tab-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.querySelectorAll('#date-filter .tab-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
-                currentFilter = btn.dataset.filter;
+                activeFilter = btn.dataset.filter;
                 refreshDashboard();
             });
         });
@@ -247,6 +272,14 @@
                     document.getElementById('stat-skus').textContent = inv.length + ' SKUs in system';
                 }
             }
+
+            // Load credit dues
+            const duesRes = await app.api('/dues');
+            if (duesRes && duesRes.dues) {
+                const totalDues = duesRes.dues.reduce((s, d) => s + (d.total_due || 0), 0);
+                const el = document.getElementById('stat-credit-due');
+                if (el) el.textContent = '₹' + totalDues.toLocaleString('en-IN');
+            }
         }
 
         async function refreshDashboard() {
@@ -262,50 +295,28 @@
 
             try {
                 let stats;
-                if (currentFilter === 'today') {
+                if (activeFilter === 'day') {
                     stats = await app.api('/sales/today');
-                } else if (currentFilter === 'month') {
-                    const monthRes = await app.api('/sales/month');
-                    if (monthRes && !monthRes.error) {
-                        // Transform month response to match what updateStats expects
-                        stats = {
-                            total_revenue: monthRes.month_revenue || 0,
-                            total_sales: monthRes.month_orders || 0,
-                            total_quantity: monthRes.month_quantity || 0,
-                            transactions: monthRes.transactions || []
-                        };
-                    } else {
-                        stats = { transactions: [] };
-                    }
+                } else if (activeFilter === 'week') {
+                    stats = await app.api('/sales/week');
                 } else {
-                    // week - get last 7 days manually
-                    stats = { transactions: [] };
-                    for (let i = 6; i >= 0; i--) {
-                        const d = new Date();
-                        d.setDate(d.getDate() - i);
-                        const ds = d.toISOString().split('T')[0];
-                        const dayStats = await app.api(`/sales/date/${ds}`);
-                        if (dayStats && !dayStats.error) {
-                            stats.transactions = [...(stats.transactions||[]), ...(dayStats.transactions||[])];
-                            stats.total_revenue = (stats.total_revenue||0) + (dayStats.revenue||0);
-                            stats.total_sales = (stats.total_sales||0) + (dayStats.orders||0);
-                            stats.total_quantity = (stats.total_quantity||0) + (dayStats.quantity||0);
-                        }
-                    }
+                    stats = await app.api('/sales/year');
                 }
 
                 if (stats && !stats.error) {
                     updateStats(stats);
                     renderTransactions(stats.transactions || []);
+                    // Update pie chart from transactions
+                    renderPieChart(stats.transactions || []);
                 }
 
                 // Load weekly chart
                 const weekly = await app.api('/analytics/weekly');
                 if (weekly && !weekly.error && weekly.data) {
                     const labels = weekly.data.dates || [];
-                    const values = weekly.data.cash || [];
+                    const cashValues = weekly.data.cash || [];
                     if (chartLoading) chartLoading.style.display = 'none';
-                    createRevenueChart('revenue-chart', labels, values, 'Revenue');
+                    createLineChart('revenue-chart', labels, cashValues);
                 }
             } catch (e) {
                 console.error(e);
@@ -317,6 +328,21 @@
 
         // Expose refreshDashboard to window for inline onclick handler
         window.refreshDashboard = refreshDashboard;
+
+        function renderPieChart(transactions) {
+            const itemMap = {};
+            transactions.forEach(tx => {
+                (tx.detailed_items || []).forEach(item => {
+                    const name = item.name || 'Unknown';
+                    itemMap[name] = (itemMap[name] || 0) + (item.quantity || 1);
+                });
+            });
+            const sorted = Object.entries(itemMap).sort((a,b) => b[1]-a[1]).slice(0, 6);
+            if (sorted.length === 0) return;
+            const labels = sorted.map(x => x[0]);
+            const values = sorted.map(x => x[1]);
+            createPieChart('pie-chart', labels, values);
+        }
 
         function renderTransactions(transactions) {
             const loading = document.getElementById('tx-loading');

@@ -293,6 +293,14 @@
         .view-all-link:hover {
             opacity: 0.8;
         }
+        .highlight-pulse {
+            animation: highlightPulse 1.5s ease-in-out;
+        }
+        @keyframes highlightPulse {
+            0%, 100% { box-shadow: none; }
+            50% { box-shadow: 0 0 0 4px var(--accent-green-light); }
+        }
+        #transaction-history { scroll-margin-top: 20px; }
         .table-wrap {
             overflow-x: auto;
             border-radius: 12px;
@@ -405,7 +413,7 @@
                     </div>
 
                     <!-- Recent Transactions Table -->
-                    <div class="chart-card">
+                    <div class="chart-card" id="transaction-history">
                         <div class="section-header">
                             <h3 class="section-title">
                                 <i class="fas fa-clock-rotate-left" style="color: var(--accent-blue);"></i>
@@ -909,6 +917,18 @@
         window.viewAllTransactions = () => {
             renderTransactions(_allTransactions, true);
         };
+
+        // scrollTo support from dashboard
+        if (window.location.search.includes('scrollTo=transactions')) {
+            setTimeout(() => {
+                const el = document.getElementById('transaction-history');
+                if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    el.classList.add('highlight-pulse');
+                    setTimeout(() => el.classList.remove('highlight-pulse'), 2000);
+                }
+            }, 500);
+        }
     </script>
     <script src="/static/js/charts.js" type="module"></script>
 </body>

@@ -70,6 +70,104 @@ function createRevenueChart(canvasId, labels, values, title) {
     });
 }
 
+// Create a line chart with gradient fill
+function createLineChart(canvasId, labels, values) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return null;
+
+    const existing = Chart.getChart(canvas);
+    if (existing) existing.destroy();
+
+    const ctx = canvas.getContext('2d');
+    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.offsetHeight || 200);
+    gradient.addColorStop(0, 'rgba(16,185,129,0.3)');
+    gradient.addColorStop(1, 'rgba(16,185,129,0.02)');
+
+    return new Chart(canvas, {
+        type: 'line',
+        data: {
+            labels: labels || [],
+            datasets: [{
+                data: values || [],
+                borderColor: '#10B981',
+                backgroundColor: gradient,
+                fill: true,
+                tension: 0.4,
+                pointRadius: 4,
+                pointBackgroundColor: '#10B981',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            ...CHART_DEFAULTS,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(0,0,0,0.05)' },
+                    ticks: {
+                        callback: v => '₹' + (v >= 1000 ? (v/1000).toFixed(0) + 'k' : v),
+                        font: { family: "'Plus Jakarta Sans', sans-serif", size: 11 },
+                        color: 'var(--text-muted)'
+                    }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: {
+                        font: { family: "'Plus Jakarta Sans', sans-serif", size: 11 },
+                        color: 'var(--text-muted)'
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Create a pie chart
+function createPieChart(canvasId, labels, values) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return null;
+
+    const existing = Chart.getChart(canvas);
+    if (existing) existing.destroy();
+
+    const colors = ['#10B981', '#3B82F6', '#8B5CF6', '#F59E0B', '#EF4444', '#EC4899'];
+
+    return new Chart(canvas, {
+        type: 'pie',
+        data: {
+            labels: labels || [],
+            datasets: [{
+                data: values || [],
+                backgroundColor: colors.slice(0, labels.length),
+                borderWidth: 0,
+                hoverOffset: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'bottom',
+                    labels: {
+                        font: { family: "'Plus Jakarta Sans', sans-serif", size: 10 },
+                        color: 'var(--text-muted)',
+                        padding: 8,
+                        boxWidth: 10
+                    }
+                },
+                tooltip: {
+                    ...CHART_DEFAULTS.plugins.tooltip,
+                    callbacks: {
+                        label: ctx => ' ' + ctx.label + ': ' + ctx.parsed
+                    }
+                }
+            }
+        }
+    });
+}
+
 // Create a line chart for trends
 function createTrendChart(canvasId, labels, revenueValues, profitValues) {
     const canvas = document.getElementById(canvasId);
@@ -188,3 +286,5 @@ function createPaymentDoughnut(canvasId, cash, udhaar) {
 window.createRevenueChart = createRevenueChart;
 window.createTrendChart = createTrendChart;
 window.createPaymentDoughnut = createPaymentDoughnut;
+window.createLineChart = createLineChart;
+window.createPieChart = createPieChart;

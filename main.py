@@ -1446,6 +1446,157 @@ async def get_weekly_analytics(auth: tuple = Depends(get_user_client)):
         traceback.print_exc()
         return {"success": False, "message": str(e)}
 
+@app.get("/sales/week")
+async def get_sales_week(authorization: str = Header(None)):
+    """Get sales for current week (Mon-Sun IST)"""
+    if not authorization:
+        return {"error": "Unauthorized"}
+    try:
+        token = authorization.replace("Bearer ", "")
+        payload = supabase_anon.auth.get_user(token)
+        user_id = payload.user.id
+    except:
+        return {"error": "Invalid token"}
+
+    now_ist = datetime.utcnow() + timedelta(hours=5, minutes=30)
+    today_ist = now_ist.date()
+    monday = today_ist - timedelta(days=today_ist.weekday())
+    sunday = monday + timedelta(days=6)
+
+    start_ist = datetime.combine(monday, datetime.min.time()) - timedelta(hours=5, minutes=30)
+    end_ist = datetime.combine(sunday, datetime.max.time()) - timedelta(hours=5, minutes=30)
+
+    try:
+        sb_admin: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+        res = sb_admin.from_("sales").select("*").gte("created_at", start_ist.isoformat()).lte("created_at", end_ist.isoformat()).eq("user_id", user_id).execute()
+        transactions = res.data or []
+
+        total_revenue = sum(float(tx.get("total_price", 0)) for tx in transactions)
+        total_sales = len(transactions)
+        total_quantity = sum(sum(item.get("quantity", 0) for item in tx.get("detailed_items", [])) for tx in transactions)
+
+        return {
+            "total_revenue": total_revenue,
+            "total_sales": total_sales,
+            "total_quantity": total_quantity,
+            "transactions": transactions
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/analytics/top-items")
+async def get_top_items(period: str = "day", authorization: str = Header(None)):
+    """Get top 10 items by qty sold, with revenue and % change vs previous period"""
+    if not authorization:
+        return {"error": "Unauthorized"}
+    try:
+        token = authorization.replace("Bearer ", "")
+        payload = supabase_anon.auth.get_user(token)
+        user_id = payload.user.id
+    except:
+        return {"error": "Invalid token"}
+
+    now_ist = datetime.utcnow() + timedelta(hours=5, minutes=30)
+    today_ist = now_ist.date()
+
+    if period == "day":
+        start1 = datetime.combine(today_ist, datetime.min.time()) - timedelta(hours=5, minutes=30)
+        end1 = datetime.combine(today_ist, datetime.max.time()) - timedelta(hours=5, minutes=30)
+        prev_start = start1 - timedelta(days=1)
+        prev_end = end1 - timedelta(days=1)
+    elif period == "week":
+        monday = today_ist - timedelta(days=today_ist.weekday())
+        start1 = datetime.combine(monday, datetime.min.time()) - timedelta(hours=5, minutes=30)
+        end1 = datetime.combine(monday + timedelta(days=6), datetime.max.time()) - timedelta(hours=5, minutes=30)
+        prev_start = start1 - timedelta(weeks=1)
+        prev_end = end1 - timedelta(weeks=1)
+    else:
+        start1 = datetime(today_ist.year, 1, 1) - timedelta(hours=5, minutes=30)
+        end1 = datetime(today_ist.year, 12, 31, 23, 59, 59) - timedelta(hours=5, minutes=30)
+        prev_start = datetime(today_ist.year - 1, 1, 1) - timedelta(hours=5, minutes=30)
+        prev_end = datetime(today_ist.year - 1, 12, 31, 23, 59, 59) - timedelta(hours=5, minutes=30)
+
+    try:
+        sb_admin: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+
+        r1 = sb_admin.from_("sales").select("detailed_items,total_price").gte("created_at", start1.isoformat()).lte("created_at", end1.isoformat()).eq("user_id", user_id).execute()
+        r2 = sb_admin.from_("sales").select("detailed_items,total_price").gte("created_at", prev_start.isoformat()).lte("created_at", prev_end.isoformat()).eq("user_id", user_id).execute()
+
+        item_map = defaultdict(lambda: {"qty": 0, "revenue": 0.0})
+        for tx in (r1.data or []):
+            for item in tx.get("detailed_items", []):
+                name = item.get("name", "Unknown")
+                item_map[name]["qty"] += item.get("quantity", 0)
+                item_map[name]["revenue"] += float(item.get("price", 0)) * item.get("quantity", 0)
+
+        prev_map = defaultdict(lambda: {"qty": 0})
+        for tx in (r2.data or []):
+            for item in tx.get("detailed_items", []):
+                prev_map[item.get("name", "Unknown")]["qty"] += item.get("quantity", 0)
+
+        total_rev = sum(v["revenue"] for v in item_map.values()) or 1
+        sorted_items = sorted(item_map.items(), key=lambda x: x[1]["qty"], reverse=True)[:10]
+
+        result = []
+        for name, data in sorted_items:
+            prev_qty = prev_map[name]["qty"]
+            pct_change = ((data["qty"] - prev_qty) / prev_qty * 100) if prev_qty else (100 if data["qty"] > 0 else 0)
+            result.append({
+                "name": name,
+                "qty": data["qty"],
+                "revenue": data["revenue"],
+                "pct_of_total": round(data["revenue"] / total_rev * 100, 1),
+                "pct_change": round(pct_change, 1)
+            })
+        return {"items": result}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/analytics/comparison")
+async def get_comparison(period: str = "day", authorization: str = Header(None)):
+    """Get current vs previous period revenue comparison"""
+    if not authorization:
+        return {"error": "Unauthorized"}
+    try:
+        token = authorization.replace("Bearer ", "")
+        payload = supabase_anon.auth.get_user(token)
+        user_id = payload.user.id
+    except:
+        return {"error": "Invalid token"}
+
+    now_ist = datetime.utcnow() + timedelta(hours=5, minutes=30)
+    today_ist = now_ist.date()
+
+    if period == "day":
+        start1 = datetime.combine(today_ist, datetime.min.time()) - timedelta(hours=5, minutes=30)
+        end1 = datetime.combine(today_ist, datetime.max.time()) - timedelta(hours=5, minutes=30)
+        prev_start = start1 - timedelta(days=1)
+        prev_end = end1 - timedelta(days=1)
+    elif period == "week":
+        monday = today_ist - timedelta(days=today_ist.weekday())
+        start1 = datetime.combine(monday, datetime.min.time()) - timedelta(hours=5, minutes=30)
+        end1 = datetime.combine(monday + timedelta(days=6), datetime.max.time()) - timedelta(hours=5, minutes=30)
+        prev_start = start1 - timedelta(weeks=1)
+        prev_end = end1 - timedelta(weeks=1)
+    else:
+        start1 = datetime(today_ist.year, 1, 1) - timedelta(hours=5, minutes=30)
+        end1 = datetime(today_ist.year, 12, 31, 23, 59, 59) - timedelta(hours=5, minutes=30)
+        prev_start = datetime(today_ist.year - 1, 1, 1) - timedelta(hours=5, minutes=30)
+        prev_end = datetime(today_ist.year - 1, 12, 31, 23, 59, 59) - timedelta(hours=5, minutes=30)
+
+    try:
+        sb_admin: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+        r1 = sb_admin.from_("sales").select("total_price").gte("created_at", start1.isoformat()).lte("created_at", end1.isoformat()).eq("user_id", user_id).execute()
+        r2 = sb_admin.from_("sales").select("total_price").gte("created_at", prev_start.isoformat()).lte("created_at", prev_end.isoformat()).eq("user_id", user_id).execute()
+
+        curr = sum(float(tx.get("total_price", 0)) for tx in (r1.data or []))
+        prev = sum(float(tx.get("total_price", 0)) for tx in (r2.data or []))
+        pct_change = ((curr - prev) / prev * 100) if prev else (100 if curr > 0 else 0)
+
+        return {"current": curr, "previous": prev, "pct_change": round(pct_change, 1)}
+    except Exception as e:
+        return {"error": str(e)}
+
 @app.get("/sales/month")
 async def get_monthly_sales(month: int = None, year: int = None, auth: tuple = Depends(get_user_client)):
     from datetime import datetime, timezone, timedelta
