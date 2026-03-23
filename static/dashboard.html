@@ -105,19 +105,6 @@
                     </div>
                 </div>
 
-                <!-- Sales by Item (Pie Chart) -->
-                <div class="stat-card">
-                    <div class="stat-icon-wrap" style="background:var(--accent-blue-light);">
-                        <i class="fas fa-chart-pie" style="color:var(--accent-blue);"></i>
-                    </div>
-                    <div class="stat-info">
-                        <p class="stat-label">Sales by Item</p>
-                        <div style="height:160px;margin-top:8px;">
-                            <canvas id="pie-chart"></canvas>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Credit Due -->
                 <div class="stat-card" id="stat-credit-card" style="background:linear-gradient(135deg,#D97706,#F59E0B);cursor:pointer;" onclick="window.location.href='/customers.html'">
                     <div class="stat-icon-wrap" style="background:rgba(255,255,255,0.2);">
@@ -222,8 +209,9 @@
     </div>
 
     <script type="module">
-        // Load app.js first so window.app is available
+        // Load app.js and charts.js first so window.app and chart functions are available
         await import('/static/js/app.js');
+        await import('/static/js/charts.js');
 
         // Load sidebar
         const sidebarResp = await fetch('/static/components/sidebar.html');
@@ -306,8 +294,6 @@
                 if (stats && !stats.error) {
                     updateStats(stats);
                     renderTransactions(stats.transactions || []);
-                    // Update pie chart from transactions
-                    renderPieChart(stats.transactions || []);
                 }
 
                 // Load weekly chart
@@ -329,20 +315,6 @@
         // Expose refreshDashboard to window for inline onclick handler
         window.refreshDashboard = refreshDashboard;
 
-        function renderPieChart(transactions) {
-            const itemMap = {};
-            transactions.forEach(tx => {
-                (tx.detailed_items || []).forEach(item => {
-                    const name = item.name || 'Unknown';
-                    itemMap[name] = (itemMap[name] || 0) + (item.quantity || 1);
-                });
-            });
-            const sorted = Object.entries(itemMap).sort((a,b) => b[1]-a[1]).slice(0, 6);
-            if (sorted.length === 0) return;
-            const labels = sorted.map(x => x[0]);
-            const values = sorted.map(x => x[1]);
-            createPieChart('pie-chart', labels, values);
-        }
 
         function renderTransactions(transactions) {
             const loading = document.getElementById('tx-loading');
@@ -386,6 +358,5 @@
         // Initialize app
         await app.initApp();
     </script>
-    <script src="/static/js/charts.js" type="module"></script>
 </body>
 </html>

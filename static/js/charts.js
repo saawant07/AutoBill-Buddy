@@ -2,9 +2,6 @@
    AutoBill Buddy - Chart.js Helpers
 ============================================================================ */
 
-// Wait for app.js to be loaded (pages load app.js via their inline module)
-await import('/static/js/app.js');
-
 const CHART_DEFAULTS = {
     responsive: true,
     maintainAspectRatio: false,
