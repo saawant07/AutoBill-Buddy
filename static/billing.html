@@ -649,7 +649,7 @@
         // ---- VOICE INPUT (Two Controls) ----
 
         // CONTROL A: Persistent Round Mic Button - full order dictation
-        window.togglePersistentVoice = function() {
+        window.togglePersistentVoice = async function() {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (!SpeechRecognition) { app.showToast('Speech not supported. Use Chrome.', 'warning'); return; }
 
@@ -663,6 +663,17 @@
                 stopVoice();
             }
 
+            // Check mic permission first
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                stream.getTracks().forEach(track => track.stop()); // Release the track immediately
+                console.log('[Voice] Mic permission granted');
+            } catch(e) {
+                console.log('[Voice] Mic permission denied:', e.message);
+                app.showToast('Please allow microphone in browser settings', 'error');
+                return;
+            }
+
             voiceError = false;
             voiceMode = 'persistent';
             pendingVoiceItems = [];
@@ -671,6 +682,7 @@
             recognition.continuous = true;
             recognition.interimResults = true;
             recognition.lang = 'en-IN';
+            recognition.maxAlternatives = 1;
 
             // Show the persistent button with listening state
             const pBtn = document.getElementById('voice-persistent-btn');
@@ -679,35 +691,46 @@
                 pBtn.innerHTML = '<i class="fas fa-stop" style="font-size:20px;"></i>';
             }
 
+            recognition.onstart = () => {
+                console.log('[Voice] onstart - listening started');
+            };
+
             recognition.onresult = (event) => {
+                console.log('[Voice] onresult, results so far:', event.results.length);
                 // Reset silence timer on any speech result
                 clearTimeout(persistentSilenceTimer);
                 persistentSilenceTimer = setTimeout(() => {
-                    if (voiceMode === 'persistent') {
-                        try { recognition?.stop(); } catch(e) {}
+                    if (voiceMode !== 'persistent') return;
+                    console.log('[Voice] Silence timeout - accumulating transcript and stopping');
+                    // Capture transcript BEFORE stopping
+                    let transcript = '';
+                    for (let i = 0; i < recognition.results.length; i++) {
+                        const r = recognition.results[i];
+                        if (r.isFinal) transcript += r[0].transcript + ' ';
                     }
+                    const text = transcript.trim();
+                    console.log('[Voice] Final transcript:', text);
+                    if (!text || text.length < 2) {
+                        app.showToast('No speech detected, try again.', 'warning');
+                        stopVoice();
+                        return;
+                    }
+                    // Stop recognition
+                    try { recognition.stop(); } catch(e) {}
+                    // Show review modal after stop() (onend will fire but be a no-op)
+                    showVoiceReviewModal(text);
                 }, 3000);
             };
 
-            recognition.onend = async () => {
-                if (voiceError) { stopVoice(); return; }
+            recognition.onend = () => {
+                console.log('[Voice] onend fired');
                 clearTimeout(persistentSilenceTimer);
-                stopVoice();
-                // Get transcript
-                let transcript = '';
-                for (let i = 0; i < recognition?.results?.length; i++) {
-                    transcript += recognition.results[i][0].transcript;
-                }
-                const text = transcript.trim();
-                if (!text || text.length < 2) {
-                    app.showToast('No speech detected, try again.', 'warning');
-                    return;
-                }
-                // Show review modal
-                await showVoiceReviewModal(text);
+                // If we get here without a transcript already shown, it was an unexpected end
+                // (e.g., recognition stopped itself). Safe to ignore since silence timer already handled it.
             };
 
             recognition.onerror = (event) => {
+                console.log('[Voice] onerror:', event.error);
                 voiceError = true;
                 clearTimeout(persistentSilenceTimer);
                 const pBtn = document.getElementById('voice-persistent-btn');
@@ -716,16 +739,20 @@
                     pBtn.innerHTML = '<i class="fas fa-microphone" style="font-size:20px;"></i>';
                 }
                 if (event.error === 'not-allowed') {
-                    app.showToast('Mic permission denied.', 'error');
+                    app.showToast('Please allow microphone in browser settings', 'error');
                 } else if (event.error === 'network') {
                     app.showToast('Network error.', 'error');
+                } else if (event.error === 'no-speech') {
+                    app.showToast('Tap mic and speak clearly', 'warning');
                 } else {
                     app.showToast('Mic error. Try again.', 'error');
                 }
                 voiceMode = null;
+                isListening = false;
             };
 
             isListening = true;
+            console.log('[Voice] Calling recognition.start()');
             recognition.start();
 
             // Auto-stop after 60 seconds max
@@ -733,7 +760,7 @@
         };
 
         // CONTROL B: Quick Add - single item fast entry (max 4 sec)
-        window.startQuickAdd = function() {
+        window.startQuickAdd = async function() {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (!SpeechRecognition) { app.showToast('Speech not supported. Use Chrome.', 'warning'); return; }
 
@@ -747,6 +774,17 @@
                 stopVoice();
             }
 
+            // Check mic permission first
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                stream.getTracks().forEach(track => track.stop()); // Release the track immediately
+                console.log('[QuickAdd] Mic permission granted');
+            } catch(e) {
+                console.log('[QuickAdd] Mic permission denied:', e.message);
+                app.showToast('Please allow microphone in browser settings', 'error');
+                return;
+            }
+
             voiceError = false;
             voiceMode = 'quick';
 
@@ -754,62 +792,85 @@
             recognition.continuous = false;
             recognition.interimResults = true;
             recognition.lang = 'en-IN';
+            recognition.maxAlternatives = 1;
 
             const qBtn = document.getElementById('quick-add-btn');
             if (qBtn) {
                 qBtn.classList.add('listening');
             }
 
+            recognition.onstart = () => {
+                console.log('[QuickAdd] onstart - listening started');
+            };
+
             // Silence timer: auto-stop after 4 seconds of no speech
             clearTimeout(quickSilenceTimer);
             quickSilenceTimer = setTimeout(() => {
-                if (voiceMode === 'quick') {
-                    try { recognition?.stop(); } catch(e) {}
-                }
-            }, 4000);
-
-            recognition.onresult = (event) => {
-                // Reset silence timer on each result
-                clearTimeout(quickSilenceTimer);
-                quickSilenceTimer = setTimeout(() => {
-                    if (voiceMode === 'quick') {
-                        try { recognition?.stop(); } catch(e) {}
-                    }
-                }, 4000);
-            };
-
-            recognition.onend = () => {
-                clearTimeout(quickSilenceTimer);
-                if (voiceError) {
-                    stopVoice();
-                    return;
-                }
+                if (voiceMode !== 'quick') return;
+                console.log('[QuickAdd] Silence timeout - stopping');
+                // Capture transcript BEFORE stopping
                 let transcript = '';
-                for (let i = 0; i < recognition?.results?.length; i++) {
-                    transcript += recognition.results[i][0].transcript;
+                for (let i = 0; i < recognition.results.length; i++) {
+                    const r = recognition.results[i];
+                    if (r.isFinal) transcript += r[0].transcript + ' ';
                 }
                 const text = transcript.trim();
+                console.log('[QuickAdd] Final transcript:', text);
                 const qBtn = document.getElementById('quick-add-btn');
                 if (qBtn) qBtn.classList.remove('listening');
                 isListening = false;
                 voiceMode = null;
-
+                try { recognition.stop(); } catch(e) {}
                 if (!text || text.length < 2) {
-                    app.showToast('Didn\'t catch that, try again.', 'warning');
+                    app.showToast('Tap mic and speak clearly', 'warning');
                     return;
                 }
-
-                // Parse and directly add to bill
                 processQuickAdd(text);
+            }, 4000);
+
+            recognition.onresult = (event) => {
+                console.log('[QuickAdd] onresult, interim:', event.results[event.results.length - 1]?.[0]?.transcript);
+                // Reset silence timer on each final result
+                if (event.results[event.results.length - 1]?.isFinal) {
+                    clearTimeout(quickSilenceTimer);
+                    quickSilenceTimer = setTimeout(() => {
+                        if (voiceMode !== 'quick') return;
+                        console.log('[QuickAdd] Silence after final result - stopping');
+                        let transcript = '';
+                        for (let i = 0; i < recognition.results.length; i++) {
+                            const r = recognition.results[i];
+                            if (r.isFinal) transcript += r[0].transcript + ' ';
+                        }
+                        const text = transcript.trim();
+                        const qBtn = document.getElementById('quick-add-btn');
+                        if (qBtn) qBtn.classList.remove('listening');
+                        isListening = false;
+                        voiceMode = null;
+                        try { recognition.stop(); } catch(e) {}
+                        if (!text || text.length < 2) {
+                            app.showToast('Tap mic and speak clearly', 'warning');
+                            return;
+                        }
+                        processQuickAdd(text);
+                    }, 2000);
+                }
+            };
+
+            recognition.onend = () => {
+                console.log('[QuickAdd] onend fired');
+                clearTimeout(quickSilenceTimer);
             };
 
             recognition.onerror = (event) => {
+                console.log('[QuickAdd] onerror:', event.error);
                 voiceError = true;
                 clearTimeout(quickSilenceTimer);
                 const qBtn = document.getElementById('quick-add-btn');
                 if (qBtn) qBtn.classList.remove('listening');
                 if (event.error === 'not-allowed') {
-                    app.showToast('Mic permission denied.', 'error');
+                    app.showToast('Please allow microphone in browser settings', 'error');
+                } else if (event.error === 'no-speech') {
+                    app.showToast('Tap mic and speak clearly', 'warning');
                 } else {
                     app.showToast('Couldn\'t hear, try again.', 'error');
                 }
@@ -818,6 +879,7 @@
             };
 
             isListening = true;
+            console.log('[QuickAdd] Calling recognition.start()');
             recognition.start();
             // Safety cutoff at 15 seconds
             setTimeout(() => { if (isListening && voiceMode === 'quick') { try { recognition?.stop(); } catch(e) {} } }, 15000);
@@ -844,7 +906,7 @@
             voiceMode = null;
         };
 
-        // Customer voice (existing, now respects active voice mode)
+        // Customer voice (uses LOCAL recognition var to never conflict with main controls)
         window.openCustomerVoice = function() {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (!SpeechRecognition) { app.showToast('Speech not supported.', 'warning'); return; }
@@ -852,19 +914,22 @@
             if (isListening) stopVoice();
             const btn = document.getElementById('customer-mic-btn');
             if (btn) btn.classList.add('recording');
-            recognition = new SpeechRecognition();
-            recognition.continuous = false;
-            recognition.interimResults = true;
-            recognition.lang = 'en-IN';
-            recognition.onresult = (event) => {
+            // Use LOCAL variable so it never overwrites the global recognition used by main controls
+            let customerReco = new SpeechRecognition();
+            customerReco.continuous = false;
+            customerReco.interimResults = false;
+            customerReco.lang = 'en-IN';
+            customerReco.onresult = (event) => {
                 let transcript = '';
-                for (let i = 0; i < event.results.length; i++) transcript += event.results[i][0].transcript;
+                for (let i = 0; i < event.results.length; i++) {
+                    if (event.results[i].isFinal) transcript += event.results[i][0].transcript + ' ';
+                }
                 document.getElementById('customer-name').value = transcript.trim();
             };
-            recognition.onend = () => { if (btn) btn.classList.remove('recording'); };
-            recognition.onerror = () => { if (btn) btn.classList.remove('recording'); };
-            recognition.start();
-            setTimeout(() => { try { recognition?.stop(); } catch(e) {} }, 10000);
+            customerReco.onend = () => { if (btn) btn.classList.remove('recording'); };
+            customerReco.onerror = () => { if (btn) btn.classList.remove('recording'); };
+            customerReco.start();
+            setTimeout(() => { try { customerReco?.stop(); } catch(e) {} }, 10000);
         };
 
         // Show review modal with parsed items (Control A flow)
