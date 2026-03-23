@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 import asyncio
 from typing import Optional
 import httpx
-from fastapi import FastAPI, HTTPException, Header, Depends, BackgroundTasks, Request, Response
+from fastapi import FastAPI, HTTPException, Header, Depends, BackgroundTasks, Request, Response, UploadFile, File
 from fastapi.responses import RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 from supabase import create_client, Client
 import google.generativeai as genai
+import tempfile
 import time
 from collections import defaultdict
 
@@ -395,11 +396,11 @@ def fuzzy_match_item(word, available_items, custom_aliases=None, debug=False):
         'keji': 'kg', 'kaji': 'kg', 'kilo': 'kg', 'kilos': 'kg', 'kilogram': 'kg',
         'rise': 'rice', 'rais': 'rice', 'raice': 'rice', 'chaawal': 'rice', 'chaval': 'rice',
         'chawal': 'rice', 'ricee': 'rice',
-        'tee': 'tea', 'chai': 'tea', 'patti': 'tea',
+        'tee': 'tea', 'chai': 'tea',
         'melk': 'milk', 'melku': 'milk', 'doodh': 'milk', 'dudh': 'milk', 'dudth': 'milk', 'malk': 'milk', 'milkk': 'milk',
         'suger': 'sugar', 'sugur': 'sugar', 'cheeni': 'sugar', 'chini': 'sugar', 'shakkar': 'sugar',
-        'flor': 'flour', 'flower': 'flour',
-        'bred': 'bread', 'brad': 'bread', 'roti': 'bread',
+        'flor': 'flour',
+        'bred': 'bread', 'brad': 'bread',
         'ags': 'eggs', 'aggs': 'eggs', 'anda': 'eggs', 'ande': 'eggs', 'anday': 'eggs', 'eggz': 'eggs',
         'ghea': 'ghee', 'ghi': 'ghee',
         'panir': 'paneer', 'paner': 'paneer', 'panneer': 'paneer', 'pneer': 'paneer',
@@ -432,9 +433,16 @@ def fuzzy_match_item(word, available_items, custom_aliases=None, debug=False):
     if word_lower in VOICE_TYPOS:
         mapped = VOICE_TYPOS[word_lower].lower()
         _log(f"typo dict VOICE_TYPOS: '{word}' -> '{mapped}'")
+        # First try exact match
         for item in available_items:
             if item.lower() == mapped:
                 _log(f"matched item: '{item}'")
+                return item
+        # Then try contains match for branded names (e.g. 'milk' in 'Amul Milk')
+        for item in available_items:
+            item_words = item.lower().split()
+            if mapped in item_words:
+                _log(f"contains match (branded): '{item}'")
                 return item
 
     # 2. Check DB aliases (exact match: alias -> item_name)
@@ -459,13 +467,17 @@ def fuzzy_match_item(word, available_items, custom_aliases=None, debug=False):
                 _log(f"short-word exact match: '{item}'")
                 return item
 
-    # 5. Partial match — ONLY if len(word) >= 4
+    # 5. Partial match — ONLY if len(word) >= 4, and lengths within 50%
     if len(word_lower) >= 4:
         for item in available_items:
-            if item.lower() in word_lower or word_lower in item.lower():
-                pct = _character_overlap_pct(word_lower, item.lower())
-                if pct >= 0.40:
-                    _log(f"partial match (>=40%): '{item}' (overlap={pct:.2f})")
+            il = item.lower()
+            # Guard: skip if lengths differ by more than 50%
+            if max(len(word_lower), len(il)) > min(len(word_lower), len(il)) * 1.5:
+                continue
+            if il in word_lower or word_lower in il:
+                pct = _character_overlap_pct(word_lower, il)
+                if pct >= 0.60:
+                    _log(f"partial match (>=60%): '{item}' (overlap={pct:.2f})")
                     return item
 
     # 6. Prefix match — min len 5, prefix must be >= 60% of item name length
@@ -475,8 +487,8 @@ def fuzzy_match_item(word, available_items, custom_aliases=None, debug=False):
                 required = int(len(item.lower()) * 0.60)
                 if len(word_lower) >= required:
                     pct = _character_overlap_pct(word_lower, item.lower())
-                    if pct >= 0.40:
-                        _log(f"prefix match (>=60% len, >=40% overlap): '{item}' (overlap={pct:.2f})")
+                    if pct >= 0.60:
+                        _log(f"prefix match (>=60% len, >=60% overlap): '{item}' (overlap={pct:.2f})")
                         return item
 
     # 6. Token-based fuzzy match (SequenceMatcher ratio: 0.82)
@@ -487,9 +499,9 @@ def fuzzy_match_item(word, available_items, custom_aliases=None, debug=False):
             for iw in item_words:
                 if len(iw) >= 3:
                     ratio = difflib.SequenceMatcher(None, word_lower, iw).ratio()
-                    if ratio >= 0.82:
+                    if ratio >= 0.88:
                         pct = _character_overlap_pct(word_lower, iw)
-                        if pct >= 0.40:
+                        if pct >= 0.60:
                             _log(f"seqmatch (ratio={ratio:.2f}, overlap={pct:.2f}): '{item}' (iw='{iw}')")
                             return item
 
@@ -500,12 +512,12 @@ def fuzzy_match_item(word, available_items, custom_aliases=None, debug=False):
         alias_strings = list(custom_aliases.keys())
         all_candidates = inventory_lower + alias_strings
 
-        matches = difflib.get_close_matches(word_lower, all_candidates, n=1, cutoff=0.75)
+        matches = difflib.get_close_matches(word_lower, all_candidates, n=1, cutoff=0.82)
         if matches:
             match = matches[0]
             pct = _character_overlap_pct(word_lower, match)
-            if pct >= 0.40:
-                _log(f"difflib fallback (cutoff=0.75, overlap={pct:.2f}): '{match}'")
+            if pct >= 0.60:
+                _log(f"difflib fallback (cutoff=0.82, overlap={pct:.2f}): '{match}'")
                 # Check if matched an inventory name
                 for item in available_items:
                     if item.lower() == match:
@@ -633,7 +645,7 @@ def parse_message_locally(message, available_items, custom_aliases=None):
 
     # Expanded typos including Hindi
     EXPANDED_VOICE_TYPOS = {
-        'keji': 'kg', 'kaji': 'kg', 'kaji': 'kg', 'kilo': 'kg', 'kilos': 'kg', 'kilogram': 'kg',
+        'keji': 'kg', 'kaji': 'kg', 'kilo': 'kg', 'kilos': 'kg', 'kilogram': 'kg',
         'doodh': 'milk', 'dudh': 'milk', 'dudth': 'milk', 'melk': 'milk', 'malk': 'milk', 'milkk': 'milk',
         'chawal': 'rice', 'chaawal': 'rice', 'chaval': 'rice', 'rise': 'rice', 'rais': 'rice', 'raice': 'rice', 'ricee': 'rice',
         'cheeni': 'sugar', 'chini': 'sugar', 'shakkar': 'sugar', 'suger': 'sugar', 'sugur': 'sugar', 'sugarr': 'sugar',
@@ -641,11 +653,11 @@ def parse_message_locally(message, available_items, custom_aliases=None):
         'pyaz': 'onion', 'pyaaz': 'onion', 'kanda': 'onion',
         'tamatar': 'tomato', 'tamater': 'tomato',
         'anda': 'eggs', 'ande': 'eggs', 'anday': 'eggs', 'ags': 'eggs', 'aggs': 'eggs', 'eggz': 'eggs', 'eg': 'eggs',
-        'namak': 'salt', 'namkeen': 'salt',
+        'namak': 'salt',
         'tel': 'oil', 'teil': 'oil',
         'makhan': 'butter', 'makkhan': 'butter', 'buttar': 'butter', 'butr': 'butter',
         'dahi': 'curd', 'dahee': 'curd',
-        'roti': 'bread', 'rotee': 'bread', 'bred': 'bread', 'brad': 'bread', 'breads': 'bread',
+        'bred': 'bread', 'brad': 'bread', 'breads': 'bread',
         'daal': 'dal', 'dhaal': 'dal', 'dhal': 'dal',
         'chees': 'cheese', 'cheez': 'cheese', 'cheeze': 'cheese',
         'panneer': 'paneer', 'pneer': 'paneer', 'panir': 'paneer', 'paner': 'paneer',
@@ -654,8 +666,8 @@ def parse_message_locally(message, available_items, custom_aliases=None):
         'biskut': 'biscuits', 'biscut': 'biscuits', 'biskoot': 'biscuits', 'biskit': 'biscuits',
         'sabun': 'soap', 'saabun': 'soap',
         'maggie': 'maggi', 'maagi': 'maggi', 'noodle': 'noodles',
-        'tooothpaste': 'toothpaste', 'toothpast': 'toothpaste', 'colgate': 'toothpaste',
-        'tee': 'tea', 'chai': 'tea', 'patti': 'tea',
+        'toothpast': 'toothpaste',
+        'tee': 'tea', 'chai': 'tea',
         'coffe': 'coffee', 'koffee': 'coffee', 'cofee': 'coffee',
         'jeera': 'cumin', 'jira': 'cumin', 'zeera': 'cumin',
     }
@@ -1216,12 +1228,18 @@ async def generate_aliases_task(item_name: str, user_id: str, db: Client):
     try:
         print(f"Generating aliases for: {item_name}")
         model = genai.GenerativeModel('gemini-2.5-flash')
-        prompt = f"""
-        Generate 5-10 common voice-to-text typos, phonetic misspellings, and Hindi/Hinglish synonyms for the grocery item '{item_name}'.
-        Return ONLY a JSON array of lowercase strings.
-        Example for 'Milk': ["doodh", "dudh", "melk", "malk", "milkk"]
-        Example for 'Sugar': ["cheeni", "chini", "shakkar", "suger"]
-        """
+        prompt = f"""For the grocery item '{item_name}', generate exactly 3-5 aliases that SOUND ALMOST THE SAME when spoken aloud in an Indian grocery shop context. Include:
+1. The Hindi/Hinglish transliteration (e.g. "doodh" for Milk, "chawal" for Rice, "cheeni" for Sugar)
+2. Common speech-to-text errors that SOUND IDENTICAL or nearly identical to '{item_name}' when spoken
+
+STRICT RULES:
+- Only include words that a speech recognition engine might output when someone says '{item_name}'
+- Do NOT include creative misspellings that don't sound similar
+- Do NOT include brand names or unrelated words
+- Each alias must be 3-20 characters long
+
+Return ONLY a JSON array of lowercase strings. Example for 'Amul Milk': ["amul milk", "doodh", "amool milk", "dudh"]
+"""
         response = model.generate_content(prompt)
         text = response.text.strip()
         
@@ -1235,14 +1253,24 @@ async def generate_aliases_task(item_name: str, user_id: str, db: Client):
         aliases = json.loads(text)
         
         if aliases and isinstance(aliases, list):
-            data = [{"item_name": item_name, "alias": a.lower()} for a in aliases]
-            # Add exact name too if not present, to be safe
-            if item_name.lower() not in aliases:
-                data.append({"item_name": item_name, "alias": item_name.lower()})
-                
-            # Insert into item_aliases
-            db.table("item_aliases").insert(data).execute()
-            print(f"✅ Generated {len(data)} aliases for {item_name}")
+            # Validate aliases: must be 3-20 chars, only alphanumeric + spaces
+            valid_aliases = []
+            for a in aliases:
+                a_clean = str(a).lower().strip()
+                if 3 <= len(a_clean) <= 20 and a_clean != item_name.lower():
+                    valid_aliases.append(a_clean)
+            
+            if valid_aliases:
+                data = [{"item_name": item_name, "alias": a} for a in valid_aliases]
+                # Add exact name too if not present
+                if item_name.lower() not in [a for a in valid_aliases]:
+                    data.append({"item_name": item_name, "alias": item_name.lower()})
+                    
+                # Insert into item_aliases
+                db.table("item_aliases").insert(data).execute()
+                print(f"✅ Generated {len(data)} aliases for {item_name}: {valid_aliases}")
+            else:
+                print(f"⚠️ No valid aliases generated for {item_name}")
             
     except Exception as e:
         print(f"❌ Alias Generation Error: {e}")

@@ -48,9 +48,9 @@ async function api(endpoint, method = 'GET', body = null) {
 
     try {
         const headers = {
-            'Content-Type': 'application/json',
             'Authorization': `Bearer ${_session.access_token}`
         };
+        headers['Content-Type'] = 'application/json';
         const opts = { method, headers };
         if (body) opts.body = JSON.stringify(body);
 
@@ -391,7 +391,11 @@ window.submitLogin = async function() {
         const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
 
         if (error) {
-            showLoginMessage(error.message || 'Login failed. Check your credentials.', 'error');
+            if (error.message.includes('Invalid login credentials')) {
+                showLoginMessage('Account not found. Please click "Sign Up" below to create an account.', 'error');
+            } else {
+                showLoginMessage(error.message || 'Login failed. Check your credentials.', 'error');
+            }
         } else if (data?.session) {
             _session = data.session;
             // Store both tokens for session restoration

@@ -45,8 +45,8 @@
 
         /* Persistent Round Mic Button (Control A) */
         #voice-persistent-btn {
-            width: 64px;
-            height: 64px;
+            width: 36px;
+            height: 36px;
             border-radius: 50%;
             border: none;
             background: linear-gradient(135deg, #10B981, #059669);
@@ -55,20 +55,21 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 6px 20px rgba(16,185,129,0.35);
+            box-shadow: 0 4px 14px rgba(16,185,129,0.35);
             transition: transform 0.2s, box-shadow 0.2s;
             position: relative;
+            flex-shrink: 0;
         }
         #voice-persistent-btn:hover {
             transform: scale(1.05);
-            box-shadow: 0 8px 28px rgba(16,185,129,0.45);
+            box-shadow: 0 6px 20px rgba(16,185,129,0.45);
         }
         #voice-persistent-btn:active {
             transform: scale(0.95);
         }
         #voice-persistent-btn.listening {
             background: linear-gradient(135deg, #DC2626, #B91C1C);
-            box-shadow: 0 6px 20px rgba(220,38,38,0.35);
+            box-shadow: 0 4px 14px rgba(220,38,38,0.35);
         }
         #voice-persistent-btn:disabled {
             opacity: 0.5;
@@ -78,7 +79,7 @@
         #voice-persistent-btn.listening::after {
             content: '';
             position: absolute;
-            inset: -8px;
+            inset: -6px;
             border-radius: 50%;
             border: 3px solid rgba(220,38,38,0.4);
             animation: pulseRing 1.2s ease-out infinite;
@@ -90,10 +91,75 @@
         #voice-persistent-btn.listening::before {
             content: '';
             position: absolute;
-            inset: -14px;
+            inset: -12px;
             border-radius: 50%;
             border: 2px solid rgba(220,38,38,0.2);
             animation: pulseRing 1.2s ease-out 0.4s infinite;
+        }
+
+        /* Text Order Input Bar */
+        #text-order-bar {
+            position: fixed;
+            bottom: 0;
+            left: var(--sidebar-width, 260px);
+            right: 316px;
+            z-index: 100;
+            padding: 6px 12px 8px;
+            background: var(--card-bg);
+            border-top: 1px solid var(--border-subtle);
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.06);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        #text-order-input {
+            flex: 1;
+            padding: 8px 14px;
+            border-radius: 14px;
+            border: 1.5px solid var(--border-subtle);
+            background: var(--input-bg);
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-heading);
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            font-family: inherit;
+        }
+        #text-order-input:focus {
+            border-color: var(--accent-green);
+            box-shadow: 0 0 0 3px rgba(16,185,129,0.12);
+        }
+        #text-order-input::placeholder {
+            color: var(--text-muted);
+            font-weight: 400;
+            font-size: 12px;
+        }
+        #text-order-send-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: none;
+            background: linear-gradient(135deg, #3B82F6, #2563EB);
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 14px rgba(59,130,246,0.3);
+            transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+            flex-shrink: 0;
+        }
+        #text-order-send-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(59,130,246,0.4);
+        }
+        #text-order-send-btn:active {
+            transform: scale(0.95);
+        }
+        #text-order-send-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
         }
 
         /* Quick Add button (Control B) - near search bar */
@@ -495,19 +561,23 @@
     <!-- Toast Container -->
     <div id="toast-container" class="toast-container"></div>
 
-    <!-- CONTROL A: Persistent Round Mic Button with Label -->
-    <div id="voice-persistent-wrap" style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:100;display:flex;flex-direction:column;align-items:center;gap:4px;">
-        <button id="voice-persistent-btn" onclick="togglePersistentVoice()" title="Voice billing - tap to start/stop" style="position:static;transform:none;">
-            <i class="fas fa-microphone" style="font-size:20px;"></i>
+    <!-- Text Order Input Bar -->
+    <div id="text-order-bar">
+        <button id="voice-persistent-btn" onclick="togglePersistentVoice()" title="Voice billing - tap to start/stop">
+            <i class="fas fa-microphone" style="font-size:16px;"></i>
         </button>
-        <span id="voice-persistent-label" style="font-size:10px;font-weight:700;color:var(--text-muted);white-space:nowrap;letter-spacing:0.05em;">TAP TO ADD BY VOICE</span>
+        <input type="text" id="text-order-input" placeholder='Type order... "3 anda 5kg chawal anuj ke udhar pe"' onkeydown="if(event.key==='Enter'){event.preventDefault();processTextOrder()}">
+        <button id="text-order-send-btn" onclick="processTextOrder()" title="Parse order">
+            <i class="fas fa-paper-plane" style="font-size:14px;"></i>
+        </button>
     </div>
+    <span id="voice-persistent-label" style="display:none;"></span>
 
     <!-- Voice Review Modal (shown after persistent voice dictation) -->
     <div id="voice-review-modal" class="modal-overlay hidden" style="z-index:200;">
         <div class="modal-box">
             <div class="modal-header">
-                <h3 class="modal-title"><i class="fas fa-list-check" style="color:var(--accent-green);margin-right:6px;"></i>Review Voice Order</h3>
+                <h3 class="modal-title"><i class="fas fa-list-check" style="color:var(--accent-green);margin-right:6px;"></i>Review Order</h3>
                 <button class="modal-close" onclick="closeVoiceReview()"><i class="fas fa-times"></i></button>
             </div>
             <div id="voice-review-content" style="max-height:320px;overflow-y:auto;margin-bottom:12px;"></div>
@@ -581,11 +651,9 @@
         let isListening = false;
         let voiceError = false;
         let voiceMode = null; // 'persistent' | 'quick' | null
-        let pendingVoiceItems = []; // items from persistent dictation awaiting review
-        let pendingVoicePaymentMode = null; // detected payment mode from voice
-        let pendingVoiceCustomer = null; // detected customer name from voice
-        let persistentSilenceTimer = null;
-        let quickSilenceTimer = null;
+        let pendingVoiceItems = [];
+        let pendingVoicePaymentMode = null;
+        let pendingVoiceCustomer = null;
 
         document.getElementById('bill-number').textContent = currentBillNumber || 'New Bill';
 
@@ -650,7 +718,7 @@
         // ---- VOICE INPUT (Two Controls) ----
 
         // CONTROL A: Persistent Round Mic Button - full order dictation
-        window.togglePersistentVoice = async function() {
+        window.togglePersistentVoice = function() {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (!SpeechRecognition) { app.showToast('Speech not supported. Use Chrome.', 'warning'); return; }
 
@@ -664,16 +732,7 @@
                 stopVoice();
             }
 
-            // Check mic permission first
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                stream.getTracks().forEach(track => track.stop()); // Release the track immediately
-                console.log('[Voice] Mic permission granted');
-            } catch(e) {
-                console.log('[Voice] Mic permission denied:', e.message);
-                app.showToast('Please allow microphone in browser settings', 'error');
-                return;
-            }
+            // Start SpeechRecognition synchronously for iOS/Safari compatibility
 
             voiceError = false;
             voiceMode = 'persistent';
@@ -800,7 +859,7 @@
         };
 
         // CONTROL B: Quick Add - single item fast entry (max 4 sec)
-        window.startQuickAdd = async function() {
+        window.startQuickAdd = function() {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (!SpeechRecognition) { app.showToast('Speech not supported. Use Chrome.', 'warning'); return; }
 
@@ -814,16 +873,7 @@
                 stopVoice();
             }
 
-            // Check mic permission first
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                stream.getTracks().forEach(track => track.stop()); // Release the track immediately
-                console.log('[QuickAdd] Mic permission granted');
-            } catch(e) {
-                console.log('[QuickAdd] Mic permission denied:', e.message);
-                app.showToast('Please allow microphone in browser settings', 'error');
-                return;
-            }
+            // Start SpeechRecognition synchronously for iOS/Safari compatibility
 
             voiceError = false;
             voiceMode = 'quick';
@@ -1192,6 +1242,33 @@
                 app.showToast('Could not understand. Try again.', 'error');
             }
         }
+
+        // ---- PROCESS TEXT ORDER (typed input) ----
+        window.processTextOrder = async function() {
+            const input = document.getElementById('text-order-input');
+            const text = (input.value || '').trim();
+            if (!text || text.length < 2) {
+                app.showToast('Type an order first, e.g. "3 anda 5kg chawal"', 'warning');
+                input.focus();
+                return;
+            }
+            // Disable send button while processing
+            const sendBtn = document.getElementById('text-order-send-btn');
+            if (sendBtn) sendBtn.disabled = true;
+            input.disabled = true;
+
+            try {
+                await showVoiceReviewModal(text);
+                // Clear input on success (review modal shown)
+                input.value = '';
+            } catch(e) {
+                app.showToast('Error processing order. Try again.', 'error');
+            } finally {
+                if (sendBtn) sendBtn.disabled = false;
+                input.disabled = false;
+                input.focus();
+            }
+        };
 
         // ---- RENDER BILL ITEMS ----
         function renderBillItems() {
