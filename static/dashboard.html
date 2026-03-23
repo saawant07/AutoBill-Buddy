@@ -206,9 +206,7 @@
                 <button id="inline-prompt-submit" class="btn btn-primary" style="flex:1">Submit</button>
             </div>
         </div>
-    </div>
-
-    <script type="module">
+        <script type="module">
         // Load app.js and charts.js first so window.app and chart functions are available
         await import('/static/js/app.js');
         await import('/static/js/charts.js');
@@ -238,20 +236,86 @@
             });
         });
 
-        async function updateStats(stats) {
+        // ---- Helper: normalise raw Supabase rows (from /sales/week) into display format ----
+        function normalizeWeekTransactions(rawRows) {
+            if (!rawRows || rawRows.length === 0) return [];
+
+            // Group by transaction_id (or created_at[:19] fallback)
+            const groups = {};
+            for (const s of rawRows) {
+                if (s.item_name === 'Payment Received') continue;
+                const tid = s.transaction_id || (s.created_at || '').slice(0, 19) || ('RAW_' + Math.random());
+                if (!groups[tid]) {
+                    let timeStr = '';
+                    if (s.created_at) {
+                        try {
+                            const dt = new Date(s.created_at);
+                            const ist = new Date(dt.getTime() + 5.5 * 60 * 60 * 1000);
+                            timeStr = ist.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+                        } catch (_) {}
+                    }
+                    groups[tid] = {
+                        items: [],
+                        detailed_items: [],
+                        total_price: 0,
+                        time: timeStr,
+                        payment_mode: s.payment_mode || 'Cash',
+                        customer_name: s.customer_name || 'Walk-in',
+                        date: s.created_at ? s.created_at.slice(0, 10) : ''
+                    };
+                }
+                const qty = s.quantity || 0;
+                const name = s.item_name || '?';
+                const total = s.total_price || 0;
+                groups[tid].items.push(`${qty} ${name}`);
+                groups[tid].detailed_items.push({ qty, name, unit_price: qty > 0 ? Math.round(total / qty) : 0, total: Math.round(total) });
+                groups[tid].total_price += total;
+            }
+
+            return Object.values(groups).map(g => ({
+                item: g.items.join(', '),
+                detailed_items: g.detailed_items,
+                price: Math.round(g.total_price),
+                time: g.date ? g.date.slice(5) + ' ' + g.time : g.time,
+                payment_mode: g.payment_mode,
+                customer_name: g.customer_name
+            }));
+        }
+
+        // ---- Update stat cards ----
+        async function updateStats(stats, filter) {
             const revEl = document.getElementById('stat-revenue');
             const ordEl = document.getElementById('stat-orders');
             const itmEl = document.getElementById('stat-items');
             const lowEl = document.getElementById('stat-low-stock');
+            const revLabel = document.querySelector('#stat-revenue-card .stat-label');
+            const ordLabel = document.getElementById('stat-orders-label');
 
-            if (revEl) {
-                const rev = parseFloat(stats.total_revenue || 0);
-                revEl.textContent = '₹' + rev.toLocaleString('en-IN');
+            // Handle different response shapes
+            let revenue = 0, orders = 0, quantity = 0;
+
+            if (filter === 'year') {
+                // /sales/year returns { year_revenue, months: [...] }
+                revenue = stats.year_revenue || 0;
+                orders = (stats.months || []).reduce((s, m) => s + (m.orders || 0), 0);
+                quantity = (stats.months || []).reduce((s, m) => s + (m.quantity || 0), 0);
+            } else {
+                revenue = stats.total_revenue || 0;
+                orders = stats.total_sales || 0;
+                quantity = stats.total_quantity || 0;
             }
-            if (ordEl) ordEl.textContent = stats.total_sales || 0;
-            if (itmEl) itmEl.textContent = stats.total_quantity || 0;
 
-            // Count low stock
+            if (revEl) revEl.textContent = '₹' + Math.round(revenue).toLocaleString('en-IN');
+            if (ordEl) ordEl.textContent = orders;
+            if (itmEl) itmEl.textContent = Math.round(quantity);
+
+            // Update labels
+            const labelMap = { day: "Today's Revenue", week: "This Week's Revenue", year: "This Year's Revenue" };
+            const subMap = { day: 'orders today', week: 'orders this week', year: 'orders this year' };
+            if (revLabel) revLabel.textContent = labelMap[filter] || "Today's Revenue";
+            if (ordLabel) ordLabel.textContent = subMap[filter] || 'orders today';
+
+            // Count low stock (doesn't change by period)
             const inv = await app.api('/inventory');
             if (inv && !inv.error) {
                 const low = inv.filter(i => i.stock_quantity <= 5).length;
@@ -270,11 +334,13 @@
             }
         }
 
+        // ---- Refresh everything ----
         async function refreshDashboard() {
             const loading = document.getElementById('tx-loading');
             const empty = document.getElementById('tx-empty');
             const list = document.getElementById('tx-list');
             const chartLoading = document.getElementById('chart-loading');
+            const chartTitle = document.querySelector('.card-title');
 
             if (loading) loading.style.display = 'block';
             if (empty) empty.style.display = 'none';
@@ -282,28 +348,59 @@
             if (chartLoading) chartLoading.style.display = 'flex';
 
             try {
-                let stats;
+                let transactions = [];
+                let yearStats = null;
+
                 if (activeFilter === 'day') {
-                    stats = await app.api('/sales/today');
+                    const stats = await app.api('/sales/today');
+                    if (stats && !stats.error) {
+                        await updateStats(stats, 'day');
+                        transactions = stats.transactions || [];
+                    }
                 } else if (activeFilter === 'week') {
-                    stats = await app.api('/sales/week');
+                    const stats = await app.api('/sales/week');
+                    if (stats && !stats.error) {
+                        await updateStats(stats, 'week');
+                        // Normalize raw Supabase rows into display format
+                        transactions = normalizeWeekTransactions(stats.transactions || []);
+                    }
                 } else {
-                    stats = await app.api('/sales/year');
+                    // Year
+                    yearStats = await app.api('/sales/year');
+                    if (yearStats && !yearStats.error) {
+                        await updateStats(yearStats, 'year');
+                        // No per-transaction data for year — show monthly summary instead
+                        renderYearlySummary(yearStats.months || []);
+                    }
                 }
 
-                if (stats && !stats.error) {
-                    updateStats(stats);
-                    renderTransactions(stats.transactions || []);
+                if (activeFilter !== 'year') {
+                    renderTransactions(transactions);
                 }
 
-                // Load weekly chart
-                const weekly = await app.api('/analytics/weekly');
-                if (weekly && !weekly.error && weekly.data) {
-                    const labels = weekly.data.dates || [];
-                    const cashValues = weekly.data.cash || [];
+                // ---- Chart ----
+                if (activeFilter === 'year' && yearStats && !yearStats.error && yearStats.months) {
+                    // Year: show monthly revenue as a bar chart
+                    const labels = yearStats.months.map(m => m.name);
+                    const values = yearStats.months.map(m => Math.round(m.revenue));
                     if (chartLoading) chartLoading.style.display = 'none';
-                    createLineChart('revenue-chart', labels, cashValues);
+                    const titleEls = document.querySelectorAll('.card-title');
+                    titleEls.forEach(t => { if (t.textContent.includes('Revenue')) t.innerHTML = '<i class="fas fa-chart-bar" style="color:var(--accent-green)"></i> Revenue — This Year'; });
+                    createRevenueChart('revenue-chart', labels, values, 'Monthly Revenue');
+                } else if (activeFilter !== 'year') {
+                    // Day / Week: show last 7 days line chart
+                    const weekly = await app.api('/analytics/weekly');
+                    if (weekly && !weekly.error && weekly.data) {
+                        const labels = weekly.data.dates || [];
+                        const cashValues = weekly.data.cash || [];
+                        if (chartLoading) chartLoading.style.display = 'none';
+                        const titleEls = document.querySelectorAll('.card-title');
+                        titleEls.forEach(t => { if (t.textContent.includes('Revenue')) t.innerHTML = '<i class="fas fa-chart-bar" style="color:var(--accent-green)"></i> Revenue — Last 7 Days'; });
+                        createLineChart('revenue-chart', labels, cashValues);
+                    }
                 }
+
+                if (chartLoading) chartLoading.style.display = 'none';
             } catch (e) {
                 console.error(e);
                 app.showToast('Failed to load dashboard data', 'error');
@@ -315,7 +412,7 @@
         // Expose refreshDashboard to window for inline onclick handler
         window.refreshDashboard = refreshDashboard;
 
-
+        // ---- Render transactions (Day / Week) ----
         function renderTransactions(transactions) {
             const loading = document.getElementById('tx-loading');
             const empty = document.getElementById('tx-empty');
@@ -330,7 +427,7 @@
 
             if (empty) empty.style.display = 'none';
             if (list) {
-                list.innerHTML = transactions.slice(0, 10).map(tx => {
+                list.innerHTML = transactions.slice(0, 15).map(tx => {
                     const amt = parseFloat(tx.price || 0);
                     const isCash = (tx.payment_mode || '').toLowerCase() === 'cash';
                     const items = tx.detailed_items ? tx.detailed_items.map(i => i.name).join(', ') : (tx.item || '');
@@ -339,7 +436,7 @@
                             <div class="transaction-info">
                                 <span class="transaction-customer">${app.esc(tx.customer_name || 'Walk-in')}</span>
                                 <span class="transaction-meta">
-                                    ${tx.time || ''}${items ? ' &bull; ' + app.esc(items) : ''}
+                                    ${tx.time || ''} ${items ? ' &bull; ' + app.esc(items) : ''}
                                 </span>
                             </div>
                             <span class="transaction-amount">${app.formatCurrency(amt)}</span>
@@ -347,6 +444,35 @@
                         </div>
                     `;
                 }).join('');
+            }
+        }
+
+        // ---- Render yearly summary (monthly breakdown) ----
+        function renderYearlySummary(months) {
+            const loading = document.getElementById('tx-loading');
+            const empty = document.getElementById('tx-empty');
+            const list = document.getElementById('tx-list');
+
+            if (loading) loading.style.display = 'none';
+
+            const activeMonths = months.filter(m => m.revenue > 0 || m.orders > 0);
+            if (activeMonths.length === 0) {
+                if (empty) empty.style.display = 'block';
+                return;
+            }
+
+            if (empty) empty.style.display = 'none';
+            if (list) {
+                list.innerHTML = activeMonths.reverse().map(m => `
+                    <div class="transaction-row">
+                        <div class="transaction-info">
+                            <span class="transaction-customer">${m.name} ${new Date().getFullYear()}</span>
+                            <span class="transaction-meta">${m.orders} orders &bull; ${Math.round(m.quantity)} items sold</span>
+                        </div>
+                        <span class="transaction-amount">${app.formatCurrency(m.revenue)}</span>
+                        <span class="transaction-status badge-green">₹${Math.round(m.profit)} profit</span>
+                    </div>
+                `).join('');
             }
         }
 
@@ -358,5 +484,6 @@
         // Initialize app
         await app.initApp();
     </script>
+    </div>
 </body>
 </html>
