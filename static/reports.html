@@ -59,6 +59,7 @@
         .calendar-day.has-sales:hover { background: rgba(16,185,129,0.2); }
         .calendar-day.today { border: 2px solid var(--accent-orange); color: var(--accent-orange); font-weight: 700; }
         .calendar-day.today.has-sales { background: var(--accent-orange-light); }
+        .calendar-day.selected-day { background: var(--accent-blue-light) !important; color: var(--accent-blue) !important; border: 2px solid var(--accent-blue); font-weight: 700; }
         .calendar-day-amount { font-size: 8px; font-weight: 700; margin-top: 1px; }
         .highlight-pulse { animation: highlightPulse 1.5s ease-in-out; }
         @keyframes highlightPulse { 0%, 100% { box-shadow: none; } 50% { box-shadow: 0 0 0 4px var(--accent-green-light); } }
@@ -225,6 +226,7 @@
         app.initSidebar();
 
         let activeFilter = 'today';
+        let selectedDate = null; // set when a calendar day is clicked
         let calYear = new Date().getFullYear();
         let calMonth = new Date().getMonth();
         let dailyCache = {};
@@ -443,10 +445,12 @@
                 const ds = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
                 const dayData = monthData[ds];
                 const isToday = ds === todayStr;
+                const isSelected = ds === selectedDate;
                 const hasSales = dayData && dayData.revenue > 0;
                 let cls = 'calendar-day';
-                if (isToday) cls += ' today';
-                if (hasSales) cls += ' has-sales';
+                if (isSelected) cls += ' selected-day';
+                else if (isToday) cls += ' today';
+                if (hasSales && !isSelected) cls += ' has-sales';
                 let amtHtml = '';
                 if (hasSales) {
                     const rev = dayData.revenue || 0;
@@ -476,17 +480,66 @@
         };
 
         window.openDayDetail = async (dateStr) => {
+            // Clear filter button active states
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            // Set selected date state
+            selectedDate = dateStr;
+            // Update subtitle
+            const d = new Date(dateStr + 'T00:00:00');
+            document.getElementById('report-period').textContent = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+
             const res = await app.api(`/sales/date/${dateStr}`);
             if (res && !res.error) {
                 allTransactions = res.transactions || [];
+
+                // KPIs
                 const totalRev = parseFloat(res.revenue || 0);
                 const totalOrd = parseInt(res.orders || 0);
                 const avgVal = totalOrd > 0 ? totalRev / totalOrd : 0;
                 document.getElementById('kpi-revenue').textContent = '₹' + totalRev.toLocaleString('en-IN');
                 document.getElementById('kpi-orders').textContent = totalOrd.toLocaleString('en-IN');
                 document.getElementById('kpi-avg').textContent = '₹' + avgVal.toLocaleString('en-IN', { maximumFractionDigits: 0 });
-                createRevenueChart('trend-chart', [dateStr], [totalRev], 'Revenue');
+
+                // Sales Trend — hourly breakdown (X-axis: 00:00 – 23:00)
+                const hourlyRev = new Array(24).fill(0);
+                (res.transactions || []).forEach(tx => {
+                    const h = parseInt(tx.time ? tx.time.split(':')[0] : 12);
+                    hourlyRev[h] = (hourlyRev[h] || 0) + parseFloat(tx.price || 0);
+                });
+                const hourlyLabels = hourlyRev.map((_, i) => String(i).padStart(2, '0') + ':00');
+                createRevenueChart('trend-chart', hourlyLabels, hourlyRev, 'Revenue by Hour');
+
+                // Payment doughnut
+                let cashTotal = 0, udhaarTotal = 0;
+                (res.transactions || []).forEach(tx => {
+                    if ((tx.payment_mode || '').toLowerCase() === 'cash') cashTotal += parseFloat(tx.price || 0);
+                    else udhaarTotal += parseFloat(tx.price || 0);
+                });
+                createPaymentDoughnut('payment-chart', cashTotal, udhaarTotal);
+
+                // Sales by Item pie
+                const itemMap = {};
+                (res.transactions || []).forEach(tx => {
+                    (tx.detailed_items || []).forEach(item => {
+                        const name = item.name || 'Unknown';
+                        itemMap[name] = (itemMap[name] || 0) + (item.quantity || 1);
+                    });
+                });
+                const sorted = Object.entries(itemMap).sort((a, b) => b[1] - a[1]).slice(0, 6);
+                if (sorted.length > 0) {
+                    createPieChart('items-chart', sorted.map(x => x[0]), sorted.map(x => x[1]));
+                } else {
+                    createPieChart('items-chart', ['No data'], [1]);
+                }
+
+                // Top items table
+                renderTopItems(sorted, totalRev);
+
+                // Transactions
                 renderTransactions(allTransactions);
+
+                // Re-render calendar to reflect selection
+                renderCalendar();
             }
         };
 
