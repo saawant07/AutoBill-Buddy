@@ -1056,6 +1056,8 @@ tbody tr:hover {
     border: 1px solid var(--border-subtle);
     margin-bottom: 8px;
     transition: all 0.15s;
+    flex-wrap: wrap;
+    gap: 10px;
 }
 
 .transaction-row:hover {
