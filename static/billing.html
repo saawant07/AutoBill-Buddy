@@ -385,6 +385,29 @@
             margin: 2px 4px;
         }
         .search-result:hover { background: var(--accent-green-light); }
+
+        /* Responsive Layout Fixes */
+        @media (max-width: 900px) {
+            #text-order-bar {
+                left: 0 !important;
+                right: 0 !important;
+                padding-bottom: 24px !important; /* give extra space at bottom */
+            }
+            .billing-main-flex {
+                flex-direction: column !important;
+                overflow-y: auto !important;
+            }
+            .billing-left-panel {
+                min-height: 50vh !important;
+                overflow: visible !important;
+            }
+            .billing-right-panel {
+                width: 100% !important;
+                border-left: none !important;
+                border-top: 1px solid var(--border-subtle) !important;
+                padding-bottom: 120px !important; /* space for text input bar */
+            }
+        }
     </style>
 </head>
 <body>
@@ -414,10 +437,10 @@
         </div>
 
         <!-- Main Body -->
-        <div style="display:flex;flex:1;min-height:0;overflow:hidden;">
+        <div class="billing-main-flex" style="display:flex;flex:1;min-height:0;overflow:hidden;">
 
             <!-- LEFT: Bill Items -->
-            <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;">
+            <div class="billing-left-panel" style="flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;">
 
                 <!-- Content Area: Bill list only (voice controls are separate) -->
                 <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;padding:6px 10px 80px;">
@@ -447,7 +470,7 @@
             </div>
 
             <!-- RIGHT: Summary Panel (300px) -->
-            <div style="width:300px;flex-shrink:0;display:flex;flex-direction:column;overflow-y:auto;padding:8px;border-left:1px solid var(--border-subtle);">
+            <div class="billing-right-panel" style="width:300px;flex-shrink:0;display:flex;flex-direction:column;overflow-y:auto;padding:8px;border-left:1px solid var(--border-subtle);">
 
                 <!-- Bill Summary -->
                 <div style="background:var(--card-bg);border-radius:14px;padding:14px 16px;margin-bottom:6px;">
