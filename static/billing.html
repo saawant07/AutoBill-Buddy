@@ -45,10 +45,6 @@
 
         /* Persistent Round Mic Button (Control A) */
         #voice-persistent-btn {
-            position: fixed;
-            bottom: 32px;
-            left: 50%;
-            transform: translateX(-50%);
             width: 64px;
             height: 64px;
             border-radius: 50%;
@@ -61,14 +57,14 @@
             justify-content: center;
             box-shadow: 0 6px 20px rgba(16,185,129,0.35);
             transition: transform 0.2s, box-shadow 0.2s;
-            z-index: 100;
+            position: relative;
         }
         #voice-persistent-btn:hover {
-            transform: translateX(-50%) scale(1.05);
+            transform: scale(1.05);
             box-shadow: 0 8px 28px rgba(16,185,129,0.45);
         }
         #voice-persistent-btn:active {
-            transform: translateX(-50%) scale(0.95);
+            transform: scale(0.95);
         }
         #voice-persistent-btn.listening {
             background: linear-gradient(135deg, #DC2626, #B91C1C);
@@ -499,10 +495,13 @@
     <!-- Toast Container -->
     <div id="toast-container" class="toast-container"></div>
 
-    <!-- CONTROL A: Persistent Round Mic Button -->
-    <button id="voice-persistent-btn" onclick="togglePersistentVoice()" title="Voice billing - tap to start/stop" style="display:none;">
-        <i class="fas fa-microphone" style="font-size:20px;"></i>
-    </button>
+    <!-- CONTROL A: Persistent Round Mic Button with Label -->
+    <div id="voice-persistent-wrap" style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:100;display:flex;flex-direction:column;align-items:center;gap:4px;">
+        <button id="voice-persistent-btn" onclick="togglePersistentVoice()" title="Voice billing - tap to start/stop" style="position:static;transform:none;">
+            <i class="fas fa-microphone" style="font-size:20px;"></i>
+        </button>
+        <span id="voice-persistent-label" style="font-size:10px;font-weight:700;color:var(--text-muted);white-space:nowrap;letter-spacing:0.05em;">TAP TO ADD BY VOICE</span>
+    </div>
 
     <!-- Voice Review Modal (shown after persistent voice dictation) -->
     <div id="voice-review-modal" class="modal-overlay hidden" style="z-index:200;">
@@ -679,72 +678,75 @@
             pendingVoiceItems = [];
 
             recognition = new SpeechRecognition();
-            recognition.continuous = true;
+            recognition.continuous = false; // false = browser auto-stops on silence
             recognition.interimResults = true;
             recognition.lang = 'en-IN';
             recognition.maxAlternatives = 1;
 
             // Show the persistent button with listening state
             const pBtn = document.getElementById('voice-persistent-btn');
+            const pLabel = document.getElementById('voice-persistent-label');
             if (pBtn) {
                 pBtn.classList.add('listening');
                 pBtn.innerHTML = '<i class="fas fa-stop" style="font-size:20px;"></i>';
             }
+            if (pLabel) pLabel.textContent = 'LISTENING... TAP TO STOP';
 
-            // Track when we last heard speech — always restart a 3s silence timer
-            let lastSpeechTime = Date.now();
+            // Accumulated final transcript
+            let accumulatedTranscript = '';
+            let hasProcessed = false; // guard against double-processing
 
             recognition.onstart = () => {
                 console.log('[Voice] onstart - listening started');
-                lastSpeechTime = Date.now();
-                // Kick off the first silence timer
-                scheduleSilenceStop();
+                accumulatedTranscript = '';
+                hasProcessed = false;
             };
 
-            function scheduleSilenceStop() {
-                clearTimeout(persistentSilenceTimer);
-                persistentSilenceTimer = setTimeout(() => {
-                    if (voiceMode !== 'persistent') return;
-                    const elapsed = Date.now() - lastSpeechTime;
-                    console.log(`[Voice] Silence timer fired (${elapsed}ms since last speech)`);
-                    // Capture all results we've heard so far (include interim too — safer on webkit)
-                    let transcript = '';
-                    for (let i = 0; i < recognition.results.length; i++) {
-                        const r = recognition.results[i];
-                        // On webkit, interim results are still useful — include them
-                        transcript += (r[0].transcript || '').trim() + ' ';
-                    }
-                    const text = transcript.trim();
-                    console.log('[Voice] Transcript captured:', JSON.stringify(text));
-                    if (!text || text.length < 1) {
-                        app.showToast('No speech detected, try again.', 'warning');
-                        try { recognition?.stop(); } catch(e) {}
-                        return;
-                    }
-                    try { recognition.stop(); } catch(e) {}
-                    showVoiceReviewModal(text);
-                }, 3000);
+            // Helper: extract and process whatever we've heard
+            function processAccumulated() {
+                if (hasProcessed) return;
+                hasProcessed = true;
+                const text = accumulatedTranscript.trim();
+                console.log('[Voice] Processing accumulated transcript:', JSON.stringify(text));
+                // Reset UI
+                const pBtn = document.getElementById('voice-persistent-btn');
+                const pLabel = document.getElementById('voice-persistent-label');
+                if (pBtn) {
+                    pBtn.classList.remove('listening');
+                    pBtn.innerHTML = '<i class="fas fa-microphone" style="font-size:20px;"></i>';
+                }
+                if (pLabel) pLabel.textContent = 'TAP TO ADD BY VOICE';
+                isListening = false;
+                voiceMode = null;
+                if (!text || text.length < 2) {
+                    app.showToast('No speech detected, tap mic and try again.', 'warning');
+                    return;
+                }
+                // Send to parse and show review modal
+                showVoiceReviewModal(text);
             }
 
             recognition.onresult = (event) => {
-                lastSpeechTime = Date.now();
-                console.log('[Voice] onresult, results:', event.results.length,
-                    'latest:', event.results[event.results.length - 1]?.[0]?.transcript);
-                // Restart silence timer on any speech
-                scheduleSilenceStop();
+                // Build up transcript from all results
+                let full = '';
+                for (let i = 0; i < event.results.length; i++) {
+                    full += (event.results[i][0].transcript || '').trim() + ' ';
+                }
+                accumulatedTranscript = full.trim();
+                console.log('[Voice] onresult, transcript so far:', accumulatedTranscript);
             };
 
             recognition.onend = () => {
-                console.log('[Voice] onend fired');
-                clearTimeout(persistentSilenceTimer);
-                // If we get here without a transcript already shown, it was an unexpected end
-                // (e.g., recognition stopped itself). Safe to ignore since silence timer already handled it.
+                console.log('[Voice] onend fired, transcript:', accumulatedTranscript);
+                // Browser stopped listening (silence detected or user tapped stop).
+                // Process whatever we accumulated.
+                processAccumulated();
             };
 
             recognition.onerror = (event) => {
                 console.log('[Voice] onerror:', event.error);
+                hasProcessed = true; // prevent onend from double-processing
                 voiceError = true;
-                clearTimeout(persistentSilenceTimer);
                 const pBtn = document.getElementById('voice-persistent-btn');
                 if (pBtn) {
                     pBtn.classList.remove('listening');
@@ -755,6 +757,12 @@
                 } else if (event.error === 'network') {
                     app.showToast('Network error.', 'error');
                 } else if (event.error === 'no-speech') {
+                    // If we have accumulated text, process it anyway
+                    if (accumulatedTranscript.trim().length >= 2) {
+                        hasProcessed = false;
+                        processAccumulated();
+                        return;
+                    }
                     app.showToast('Tap mic and speak clearly', 'warning');
                 } else {
                     app.showToast('Mic error. Try again.', 'error');
@@ -767,8 +775,8 @@
             console.log('[Voice] Calling recognition.start()');
             recognition.start();
 
-            // Auto-stop after 60 seconds max
-            setTimeout(() => { if (isListening && voiceMode === 'persistent') { try { recognition?.stop(); } catch(e) {} } }, 60000);
+            // Auto-stop after 30 seconds max (browser usually auto-stops much sooner on silence)
+            setTimeout(() => { if (isListening && voiceMode === 'persistent') { try { recognition?.stop(); } catch(e) {} } }, 30000);
         };
 
         // CONTROL B: Quick Add - single item fast entry (max 4 sec)
@@ -811,63 +819,59 @@
                 qBtn.classList.add('listening');
             }
 
-            // Track when we last heard speech — always restart a 4s silence timer
-            let lastQuickSpeechTime = Date.now();
+            let quickAccumulatedTranscript = '';
+            let quickHasProcessed = false;
 
             recognition.onstart = () => {
                 console.log('[QuickAdd] onstart - listening started');
-                lastQuickSpeechTime = Date.now();
-                scheduleQuickSilenceStop();
+                quickAccumulatedTranscript = '';
+                quickHasProcessed = false;
             };
 
-            function scheduleQuickSilenceStop() {
-                clearTimeout(quickSilenceTimer);
-                quickSilenceTimer = setTimeout(() => {
-                    if (voiceMode !== 'quick') return;
-                    const elapsed = Date.now() - lastQuickSpeechTime;
-                    console.log(`[QuickAdd] Silence timer fired (${elapsed}ms since last speech)`);
-                    // Capture all results — include interim on webkit
-                    let transcript = '';
-                    for (let i = 0; i < recognition.results.length; i++) {
-                        const r = recognition.results[i];
-                        transcript += (r[0].transcript || '').trim() + ' ';
-                    }
-                    const text = transcript.trim();
-                    console.log('[QuickAdd] Transcript:', JSON.stringify(text));
-                    const qBtn = document.getElementById('quick-add-btn');
-                    if (qBtn) qBtn.classList.remove('listening');
-                    isListening = false;
-                    voiceMode = null;
-                    try { recognition.stop(); } catch(e) {}
-                    if (!text || text.length < 1) {
-                        app.showToast('Tap mic and speak clearly', 'warning');
-                        return;
-                    }
-                    processQuickAdd(text);
-                }, 4000);
+            function processQuickAccumulated() {
+                if (quickHasProcessed) return;
+                quickHasProcessed = true;
+                const text = quickAccumulatedTranscript.trim();
+                console.log('[QuickAdd] Processing accumulated:', JSON.stringify(text));
+                const qBtn = document.getElementById('quick-add-btn');
+                if (qBtn) qBtn.classList.remove('listening');
+                isListening = false;
+                voiceMode = null;
+                if (!text || text.length < 2) {
+                    app.showToast('Tap mic and speak clearly', 'warning');
+                    return;
+                }
+                processQuickAdd(text);
             }
 
             recognition.onresult = (event) => {
-                lastQuickSpeechTime = Date.now();
-                console.log('[QuickAdd] onresult:', event.results[event.results.length - 1]?.[0]?.transcript);
-                // Restart silence timer on any result
-                scheduleQuickSilenceStop();
+                let full = '';
+                for (let i = 0; i < event.results.length; i++) {
+                    full += (event.results[i][0].transcript || '').trim() + ' ';
+                }
+                quickAccumulatedTranscript = full.trim();
+                console.log('[QuickAdd] onresult:', quickAccumulatedTranscript);
             };
 
             recognition.onend = () => {
-                console.log('[QuickAdd] onend fired');
-                clearTimeout(quickSilenceTimer);
+                console.log('[QuickAdd] onend fired, transcript:', quickAccumulatedTranscript);
+                processQuickAccumulated();
             };
 
             recognition.onerror = (event) => {
                 console.log('[QuickAdd] onerror:', event.error);
+                quickHasProcessed = true;
                 voiceError = true;
-                clearTimeout(quickSilenceTimer);
                 const qBtn = document.getElementById('quick-add-btn');
                 if (qBtn) qBtn.classList.remove('listening');
                 if (event.error === 'not-allowed') {
                     app.showToast('Please allow microphone in browser settings', 'error');
                 } else if (event.error === 'no-speech') {
+                    if (quickAccumulatedTranscript.trim().length >= 2) {
+                        quickHasProcessed = false;
+                        processQuickAccumulated();
+                        return;
+                    }
                     app.showToast('Tap mic and speak clearly', 'warning');
                 } else {
                     app.showToast('Couldn\'t hear, try again.', 'error');
@@ -880,7 +884,8 @@
             console.log('[QuickAdd] Calling recognition.start()');
             recognition.start();
             // Safety cutoff at 15 seconds
-            setTimeout(() => { if (isListening && voiceMode === 'quick') { try { recognition?.stop(); } catch(e) {} } }, 15000);
+            // Safety cutoff at 10 seconds (browser auto-stops much sooner on silence)
+            setTimeout(() => { if (isListening && voiceMode === 'quick') { try { recognition?.stop(); } catch(e) {} } }, 10000);
         };
 
         // Stop any active voice (shared by both controls)
@@ -892,10 +897,12 @@
 
             // Reset persistent button
             const pBtn = document.getElementById('voice-persistent-btn');
+            const pLabel = document.getElementById('voice-persistent-label');
             if (pBtn) {
                 pBtn.classList.remove('listening');
                 pBtn.innerHTML = '<i class="fas fa-microphone" style="font-size:20px;"></i>';
             }
+            if (pLabel) pLabel.textContent = 'TAP TO ADD BY VOICE';
 
             // Reset quick add button
             const qBtn = document.getElementById('quick-add-btn');
