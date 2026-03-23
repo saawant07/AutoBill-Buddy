@@ -682,7 +682,7 @@
             recognition = new SpeechRecognition();
             recognition.continuous = false; // false = browser auto-stops on silence
             recognition.interimResults = true;
-            recognition.lang = 'hi-IN'; // Supports Hindi + Hinglish (English names/numbers work fine)
+            recognition.lang = 'en-IN'; // en-IN auto-stops on silence reliably; backend handles Hindi text
             recognition.maxAlternatives = 1;
 
             // Show the persistent button with listening state
@@ -697,17 +697,26 @@
             // Accumulated final transcript
             let accumulatedTranscript = '';
             let hasProcessed = false; // guard against double-processing
+            let silenceTimer = null; // backup silence timer
 
             recognition.onstart = () => {
                 console.log('[Voice] onstart - listening started');
                 accumulatedTranscript = '';
                 hasProcessed = false;
+                // Start a backup silence timer — if no speech at all after 5s, stop
+                silenceTimer = setTimeout(() => {
+                    if (!hasProcessed && isListening && voiceMode === 'persistent') {
+                        console.log('[Voice] Backup silence timer — no speech at all, stopping');
+                        try { recognition?.stop(); } catch(e) {}
+                    }
+                }, 5000);
             };
 
             // Helper: extract and process whatever we've heard
             function processAccumulated() {
                 if (hasProcessed) return;
                 hasProcessed = true;
+                clearTimeout(silenceTimer);
                 const text = accumulatedTranscript.trim();
                 console.log('[Voice] Processing accumulated transcript:', JSON.stringify(text));
                 // Reset UI
@@ -736,10 +745,19 @@
                 }
                 accumulatedTranscript = full.trim();
                 console.log('[Voice] onresult, transcript so far:', accumulatedTranscript);
+                // Reset backup silence timer — stop 3s after last speech
+                clearTimeout(silenceTimer);
+                silenceTimer = setTimeout(() => {
+                    if (!hasProcessed && isListening && voiceMode === 'persistent') {
+                        console.log('[Voice] Silence timer — 3s since last speech, force-stopping');
+                        try { recognition?.stop(); } catch(e) {}
+                    }
+                }, 3000);
             };
 
             recognition.onend = () => {
                 console.log('[Voice] onend fired, transcript:', accumulatedTranscript);
+                clearTimeout(silenceTimer);
                 // Browser stopped listening (silence detected or user tapped stop).
                 // Process whatever we accumulated.
                 processAccumulated();
@@ -813,7 +831,7 @@
             recognition = new SpeechRecognition();
             recognition.continuous = false;
             recognition.interimResults = true;
-            recognition.lang = 'hi-IN'; // Supports Hindi + Hinglish
+            recognition.lang = 'en-IN'; // en-IN auto-stops reliably
             recognition.maxAlternatives = 1;
 
             const qBtn = document.getElementById('quick-add-btn');
@@ -823,16 +841,24 @@
 
             let quickAccumulatedTranscript = '';
             let quickHasProcessed = false;
+            let quickSilenceBackup = null;
 
             recognition.onstart = () => {
                 console.log('[QuickAdd] onstart - listening started');
                 quickAccumulatedTranscript = '';
                 quickHasProcessed = false;
+                quickSilenceBackup = setTimeout(() => {
+                    if (!quickHasProcessed && isListening && voiceMode === 'quick') {
+                        console.log('[QuickAdd] Backup timer — no speech, stopping');
+                        try { recognition?.stop(); } catch(e) {}
+                    }
+                }, 5000);
             };
 
             function processQuickAccumulated() {
                 if (quickHasProcessed) return;
                 quickHasProcessed = true;
+                clearTimeout(quickSilenceBackup);
                 const text = quickAccumulatedTranscript.trim();
                 console.log('[QuickAdd] Processing accumulated:', JSON.stringify(text));
                 const qBtn = document.getElementById('quick-add-btn');
@@ -853,10 +879,19 @@
                 }
                 quickAccumulatedTranscript = full.trim();
                 console.log('[QuickAdd] onresult:', quickAccumulatedTranscript);
+                // Reset silence backup — stop 3s after last speech
+                clearTimeout(quickSilenceBackup);
+                quickSilenceBackup = setTimeout(() => {
+                    if (!quickHasProcessed && isListening && voiceMode === 'quick') {
+                        console.log('[QuickAdd] Silence timer — 3s since last speech, stopping');
+                        try { recognition?.stop(); } catch(e) {}
+                    }
+                }, 3000);
             };
 
             recognition.onend = () => {
                 console.log('[QuickAdd] onend fired, transcript:', quickAccumulatedTranscript);
+                clearTimeout(quickSilenceBackup);
                 processQuickAccumulated();
             };
 
