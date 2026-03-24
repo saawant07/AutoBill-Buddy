@@ -1614,83 +1614,152 @@
             const billNo = tx.transaction_id ? '#' + tx.transaction_id.toUpperCase() : (tx.order || currentBillNumber || 'New Bill');
             const time = tx.time || new Date().toLocaleString('en-IN');
             const items = tx.detailed_items || [];
+            
+            // Get shop name from localStorage (persisted in settings)
+            const shopName = localStorage.getItem('shop_name') || 'MY STORE';
 
             const itemsHtml = items.length > 0
-                ? items.map(i => `<tr><td style="padding:5px 0;font-size:13px;">${i.qty} x ${app.esc(i.name)}</td><td style="padding:5px 0;font-size:13px;text-align:right;">₹${parseFloat(i.total||0).toLocaleString('en-IN')}</td></tr>`).join('')
-                : `<tr><td style="padding:5px 0;font-size:13px;">${app.esc(tx.item || 'Items')}</td><td style="padding:5px 0;font-size:13px;text-align:right;">₹${amt.toLocaleString('en-IN')}</td></tr>`;
+                ? items.map(i => `<tr><td style="padding:4px 0;font-size:12px;">${i.qty} x ${app.esc(i.name)}</td><td style="padding:4px 0;font-size:12px;text-align:right;">₹${parseFloat(i.total||0).toLocaleString('en-IN')}</td></tr>`).join('')
+                : `<tr><td style="padding:4px 0;font-size:12px;">${app.esc(tx.item || 'Items')}</td><td style="padding:4px 0;font-size:12px;text-align:right;">₹${amt.toLocaleString('en-IN')}</td></tr>`;
 
-            // Build receipt HTML
+            // Build professional receipt HTML
             const receiptHTML = `
                 <html>
                 <head>
                     <title>Receipt - ${billNo}</title>
-                    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
                     <style>
-                        @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap');
+                        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
                         * { margin: 0; padding: 0; box-sizing: border-box; }
-                        body { font-family: 'Space Mono', 'Courier New', monospace; background: #fff; color: #111; }
+                        body { font-family: 'Inter', sans-serif; background: #fff; color: #1a1a1a; -webkit-font-smoothing: antialiased; }
                         .receipt {
-                            width: 300px;
+                            width: 320px;
                             margin: 0 auto;
-                            padding: 28px 20px;
+                            padding: 30px 24px;
                             background: #fff;
                         }
-                        .receipt-header { text-align: center; margin-bottom: 16px; }
-                        .receipt-header h2 {
-                            font-size: 18px;
-                            font-weight: 700;
-                            letter-spacing: 2px;
+                        .receipt-header { text-align: center; margin-bottom: 20px; }
+                        .receipt-header h1 {
+                            font-size: 22px;
+                            font-weight: 800;
+                            letter-spacing: -0.02em;
                             text-transform: uppercase;
                             margin-bottom: 4px;
+                            color: #000;
                         }
-                        .receipt-header p { font-size: 10px; color: #666; line-height: 1.5; }
+                        .receipt-header p { 
+                            font-size: 11px; 
+                            color: #666; 
+                            font-weight: 500;
+                            letter-spacing: 0.02em;
+                        }
                         .receipt-divider {
                             border: none;
-                            border-top: 1.5px dashed #333;
-                            margin: 14px 0;
+                            border-top: 1px dashed #e5e7eb;
+                            margin: 16px 0;
                         }
-                        .receipt-info { text-align: center; font-size: 11px; color: #444; margin-bottom: 4px; }
-                        .receipt-info strong { color: #111; }
-                        .receipt-items { width: 100%; }
-                        .receipt-items tr { display: flex; justify-content: space-between; }
-                        .receipt-footer { text-align: center; margin-top: 14px; }
-                        .receipt-footer p { font-size: 10px; color: #888; margin-top: 4px; }
-                        .receipt-total-row td {
-                            border-top: 1.5px solid #111;
-                            padding-top: 8px !important;
-                            margin-top: 4px;
+                        .bill-info-grid {
+                            display: grid;
+                            grid-template-columns: 1fr 1fr;
+                            gap: 8px;
+                            margin-bottom: 16px;
+                            font-size: 11px;
+                        }
+                        .info-label { color: #6b7280; font-weight: 500; }
+                        .info-value { color: #111827; font-weight: 600; text-align: right; }
+                        
+                        .receipt-items { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+                        .receipt-items th {
+                            text-align: left;
+                            font-size: 10px;
                             font-weight: 700;
-                            font-size: 15px !important;
+                            color: #9ca3af;
+                            text-transform: uppercase;
+                            padding-bottom: 8px;
+                            border-bottom: 1px solid #f3f4f6;
                         }
+                        .receipt-items td { padding: 8px 0; border-bottom: 1px solid #f9fafb; }
+                        
+                        .receipt-totals { width: 100%; margin-top: 8px; }
+                        .total-row { font-size: 16px; font-weight: 800; color: #000; }
+                        .total-label { padding: 12px 0; }
+                        .total-amount { text-align: right; padding: 12px 0; }
+                        
+                        .payment-badge {
+                            display: inline-block;
+                            padding: 4px 10px;
+                            border-radius: 6px;
+                            background: #f3f4f6;
+                            font-size: 10px;
+                            font-weight: 700;
+                            color: #374151;
+                            text-transform: uppercase;
+                            margin-top: 10px;
+                        }
+                        
+                        .receipt-footer { 
+                            text-align: center; 
+                            margin-top: 24px; 
+                            padding-top: 16px;
+                            border-top: 1px solid #f3f4f6;
+                        }
+                        .footer-thanks { font-size: 12px; font-weight: 600; color: #111827; margin-bottom: 4px; }
+                        .footer-branding { 
+                            font-size: 9px; 
+                            color: #9ca3af; 
+                            font-weight: 500;
+                            margin-top: 12px;
+                        }
+                        
                         @media print {
                             body { background: #fff; }
-                            .receipt { box-shadow: none; border: none; }
-                            @page { margin: 0; size: 80mm auto; }
+                            .receipt { width: 100%; padding: 0; }
+                            @page { margin: 10mm; size: 80mm auto; }
                         }
                     </style>
                 </head>
                 <body>
                 <div class="receipt" id="receipt-content">
                     <div class="receipt-header">
-                        <h2>AutoBill Buddy</h2>
-                        <p>Thank you for your visit!</p>
+                        <h1>${app.esc(shopName)}</h1>
+                        <p>OFFICIAL TAX INVOICE</p>
                     </div>
-                    <hr class="receipt-divider">
-                    <p class="receipt-info">Bill: <strong>${billNo}</strong> &nbsp;|&nbsp; ${time}</p>
-                    <p class="receipt-info">Customer: <strong>${customer}</strong></p>
-                    <hr class="receipt-divider">
+
+                    <div class="bill-info-grid">
+                        <span class="info-label">Invoice No:</span>
+                        <span class="info-value">${billNo}</span>
+                        <span class="info-label">Date:</span>
+                        <span class="info-value">${time}</span>
+                        <span class="info-label">Customer:</span>
+                        <span class="info-value">${customer}</span>
+                    </div>
+
                     <table class="receipt-items">
-                        ${itemsHtml}
-                        <tr class="receipt-total-row">
-                            <td style="padding:8px 0 2px;font-size:15px;font-weight:700;">TOTAL</td>
-                            <td style="padding:8px 0 2px;font-size:15px;font-weight:700;text-align:right;">₹${amt.toLocaleString('en-IN')}</td>
+                        <thead>
+                            <tr>
+                                <th>Description</th>
+                                <th style="text-align:right">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${itemsHtml}
+                        </tbody>
+                    </table>
+
+                    <table class="receipt-totals">
+                        <tr class="total-row">
+                            <td class="total-label">TOTAL</td>
+                            <td class="total-amount">₹${amt.toLocaleString('en-IN')}</td>
                         </tr>
                     </table>
-                    <hr class="receipt-divider">
-                    <p class="receipt-info" style="margin-top:8px;">Payment: <strong>${method}</strong></p>
+
+                    <div style="text-align:center">
+                        <span class="payment-badge">Paid via ${method}</span>
+                    </div>
+
                     <div class="receipt-footer">
-                        <hr class="receipt-divider">
-                        <p>Thank you! Visit again!</p>
+                        <p class="footer-thanks">Thank you for your business!</p>
+                        <p style="font-size:10px; color:#6b7280;">Please visit us again soon.</p>
+                        <p class="footer-branding">Invoiced with <b>AutoBill Buddy</b></p>
                     </div>
                 </div>
                 </body>
