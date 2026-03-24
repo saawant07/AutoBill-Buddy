@@ -218,10 +218,12 @@
                 <h3 class="modal-title" id="inline-prompt-title">Edit</h3>
                 <button class="modal-close" onclick="app.closeInlinePrompt()"><i class="fas fa-times"></i></button>
             </div>
-            <input type="text" id="inline-prompt-input" class="input" style="margin-bottom:16px;">
-            <div style="display:flex;gap:10px;">
-                <button class="btn btn-outline" style="flex:1" onclick="app.closeInlinePrompt()">Cancel</button>
-                <button id="inline-prompt-submit" class="btn btn-primary" style="flex:1">Submit</button>
+            <div class="modal-body">
+                <input type="text" id="inline-prompt-input" class="input" style="margin-bottom:16px; width: 100%;">
+                <div style="display:flex;gap:10px;">
+                    <button class="btn btn-outline" style="flex:1" onclick="app.closeInlinePrompt()">Cancel</button>
+                    <button id="inline-prompt-submit" class="btn btn-primary" style="flex:1">Submit</button>
+                </div>
             </div>
         </div>
     </div>
@@ -263,8 +265,21 @@
                             if ((tx.payment_mode || '').toLowerCase() === 'cash') cashTotal += parseFloat(tx.price || 0);
                             else udhaarTotal += parseFloat(tx.price || 0);
                         });
-                        trendLabels = [today.toLocaleDateString('en-IN', { weekday: 'short' })];
-                        trendValues = [totalRevenue];
+                        
+                        // Group by hour
+                        const hourly = new Array(24).fill(0);
+                        transactions.forEach(tx => {
+                            if (tx.time) {
+                                let parts = tx.time.split(/[: ]/);
+                                let hour = parseInt(parts[0]);
+                                let ampm = parts[2];
+                                if (ampm === 'PM' && hour !== 12) hour += 12;
+                                if (ampm === 'AM' && hour === 12) hour = 0;
+                                if (hour >= 0 && hour < 24) hourly[hour] += parseFloat(tx.price || 0);
+                            }
+                        });
+                        trendLabels = Array.from({length: 24}, (_, i) => `${i}:00`);
+                        trendValues = hourly;
                     }
                 } else if (activeFilter === 'yesterday') {
                     const y = new Date(today); y.setDate(today.getDate() - 1);
@@ -278,8 +293,21 @@
                             if ((tx.payment_mode || '').toLowerCase() === 'cash') cashTotal += parseFloat(tx.price || 0);
                             else udhaarTotal += parseFloat(tx.price || 0);
                         });
-                        trendLabels = [y.toLocaleDateString('en-IN', { weekday: 'short' })];
-                        trendValues = [totalRevenue];
+
+                        // Group by hour
+                        const hourly = new Array(24).fill(0);
+                        transactions.forEach(tx => {
+                            if (tx.time) {
+                                let parts = tx.time.split(/[: ]/);
+                                let hour = parseInt(parts[0]);
+                                let ampm = parts[2];
+                                if (ampm === 'PM' && hour !== 12) hour += 12;
+                                if (ampm === 'AM' && hour === 12) hour = 0;
+                                if (hour >= 0 && hour < 24) hourly[hour] += parseFloat(tx.price || 0);
+                            }
+                        });
+                        trendLabels = Array.from({length: 24}, (_, i) => `${i}:00`);
+                        trendValues = hourly;
                     }
                 } else if (activeFilter === 'week') {
                     for (let i = 6; i >= 0; i--) {

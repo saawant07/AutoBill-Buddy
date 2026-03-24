@@ -69,7 +69,7 @@
                     <button class="modal-close" onclick="closeDetailModal()"><i class="fas fa-times"></i></button>
                 </div>
             </div>
-            <div style="margin-bottom:16px;padding:14px;border-radius:12px;background:var(--accent-red-light);display:flex;align-items:center;justify-content:space-between;">
+            <div style="margin-bottom:16px;padding:14px;border-radius:12px;background:var(--accent-red-light);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
                 <div>
                     <p style="font-size:12px;font-weight:600;color:var(--status-error);text-transform:uppercase;margin:0;">Total Outstanding</p>
                     <p id="detail-total-due" style="font-size:24px;font-weight:800;color:var(--status-error);margin:4px 0 0;">₹0</p>
@@ -78,7 +78,9 @@
                     <i class="fas fa-check-circle"></i> Settle
                 </button>
             </div>
-            <div id="detail-transactions"></div>
+            <div class="modal-body">
+                <div id="detail-transactions"></div>
+            </div>
         </div>
     </div>
 
@@ -271,24 +273,40 @@
 
         window.shareStatement = async () => {
             if (!currentCustomer) return;
+            
+            // Open window NOW (synchronous = no popup blocker)
+            const win = window.open('about:blank', '_blank');
+            
             const phone = localStorage.getItem(`phone_${currentCustomer}`) || '';
-            const shop = localStorage.getItem('shop_name') || 'My Store';
-            // Fetch statement with auth header to avoid token leak
+            const shop = app.session?.user?.user_metadata?.shop_name || localStorage.getItem('shop_name') || 'My Store';
+            
+            // Refresh the session to get a fresh token if needed
+            let token = app.session?.access_token;
             try {
-                const res = await fetch(`${window.API_BASE || ''}/dues/${encodeURIComponent(currentCustomer)}/statement?phone=${encodeURIComponent(phone)}&shop=${encodeURIComponent(shop)}`, {
-                    headers: { 'Authorization': `Bearer ${app.session?.access_token || ''}` }
-                });
-                if (res.ok) {
-                    const html = await res.text();
-                    const win = window.open('', '_blank');
-                    win.document.write(html);
-                    win.document.close();
-                } else {
-                    app.showToast('Failed to load statement', 'error');
+                const { data } = await app.supabase.auth.refreshSession();
+                if (data?.session) {
+                    app.session = data.session;
+                    token = data.session.access_token;
                 }
-            } catch (e) {
-                app.showToast('Failed to load statement', 'error');
+            } catch(e) {
+                console.log('Session refresh failed, using current token');
             }
+            
+            if (!token) {
+                if (win) win.close();
+                app.showToast('Please log in again to view the statement.', 'warning');
+                return;
+            }
+            
+            const url = `${window.API_BASE || ''}/dues/${encodeURIComponent(currentCustomer)}/statement`;
+            const params = new URLSearchParams({
+                authorization: 'Bearer ' + token,
+                phone: phone,
+                shop: shop
+            });
+            
+            // Navigate the already-open window to the statement
+            if (win) win.location.href = url + '?' + params.toString();
         };
 
         // Expose loadCustomers to window for inline onclick handlers

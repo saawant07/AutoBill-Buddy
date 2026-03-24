@@ -603,7 +603,7 @@
                 <h3 class="modal-title"><i class="fas fa-list-check" style="color:var(--accent-green);margin-right:6px;"></i>Review Order</h3>
                 <button class="modal-close" onclick="closeVoiceReview()"><i class="fas fa-times"></i></button>
             </div>
-            <div id="voice-review-content" style="max-height:320px;overflow-y:auto;margin-bottom:12px;"></div>
+            <div id="voice-review-content" class="modal-body" style="margin-bottom:12px;"></div>
             <div style="display:flex;gap:10px;">
                 <button class="btn btn-outline" style="flex:1" onclick="closeVoiceReview()">Cancel</button>
                 <button id="voice-review-confirm" class="btn btn-primary" style="flex:1" onclick="confirmVoiceReview()">
@@ -624,7 +624,7 @@
                     <i class="fas fa-times"></i>
                 </button>
             </div>
-            <div id="receipt-preview-content" style="max-height:480px;overflow-y:auto;background:#f8f8f8;padding:0;"></div>
+            <div id="receipt-preview-content" class="modal-body" style="background:#f8f8f8;padding:0;"></div>
             <div style="display:flex;gap:10px;padding:16px 20px;border-top:1px solid var(--border-color);">
                 <button onclick="window.printReceiptFromPreview()" class="btn btn-sm btn-primary" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;">
                     <i class="fas fa-print"></i> Print / Save PDF
@@ -1464,7 +1464,7 @@
                 total
             });
 
-            if (result && !result.error) {
+            if (result && !result.error && result.success) {
                 app.showToast('Bill confirmed! ₹' + total.toLocaleString('en-IN'), 'success');
                 billItems = [];
                 document.getElementById('customer-name').value = '';
@@ -1615,8 +1615,8 @@
             const time = tx.time || new Date().toLocaleString('en-IN');
             const items = tx.detailed_items || [];
             
-            // Get shop name from localStorage (persisted in settings)
-            const shopName = localStorage.getItem('shop_name') || 'MY STORE';
+            // Get shop name from session metadata or localStorage
+            const shopName = app.session?.user?.user_metadata?.shop_name || localStorage.getItem('shop_name') || 'MY STORE';
 
             const itemsHtml = items.length > 0
                 ? items.map(i => `<tr><td style="padding:4px 0;font-size:12px;">${i.qty} x ${app.esc(i.name)}</td><td style="padding:4px 0;font-size:12px;text-align:right;">₹${parseFloat(i.total||0).toLocaleString('en-IN')}</td></tr>`).join('')

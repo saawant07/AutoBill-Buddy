@@ -105,6 +105,18 @@
                     </div>
                 </div>
 
+                <!-- Total Profit -->
+                <div class="stat-card" id="stat-profit-card" style="background: linear-gradient(135deg, #7C3AED, #6D28D9);">
+                    <div class="stat-icon-wrap" style="background:rgba(255,255,255,0.2);">
+                        <i class="fas fa-hand-holding-dollar" style="color:white;"></i>
+                    </div>
+                    <div class="stat-info">
+                        <p class="stat-label" style="color:rgba(255,255,255,0.8);">Total Profit</p>
+                        <p class="stat-value" id="stat-profit" style="color:white;">₹0</p>
+                        <p class="stat-sub" id="stat-profit-label" style="color:rgba(255,255,255,0.7);">profit today</p>
+                    </div>
+                </div>
+
                 <!-- Credit Due -->
                 <div class="stat-card" id="stat-credit-card" style="background:linear-gradient(135deg,#D97706,#F59E0B);cursor:pointer;" onclick="window.location.href='/customers.html'">
                     <div class="stat-icon-wrap" style="background:rgba(255,255,255,0.2);">
@@ -200,10 +212,12 @@
                 <h3 class="modal-title" id="inline-prompt-title">Edit</h3>
                 <button class="modal-close" onclick="app.closeInlinePrompt()"><i class="fas fa-times"></i></button>
             </div>
-            <input type="text" id="inline-prompt-input" class="input" style="margin-bottom:16px;">
-            <div style="display:flex;gap:10px;">
-                <button class="btn btn-outline" style="flex:1" onclick="app.closeInlinePrompt()">Cancel</button>
-                <button id="inline-prompt-submit" class="btn btn-primary" style="flex:1">Submit</button>
+            <div class="modal-body">
+                <input type="text" id="inline-prompt-input" class="input" style="margin-bottom:16px; width: 100%;">
+                <div style="display:flex;gap:10px;">
+                    <button class="btn btn-outline" style="flex:1" onclick="app.closeInlinePrompt()">Cancel</button>
+                    <button id="inline-prompt-submit" class="btn btn-primary" style="flex:1">Submit</button>
+                </div>
             </div>
         </div>
         <script type="module">
@@ -288,19 +302,23 @@
             const ordEl = document.getElementById('stat-orders');
             const itmEl = document.getElementById('stat-items');
             const lowEl = document.getElementById('stat-low-stock');
+            const proEl = document.getElementById('stat-profit');
             const revLabel = document.querySelector('#stat-revenue-card .stat-label');
             const ordLabel = document.getElementById('stat-orders-label');
+            const proLabel = document.getElementById('stat-profit-label');
 
             // Handle different response shapes
-            let revenue = 0, orders = 0, quantity = 0;
+            let revenue = 0, orders = 0, quantity = 0, profit = 0;
 
             if (filter === 'year') {
                 // /sales/year returns { year_revenue, months: [...] }
                 revenue = stats.year_revenue || 0;
+                profit = stats.year_profit || 0;
                 orders = (stats.months || []).reduce((s, m) => s + (m.orders || 0), 0);
                 quantity = (stats.months || []).reduce((s, m) => s + (m.quantity || 0), 0);
             } else {
                 revenue = stats.total_revenue || 0;
+                profit = stats.total_profit || 0;
                 orders = stats.total_sales || 0;
                 quantity = stats.total_quantity || 0;
             }
@@ -308,12 +326,15 @@
             if (revEl) revEl.textContent = '₹' + Math.round(revenue).toLocaleString('en-IN');
             if (ordEl) ordEl.textContent = orders;
             if (itmEl) itmEl.textContent = Math.round(quantity);
+            if (proEl) proEl.textContent = '₹' + Math.round(profit).toLocaleString('en-IN');
 
             // Update labels
             const labelMap = { day: "Today's Revenue", week: "This Week's Revenue", year: "This Year's Revenue" };
             const subMap = { day: 'orders today', week: 'orders this week', year: 'orders this year' };
+            const proMap = { day: 'profit today', week: 'profit this week', year: 'profit this year' };
             if (revLabel) revLabel.textContent = labelMap[filter] || "Today's Revenue";
             if (ordLabel) ordLabel.textContent = subMap[filter] || 'orders today';
+            if (proLabel) proLabel.textContent = proMap[filter] || 'profit today';
 
             // Count low stock (doesn't change by period)
             const inv = await app.api('/inventory');

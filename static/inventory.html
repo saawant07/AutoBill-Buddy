@@ -130,48 +130,50 @@
                 </h3>
                 <button class="modal-close" onclick="closeAddItem()"><i class="fas fa-times"></i></button>
             </div>
-            <div style="display:grid;gap:14px;">
-                <div>
-                    <label style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:6px;">Item Name *</label>
-                    <input type="text" id="ai-name" class="input" placeholder="e.g. Amul Milk 500ml" style="width:100%;">
-                </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div class="modal-body">
+                <div style="display:grid;gap:14px;">
                     <div>
-                        <label style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:6px;">SKU</label>
-                        <input type="text" id="ai-sku" class="input" placeholder="SKU-001" style="width:100%;">
+                        <label style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:6px;">Item Name *</label>
+                        <input type="text" id="ai-name" class="input" placeholder="e.g. Amul Milk 500ml" style="width:100%;">
                     </div>
-                    <div>
-                        <label style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:6px;">Category</label>
-                        <select id="ai-category" class="input" style="width:100%;">
-                            <option value="">Select category</option>
-                            <option value="Grocery">Grocery</option>
-                            <option value="Dairy">Dairy</option>
-                            <option value="Personal Care">Personal Care</option>
-                            <option value="Snacks">Snacks</option>
-                            <option value="Beverages">Beverages</option>
-                            <option value="Stationery">Stationery</option>
-                            <option value="Other">Other</option>
-                        </select>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                        <div>
+                            <label style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:6px;">SKU</label>
+                            <input type="text" id="ai-sku" class="input" placeholder="SKU-001" style="width:100%;">
+                        </div>
+                        <div>
+                            <label style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:6px;">Category</label>
+                            <select id="ai-category" class="input" style="width:100%;">
+                                <option value="">Select category</option>
+                                <option value="Grocery">Grocery</option>
+                                <option value="Dairy">Dairy</option>
+                                <option value="Personal Care">Personal Care</option>
+                                <option value="Snacks">Snacks</option>
+                                <option value="Beverages">Beverages</option>
+                                <option value="Stationery">Stationery</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
                     </div>
-                </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-                    <div>
-                        <label style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:6px;">Stock Qty *</label>
-                        <input type="number" id="ai-qty" class="input" placeholder="50" min="0" style="width:100%;">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                        <div>
+                            <label style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:6px;">Stock Qty *</label>
+                            <input type="number" id="ai-qty" class="input" placeholder="50" min="0" style="width:100%;">
+                        </div>
+                        <div>
+                            <label style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:6px;">Selling Price (₹) *</label>
+                            <input type="number" id="ai-price" class="input" placeholder="60" min="0" step="0.5" style="width:100%;">
+                        </div>
                     </div>
-                    <div>
-                        <label style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:6px;">Selling Price (₹) *</label>
-                        <input type="number" id="ai-price" class="input" placeholder="60" min="0" step="0.5" style="width:100%;">
-                    </div>
-                </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-                    <div>
-                        <label style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:6px;">Cost Price (₹)</label>
-                        <input type="number" id="ai-cost" class="input" placeholder="45" min="0" step="0.5" style="width:100%;">
-                    </div>
-                    <div>
-                        <label style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:6px;">Expiry Date</label>
-                        <input type="date" id="ai-expiry" class="input" style="width:100%;">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                        <div>
+                            <label style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:6px;">Cost Price (₹)</label>
+                            <input type="number" id="ai-cost" class="input" placeholder="45" min="0" step="0.5" style="width:100%;">
+                        </div>
+                        <div>
+                            <label style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:6px;">Expiry Date</label>
+                            <input type="date" id="ai-expiry" class="input" style="width:100%;">
+                        </div>
                     </div>
                 </div>
             </div>
@@ -293,17 +295,19 @@
             return `background:${c.bg};color:${c.color};`;
         }
 
-        // Get item metadata (localStorage)
-        function getItemMeta(name) {
+        function getAllMeta() {
             try {
-                const meta = JSON.parse(localStorage.getItem('inv_meta') || '{}');
-                return meta[name] || {};
+                return JSON.parse(localStorage.getItem('inv_meta') || '{}');
             } catch { return {}; }
+        }
+
+        function getItemMeta(name) {
+            return getAllMeta()[name] || {};
         }
 
         function saveItemMeta(name, data) {
             try {
-                const meta = JSON.parse(localStorage.getItem('inv_meta') || '{}');
+                const meta = getAllMeta();
                 meta[name] = { ...(meta[name] || {}), ...data };
                 localStorage.setItem('inv_meta', JSON.stringify(meta));
             } catch {}
@@ -334,8 +338,9 @@
         function buildFilterPills() {
             const categories = {};
             let lowCount = 0;
+            const fullMeta = getAllMeta();
             allItems.forEach(i => {
-                const meta = getItemMeta(i.item_name);
+                const meta = fullMeta[i.item_name] || {};
                 const cat = meta.category || '';
                 if (cat) categories[cat] = (categories[cat] || 0) + 1;
                 if ((i.stock_quantity || 0) <= 10) lowCount++;
@@ -355,19 +360,20 @@
         function renderInventory() {
             const container = document.getElementById('inventory-table-container');
             let items = allItems;
+            const fullMeta = getAllMeta();
 
             // Filter by category or low-stock
             if (currentFilter === 'low') {
                 items = items.filter(i => (i.stock_quantity || 0) <= 10);
             } else if (currentFilter !== 'all') {
-                items = items.filter(i => (getItemMeta(i.item_name).category || '') === currentFilter);
+                items = items.filter(i => (fullMeta[i.item_name]?.category || '') === currentFilter);
             }
 
             // Search
             const q = (document.getElementById('search-input')?.value || '').toLowerCase().trim();
             if (q) {
                 items = items.filter(i => {
-                    const meta = getItemMeta(i.item_name);
+                    const meta = fullMeta[i.item_name] || {};
                     return (i.item_name || '').toLowerCase().includes(q) ||
                            (meta.sku || '').toLowerCase().includes(q) ||
                            (meta.category || '').toLowerCase().includes(q);
@@ -395,7 +401,7 @@
                 <tbody>
                     ${items.map((item, idx) => {
                         const qty = item.stock_quantity || 0;
-                        const meta = getItemMeta(item.item_name);
+                        const meta = fullMeta[item.item_name] || {};
                         let pillClass, pillLabel, pillIcon;
                         if (qty === 0) { pillClass = 'out'; pillLabel = 'Out of Stock'; pillIcon = 'fa-exclamation-circle'; }
                         else if (qty <= 5) { pillClass = 'red'; pillLabel = 'Critical'; pillIcon = 'fa-triangle-exclamation'; }
@@ -446,7 +452,7 @@
             </table>`;
 
             // Delegated event listeners for action buttons (XSS fix)
-            table.addEventListener('click', (e) => {
+            container.querySelector('.inv-table').addEventListener('click', (e) => {
                 const btn = e.target.closest('[data-item-name]');
                 if (!btn) return;
                 const name = decodeURIComponent(btn.dataset.itemName);

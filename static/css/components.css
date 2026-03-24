@@ -714,17 +714,17 @@ tbody tr:hover {
 
 .modal-box {
     background: var(--card-bg);
-    border-radius: 20px;
+    border-radius: 24px;
     padding: 28px;
     width: 100%;
     max-width: 560px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.25);
     animation: modal-in 0.25s var(--transition-spring);
-}
-
-@keyframes modal-in {
-    from { opacity: 0; transform: scale(0.9) translateY(20px); }
-    to { opacity: 1; transform: scale(1) translateY(0); }
+    position: relative;
+    overflow: hidden;
 }
 
 .modal-header {
@@ -732,6 +732,14 @@ tbody tr:hover {
     align-items: center;
     justify-content: space-between;
     margin-bottom: 20px;
+    flex-shrink: 0;
+}
+
+.modal-body {
+    flex: 1;
+    overflow-y: auto;
+    margin: 0 -12px;
+    padding: 0 12px;
 }
 
 .modal-title {

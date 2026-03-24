@@ -4315,7 +4315,7 @@
             const tx = window.todayTransactions?.find(t => t.order === orderNum);
             if (!tx) return;
 
-            const shopName = document.getElementById('header-shop-name')?.innerText || 'My Store';
+            const shopName = app.session?.user?.user_metadata?.shop_name || localStorage.getItem('shop_name') || 'My Store';
             const today = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
             const total = tx.price;
             const time = tx.time || 'Just now';
@@ -5214,7 +5214,7 @@
             }
             
             const phone = localStorage.getItem('phone_' + customerName) || '';
-            const shopName = document.getElementById('header-shop-name')?.innerText || 'My Store';
+            const shopName = app.session?.user?.user_metadata?.shop_name || localStorage.getItem('shop_name') || 'My Store';
             const url = `${API_BASE}/dues/${encodeURIComponent(customerName)}/statement`;
             const params = new URLSearchParams({
                 authorization: 'Bearer ' + token,

@@ -679,7 +679,7 @@ def parse_message_locally(message, available_items, custom_aliases=None):
 
     # Detect Payment Mode & Customer
     detected_mode = 'Cash'
-    detected_customer = 'Walk-in'
+    detected_customer = 'Walk-in Customer'
     
     udhaar_keywords = ['udhaar', 'udhar', 'udhhaar', 'udhar', 'credit', 'khata', 'khate', 'khatte', 'udhaari', 'udhari', 'uthaar', 'uthar', 'udhaar pe', 'udhar pe', 'credit pe', 'on credit', 'name', 'naam']
     for kw in udhaar_keywords:
@@ -742,7 +742,7 @@ def parse_message_locally(message, available_items, custom_aliases=None):
     # Clean text — strip all credit keywords
     text = re.sub(r'\b(udhaar|udhar|udhhaar|credit|khata|khate|khatte|udhaari|udhari|uthaar|uthar|oodhar|oodaar|name|naam)\b', ' ', text, flags=re.IGNORECASE)
     text = re.sub(r'\b(ke\s+naam\s+se|naam\s+)\b', ' ', text, flags=re.IGNORECASE)
-    if detected_customer != 'Walk-in':
+    if detected_customer not in ['Walk-in', 'Walk-in Customer']:
         text = re.sub(rf'\b{re.escape(detected_customer)}\b', ' ', text, flags=re.IGNORECASE)
     
     # NEW: Remove common Hindi stop words and general filler words
@@ -931,10 +931,11 @@ async def parse_order_endpoint(req: ChatRequest, request: Request, auth: tuple =
                 
                 # Update metadata from AI if local didn't find anything specific
                 if isinstance(ai_parsed, dict):
-                    if payment_mode == 'Cash' and ai_parsed.get("payment_mode") == "Udhaar":
+                    if payment_mode.lower() == 'cash' and ai_parsed.get("payment_mode", "").lower() == "udhaar":
                         payment_mode = "Udhaar"
-                    if customer_name == 'Walk-in' and ai_parsed.get("customer_name") != "Walk-in":
-                        customer_name = ai_parsed.get("customer_name", "Walk-in").strip().title()
+                    ai_cust = ai_parsed.get("customer_name", "").strip().title()
+                    if customer_name in ['Walk-in', 'Walk-in Customer'] and ai_cust and ai_cust not in ['Walk-in', 'Walk-in Customer']:
+                        customer_name = ai_cust
                 
                 for item_data in ai_items:
                     item_name = item_data.get("item", "").strip().title()
@@ -1055,7 +1056,7 @@ async def confirm_order_endpoint(req: ConfirmOrderRequest, request: Request, aut
         results.append(f"{qty} {item}")
         
     # Update Dues if Udhaar
-    if results and req.payment_mode == 'Udhaar' and req.customer_name != 'Walk-in':
+    if results and req.payment_mode.lower() == 'udhaar' and req.customer_name not in ['Walk-in', 'Walk-in Customer']:
         try:
             dues_check = db.table("dues").select("total_due").eq("user_id", user_id).eq("customer_name", req.customer_name).execute()
             if dues_check.data:
@@ -1436,6 +1437,42 @@ async def delete_item(req: DeleteItemRequest, auth: tuple = Depends(get_user_cli
         
         if result.data:
             return {"message": f"✅ Deleted '{item}' from inventory", "success": True}
+        else:
+            return {"message": f"❌ Item '{item}' not found", "success": False}
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"message": f"❌ Error: {str(e)}", "success": False}
+
+class UpdateItemRequest(BaseModel):
+    item_name: str = Field(min_length=1)
+    price: Optional[float] = Field(default=None, ge=0)
+    cost_price: Optional[float] = Field(default=None, ge=0)
+    expiry_date: Optional[str] = None
+    sku: Optional[str] = None
+    category: Optional[str] = None
+
+@app.post("/update-item")
+async def update_item(req: UpdateItemRequest, auth: tuple = Depends(get_user_client)):
+    try:
+        db, user_id = auth
+        item = req.item_name.strip().title()
+        
+        update_data = {}
+        if req.price is not None:
+             update_data["price"] = req.price
+        if req.cost_price is not None:
+             update_data["cost_price"] = req.cost_price
+        if req.expiry_date is not None:
+             update_data["expiry_date"] = req.expiry_date
+             
+        if not update_data:
+            return {"message": "No backend fields to update", "success": True}
+            
+        result = db.table("inventory").update(update_data).eq("user_id", user_id).eq("item_name", item).execute()
+        
+        if result.data:
+            return {"message": f"✅ Updated '{item}'", "success": True}
         else:
             return {"message": f"❌ Item '{item}' not found", "success": False}
     except Exception as e:
@@ -2004,17 +2041,25 @@ async def get_customer_statement(customer_name: str, authorization: str = "", ph
         token = authorization.replace("Bearer ", "")
         
         # Guest mode bypass
+        shop_name = shop
         if token == GUEST_MAGIC_TOKEN:
             db = create_client(SUPABASE_URL, SUPABASE_KEY)
             user_id = GUEST_USER_ID
+            shop_name = "Demo Store"
         else:
             db = create_client(SUPABASE_URL, SUPABASE_KEY)
             try:
                 db.auth.set_session(token, token)
                 user_response = db.auth.get_user(token)
                 user_id = user_response.user.id
+                # Get shop name from metadata if available
+                metadata = user_response.user.user_metadata or {}
+                shop_name = metadata.get("shop_name") or shop or "My Store"
             except Exception:
                 return HTMLResponse(content="<h1>Session Expired</h1><p>Please log in again.</p>", status_code=401)
+        
+        # Use the resolved shop_name for the template
+        shop = shop_name
         
         # Get transactions
         response = db.table("sales").select("item_name, quantity, total_price, created_at").eq(
