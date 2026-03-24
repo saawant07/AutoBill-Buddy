@@ -681,14 +681,14 @@ def parse_message_locally(message, available_items, custom_aliases=None):
     detected_mode = 'Cash'
     detected_customer = 'Walk-in'
     
-    udhaar_keywords = ['udhaar', 'udhar', 'udhhaar', 'udhar', 'credit', 'khata', 'khate', 'khatte', 'udhaari', 'udhari', 'uthaar', 'uthar', 'udhaar pe', 'udhar pe', 'credit pe', 'on credit']
+    udhaar_keywords = ['udhaar', 'udhar', 'udhhaar', 'udhar', 'credit', 'khata', 'khate', 'khatte', 'udhaari', 'udhari', 'uthaar', 'uthar', 'udhaar pe', 'udhar pe', 'credit pe', 'on credit', 'name', 'naam']
     for kw in udhaar_keywords:
         if kw in text:
             detected_mode = 'Udhaar'
             break
             
     # Build the keyword list for regex (pipe-separated for alternation)
-    credit_kws = 'udhaar|udhar|udhhaar|credit|khata|khate|khatte|uthaar|uthar|oodhar|oodaar|udhaari|udhari'
+    credit_kws = 'udhaar|udhar|udhhaar|credit|khata|khate|khatte|uthaar|uthar|oodhar|oodaar|udhaari|udhari|name|naam'
     hindi_markers = 'ko|ka|ki|ke|se|kaa|kee|kai|kha|kh'
 
     # Order MATTERS: most specific patterns first
@@ -710,10 +710,25 @@ def parse_message_locally(message, available_items, custom_aliases=None):
         r'([A-Za-z]+?)\s+(?:ke|kha)\s+(?:' + credit_kws + r')\s+(?:pe|par|on)',
         # P7: "someone on someone else udhaar" — "on anuj on ram udhaar"
         r'(?:on|for)\s+([A-Za-z]+?)\s+(?:on|for)\s+([A-Za-z]+?)\s+(?:' + credit_kws + ')',
+        
+        # Standalone Fallback patterns (Trailing or Leading Names)
+        r'\b([A-Za-z]{2,})\s*$',
+        r'^\s*([A-Za-z]{2,})\b'
     ]
     
     original_text = text
-    non_names = {'on', 'the', 'and', 'sold', 'sell', 'sale', 'give', 'some', 'also', 'more', 'cash', 'udhaar', 'milk', 'bread', 'sugar', 'rice', 'oil', 'eggs', 'butter', 'cheese', 'paneer', 'curd', 'atta', 'dal', 'tea', 'coffee', 'ghee', 'soap', 'chips', 'noodles', 'biscuits', 'toothpaste', 'detergent', 'flour', 'salt', 'wheat', 'maida', 'suji', 'poha', 'jeera', 'cumin', 'khatte', 'khata', 'ke', 'ka', 'ki', 'ko', 'se', 'pe', 'naam'}
+    non_names = {'on', 'the', 'and', 'sold', 'sell', 'sale', 'give', 'some', 'also', 'more', 'cash', 'udhaar', 'milk', 'bread', 'sugar', 'rice', 'oil', 'eggs', 'butter', 'cheese', 'paneer', 'curd', 'atta', 'dal', 'tea', 'coffee', 'ghee', 'soap', 'chips', 'noodles', 'biscuits', 'toothpaste', 'detergent', 'flour', 'salt', 'wheat', 'maida', 'suji', 'poha', 'jeera', 'cumin', 'khatte', 'khata', 'ke', 'ka', 'ki', 'ko', 'se', 'pe', 'naam', 'name', 'kg', 'kgs', 'kilo', 'kilos', 'liter', 'liters', 'ltr', 'ml', 'gram', 'grams', 'gm', 'gms', 'g', 'piece', 'pieces', 'pcs', 'packet', 'packets', 'pack'}
+    
+    # Dynamically block items and known typos from being detected as names
+    for item in available_items:
+        for w in item.lower().split():
+            non_names.add(w)
+    for typo in EXPANDED_VOICE_TYPOS.keys():
+        non_names.add(typo.lower())
+    for cat_alias in custom_aliases.keys():
+        for w in cat_alias.lower().split():
+            non_names.add(w)
+
     for pat in customer_patterns:
         m = re.search(pat, original_text, re.IGNORECASE)
         if m:
@@ -725,7 +740,7 @@ def parse_message_locally(message, available_items, custom_aliases=None):
                 break
 
     # Clean text — strip all credit keywords
-    text = re.sub(r'\b(udhaar|udhar|udhhaar|credit|khata|khate|khatte|udhaari|udhari|uthaar|uthar|oodhar|oodaar)\b', ' ', text, flags=re.IGNORECASE)
+    text = re.sub(r'\b(udhaar|udhar|udhhaar|credit|khata|khate|khatte|udhaari|udhari|uthaar|uthar|oodhar|oodaar|name|naam)\b', ' ', text, flags=re.IGNORECASE)
     text = re.sub(r'\b(ke\s+naam\s+se|naam\s+)\b', ' ', text, flags=re.IGNORECASE)
     if detected_customer != 'Walk-in':
         text = re.sub(rf'\b{re.escape(detected_customer)}\b', ' ', text, flags=re.IGNORECASE)
@@ -1342,11 +1357,6 @@ async def add_stock(req: AddStockRequest, background_tasks: BackgroundTasks, aut
             
             # TRIGGER ALIAS GENERATION IF NEW
             if is_new_item:
-                try:
-                    insert_data["aliases"] = generate_multilingual_aliases(item)
-                except Exception as alias_err:
-                    print(f"Alias error (non-fatal): {alias_err}")
-                
                 # BACKGROUND Gemini enrichment — adds more creative aliases later
                 background_tasks.add_task(generate_aliases_task, item, user_id, db)
 
@@ -1563,11 +1573,14 @@ async def get_sales_week(authorization: str = Header(None)):
         transactions = res.data or []
 
         total_revenue = sum(float(tx.get("total_price", 0)) for tx in transactions)
+        total_cost = sum(float(tx.get("total_cost", 0)) for tx in transactions)
+        total_profit = total_revenue - total_cost
         total_sales = len(transactions)
-        total_quantity = sum(sum(item.get("quantity", 0) for item in tx.get("detailed_items", [])) for tx in transactions)
+        total_quantity = sum(float(tx.get("quantity", 0)) for tx in transactions)
 
         return {
             "total_revenue": total_revenue,
+            "total_profit": total_profit,
             "total_sales": total_sales,
             "total_quantity": total_quantity,
             "transactions": transactions
