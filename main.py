@@ -1247,9 +1247,7 @@ async def get_todays_sales(auth: tuple = Depends(get_user_client)):
         print(f"Sales Error: {e}")
         return {"total_revenue": 0, "total_profit": 0, "total_sales": 0, "total_quantity": 0, "items_sold": [], "transactions": []}
 
-from fastapi import FastAPI, HTTPException, Header, Depends, BackgroundTasks
-
-# ... (imports)
+# (imports already at top of file)
 
 # Helper to generate aliases using Gemini
 async def generate_aliases_task(item_name: str, user_id: str, db: Client):
@@ -1597,32 +1595,25 @@ async def get_weekly_analytics(auth: tuple = Depends(get_user_client)):
         return {"success": False, "message": str(e)}
 
 @app.get("/sales/week")
-async def get_sales_week(authorization: str = Header(None)):
+async def get_sales_week(auth: tuple = Depends(get_user_client)):
     """Get sales for current week (Mon-Sun IST)"""
-    if not authorization:
-        return {"error": "Unauthorized"}
+    from datetime import datetime, timezone, timedelta
     try:
-        token = authorization.replace("Bearer ", "")
-        payload = supabase_anon.auth.get_user(token)
-        user_id = payload.user.id
-    except:
-        return {"error": "Invalid token"}
+        db, user_id = auth
+        now_ist = datetime.now(timezone.utc) + timedelta(hours=5, minutes=30)
+        today_ist = now_ist.date()
+        monday = today_ist - timedelta(days=today_ist.weekday())
+        sunday = monday + timedelta(days=6)
 
-    now_ist = datetime.utcnow() + timedelta(hours=5, minutes=30)
-    today_ist = now_ist.date()
-    monday = today_ist - timedelta(days=today_ist.weekday())
-    sunday = monday + timedelta(days=6)
+        start_ist = datetime.combine(monday, datetime.min.time()) - timedelta(hours=5, minutes=30)
+        end_ist = datetime.combine(sunday, datetime.max.time()) - timedelta(hours=5, minutes=30)
 
-    start_ist = datetime.combine(monday, datetime.min.time()) - timedelta(hours=5, minutes=30)
-    end_ist = datetime.combine(sunday, datetime.max.time()) - timedelta(hours=5, minutes=30)
-
-    try:
-        sb_admin: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
-        res = sb_admin.from_("sales").select("*").gte("created_at", start_ist.isoformat()).lte("created_at", end_ist.isoformat()).eq("user_id", user_id).execute()
-        transactions = res.data or []
+        res = db.table("sales").select("*").eq("user_id", user_id).gte("created_at", start_ist.isoformat()).lte("created_at", end_ist.isoformat()).execute()
+        all_transactions = res.data or []
+        transactions = [t for t in all_transactions if t.get("item_name") != "Payment Received"]
 
         total_revenue = sum(float(tx.get("total_price", 0)) for tx in transactions)
-        total_cost = sum(float(tx.get("total_cost", 0)) for tx in transactions)
+        total_cost = sum(float(tx.get("total_cost", 0) or 0) for tx in transactions)
         total_profit = total_revenue - total_cost
         total_sales = len(transactions)
         total_quantity = sum(float(tx.get("quantity", 0)) for tx in transactions)
@@ -1634,57 +1625,52 @@ async def get_sales_week(authorization: str = Header(None)):
             "total_quantity": total_quantity,
             "transactions": transactions
         }
+    except HTTPException:
+        raise
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return {"error": str(e)}
 
 @app.get("/analytics/top-items")
-async def get_top_items(period: str = "day", authorization: str = Header(None)):
+async def get_top_items(period: str = "day", auth: tuple = Depends(get_user_client)):
     """Get top 10 items by qty sold, with revenue and % change vs previous period"""
-    if not authorization:
-        return {"error": "Unauthorized"}
+    from datetime import datetime, timezone, timedelta
     try:
-        token = authorization.replace("Bearer ", "")
-        payload = supabase_anon.auth.get_user(token)
-        user_id = payload.user.id
-    except:
-        return {"error": "Invalid token"}
+        db, user_id = auth
+        now_ist = datetime.now(timezone.utc) + timedelta(hours=5, minutes=30)
+        today_ist = now_ist.date()
 
-    now_ist = datetime.utcnow() + timedelta(hours=5, minutes=30)
-    today_ist = now_ist.date()
+        if period == "day":
+            start1 = datetime.combine(today_ist, datetime.min.time()) - timedelta(hours=5, minutes=30)
+            end1 = datetime.combine(today_ist, datetime.max.time()) - timedelta(hours=5, minutes=30)
+            prev_start = start1 - timedelta(days=1)
+            prev_end = end1 - timedelta(days=1)
+        elif period == "week":
+            monday = today_ist - timedelta(days=today_ist.weekday())
+            start1 = datetime.combine(monday, datetime.min.time()) - timedelta(hours=5, minutes=30)
+            end1 = datetime.combine(monday + timedelta(days=6), datetime.max.time()) - timedelta(hours=5, minutes=30)
+            prev_start = start1 - timedelta(weeks=1)
+            prev_end = end1 - timedelta(weeks=1)
+        else:
+            start1 = datetime(today_ist.year, 1, 1) - timedelta(hours=5, minutes=30)
+            end1 = datetime(today_ist.year, 12, 31, 23, 59, 59) - timedelta(hours=5, minutes=30)
+            prev_start = datetime(today_ist.year - 1, 1, 1) - timedelta(hours=5, minutes=30)
+            prev_end = datetime(today_ist.year - 1, 12, 31, 23, 59, 59) - timedelta(hours=5, minutes=30)
 
-    if period == "day":
-        start1 = datetime.combine(today_ist, datetime.min.time()) - timedelta(hours=5, minutes=30)
-        end1 = datetime.combine(today_ist, datetime.max.time()) - timedelta(hours=5, minutes=30)
-        prev_start = start1 - timedelta(days=1)
-        prev_end = end1 - timedelta(days=1)
-    elif period == "week":
-        monday = today_ist - timedelta(days=today_ist.weekday())
-        start1 = datetime.combine(monday, datetime.min.time()) - timedelta(hours=5, minutes=30)
-        end1 = datetime.combine(monday + timedelta(days=6), datetime.max.time()) - timedelta(hours=5, minutes=30)
-        prev_start = start1 - timedelta(weeks=1)
-        prev_end = end1 - timedelta(weeks=1)
-    else:
-        start1 = datetime(today_ist.year, 1, 1) - timedelta(hours=5, minutes=30)
-        end1 = datetime(today_ist.year, 12, 31, 23, 59, 59) - timedelta(hours=5, minutes=30)
-        prev_start = datetime(today_ist.year - 1, 1, 1) - timedelta(hours=5, minutes=30)
-        prev_end = datetime(today_ist.year - 1, 12, 31, 23, 59, 59) - timedelta(hours=5, minutes=30)
-
-    try:
-        sb_admin: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
-
-        r1 = sb_admin.from_("sales").select("detailed_items,total_price").gte("created_at", start1.isoformat()).lte("created_at", end1.isoformat()).eq("user_id", user_id).execute()
-        r2 = sb_admin.from_("sales").select("detailed_items,total_price").gte("created_at", prev_start.isoformat()).lte("created_at", prev_end.isoformat()).eq("user_id", user_id).execute()
+        r1 = db.table("sales").select("detailed_items,total_price").eq("user_id", user_id).gte("created_at", start1.isoformat()).lte("created_at", end1.isoformat()).execute()
+        r2 = db.table("sales").select("detailed_items,total_price").eq("user_id", user_id).gte("created_at", prev_start.isoformat()).lte("created_at", prev_end.isoformat()).execute()
 
         item_map = defaultdict(lambda: {"qty": 0, "revenue": 0.0})
         for tx in (r1.data or []):
-            for item in tx.get("detailed_items", []):
+            for item in (tx.get("detailed_items") or []):
                 name = item.get("name", "Unknown")
                 item_map[name]["qty"] += item.get("quantity", 0)
                 item_map[name]["revenue"] += float(item.get("price", 0)) * item.get("quantity", 0)
 
         prev_map = defaultdict(lambda: {"qty": 0})
         for tx in (r2.data or []):
-            for item in tx.get("detailed_items", []):
+            for item in (tx.get("detailed_items") or []):
                 prev_map[item.get("name", "Unknown")]["qty"] += item.get("quantity", 0)
 
         total_rev = sum(v["revenue"] for v in item_map.values()) or 1
@@ -1702,52 +1688,52 @@ async def get_top_items(period: str = "day", authorization: str = Header(None)):
                 "pct_change": round(pct_change, 1)
             })
         return {"items": result}
+    except HTTPException:
+        raise
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return {"error": str(e)}
 
 @app.get("/analytics/comparison")
-async def get_comparison(period: str = "day", authorization: str = Header(None)):
+async def get_comparison(period: str = "day", auth: tuple = Depends(get_user_client)):
     """Get current vs previous period revenue comparison"""
-    if not authorization:
-        return {"error": "Unauthorized"}
+    from datetime import datetime, timezone, timedelta
     try:
-        token = authorization.replace("Bearer ", "")
-        payload = supabase_anon.auth.get_user(token)
-        user_id = payload.user.id
-    except:
-        return {"error": "Invalid token"}
+        db, user_id = auth
+        now_ist = datetime.now(timezone.utc) + timedelta(hours=5, minutes=30)
+        today_ist = now_ist.date()
 
-    now_ist = datetime.utcnow() + timedelta(hours=5, minutes=30)
-    today_ist = now_ist.date()
+        if period == "day":
+            start1 = datetime.combine(today_ist, datetime.min.time()) - timedelta(hours=5, minutes=30)
+            end1 = datetime.combine(today_ist, datetime.max.time()) - timedelta(hours=5, minutes=30)
+            prev_start = start1 - timedelta(days=1)
+            prev_end = end1 - timedelta(days=1)
+        elif period == "week":
+            monday = today_ist - timedelta(days=today_ist.weekday())
+            start1 = datetime.combine(monday, datetime.min.time()) - timedelta(hours=5, minutes=30)
+            end1 = datetime.combine(monday + timedelta(days=6), datetime.max.time()) - timedelta(hours=5, minutes=30)
+            prev_start = start1 - timedelta(weeks=1)
+            prev_end = end1 - timedelta(weeks=1)
+        else:
+            start1 = datetime(today_ist.year, 1, 1) - timedelta(hours=5, minutes=30)
+            end1 = datetime(today_ist.year, 12, 31, 23, 59, 59) - timedelta(hours=5, minutes=30)
+            prev_start = datetime(today_ist.year - 1, 1, 1) - timedelta(hours=5, minutes=30)
+            prev_end = datetime(today_ist.year - 1, 12, 31, 23, 59, 59) - timedelta(hours=5, minutes=30)
 
-    if period == "day":
-        start1 = datetime.combine(today_ist, datetime.min.time()) - timedelta(hours=5, minutes=30)
-        end1 = datetime.combine(today_ist, datetime.max.time()) - timedelta(hours=5, minutes=30)
-        prev_start = start1 - timedelta(days=1)
-        prev_end = end1 - timedelta(days=1)
-    elif period == "week":
-        monday = today_ist - timedelta(days=today_ist.weekday())
-        start1 = datetime.combine(monday, datetime.min.time()) - timedelta(hours=5, minutes=30)
-        end1 = datetime.combine(monday + timedelta(days=6), datetime.max.time()) - timedelta(hours=5, minutes=30)
-        prev_start = start1 - timedelta(weeks=1)
-        prev_end = end1 - timedelta(weeks=1)
-    else:
-        start1 = datetime(today_ist.year, 1, 1) - timedelta(hours=5, minutes=30)
-        end1 = datetime(today_ist.year, 12, 31, 23, 59, 59) - timedelta(hours=5, minutes=30)
-        prev_start = datetime(today_ist.year - 1, 1, 1) - timedelta(hours=5, minutes=30)
-        prev_end = datetime(today_ist.year - 1, 12, 31, 23, 59, 59) - timedelta(hours=5, minutes=30)
-
-    try:
-        sb_admin: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
-        r1 = sb_admin.from_("sales").select("total_price").gte("created_at", start1.isoformat()).lte("created_at", end1.isoformat()).eq("user_id", user_id).execute()
-        r2 = sb_admin.from_("sales").select("total_price").gte("created_at", prev_start.isoformat()).lte("created_at", prev_end.isoformat()).eq("user_id", user_id).execute()
+        r1 = db.table("sales").select("total_price").eq("user_id", user_id).gte("created_at", start1.isoformat()).lte("created_at", end1.isoformat()).execute()
+        r2 = db.table("sales").select("total_price").eq("user_id", user_id).gte("created_at", prev_start.isoformat()).lte("created_at", prev_end.isoformat()).execute()
 
         curr = sum(float(tx.get("total_price", 0)) for tx in (r1.data or []))
         prev = sum(float(tx.get("total_price", 0)) for tx in (r2.data or []))
         pct_change = ((curr - prev) / prev * 100) if prev else (100 if curr > 0 else 0)
 
         return {"current": curr, "previous": prev, "pct_change": round(pct_change, 1)}
+    except HTTPException:
+        raise
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return {"error": str(e)}
 
 @app.get("/sales/month")

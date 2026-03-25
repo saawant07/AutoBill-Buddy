@@ -5656,8 +5656,6 @@
         }
 
         // Add Close/Back button to Auth Overlay
-        // Since we can't easily modify the auth-overlay HTML structure from here without replacing huge chunks,
-        // we'll inject a back button dynamically if it doesn't exist.
         function injectAuthBackButton() {
             const overlay = document.getElementById('auth-overlay');
             if (!overlay.querySelector('.auth-back-btn')) {
@@ -5677,31 +5675,38 @@
         async function startDemo() {
             const btn = document.getElementById('demo-btn');
             const originalText = btn.innerHTML;
-            btn.innerHTML = `< i class="fas fa-circle-notch fa-spin" ></i > Entering Demo...`;
+            btn.innerHTML = `<i class="fas fa-circle-notch fa-spin"></i> Entering Demo...`;
             btn.disabled = true;
 
             try {
-                // Call server-side guest login endpoint
-                const res = await fetch(`${API_BASE}/login/guest`, { method: 'POST' });
+                // Call server-side guest token endpoint
+                const res = await fetch(`${API_BASE}/get-guest-token`, { method: 'POST' });
 
                 if (!res.ok) {
                     const errText = await res.text();
                     throw new Error(errText || "Backend login failed");
                 }
 
-                const sessionData = await res.json();
+                const data = await res.json();
+                const token = data.access_token;
 
-                if (sessionData) {
-                    // Set session in Supabase client manually
-                    const { data, error } = await supabase.auth.setSession(sessionData);
+                if (token) {
+                    // Store guest token and use synthetic guest session (same as initApp)
+                    localStorage.setItem('token', token);
+                    localStorage.setItem('user_email', 'public_guest@autobill.com');
 
-                    if (error) throw error;
-
-                    // Trigger login success manually since state change listener handles it
-                    // But setSession triggers onAuthStateChange usually
+                    const guestSession = {
+                        access_token: token,
+                        user: {
+                            email: 'public_guest@autobill.com',
+                            id: 'guest',
+                            user_metadata: { shop_name: 'Demo Store' }
+                        }
+                    };
+                    handleLoginSuccess(guestSession);
                     showToast("Welcome to Public Demo Mode!", "success");
                 } else {
-                    throw new Error("No session returned from server");
+                    throw new Error("No token returned from server");
                 }
 
             } catch (e) {
