@@ -89,7 +89,7 @@
                     <div class="stat-info">
                         <p class="stat-label">Items Sold</p>
                         <p class="stat-value" id="stat-items">0</p>
-                        <p class="stat-sub" id="stat-skus">— SKUs in system</p>
+                        <p class="stat-sub" id="stat-skus">— Items in system</p>
                     </div>
                 </div>
 
@@ -342,7 +342,7 @@
                 const low = inv.filter(i => i.stock_quantity <= 5).length;
                 if (lowEl) lowEl.textContent = low;
                 if (document.getElementById('stat-skus')) {
-                    document.getElementById('stat-skus').textContent = inv.length + ' SKUs in system';
+                    document.getElementById('stat-skus').textContent = inv.length + ' Items in system';
                 }
             }
 

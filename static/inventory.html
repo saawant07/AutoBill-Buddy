@@ -35,7 +35,7 @@
         .inv-table tbody tr:hover { background: var(--bg-secondary); }
         .inv-table tbody td { padding: 13px 16px; font-size: 14px; vertical-align: middle; }
         .inv-table .col-product { font-weight: 600; color: var(--text-heading); }
-        .inv-table .col-sku { font-size: 12px; color: var(--text-muted); font-family: monospace; }
+        .inv-table .col-expiry { font-size: 12px; color: var(--text-muted); }
         .inv-table .col-category { font-size: 12px; }
         .inv-table .col-price { font-weight: 600; color: var(--text-heading); }
         .inv-table .col-stock { font-weight: 600; }
@@ -136,11 +136,7 @@
                         <label style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:6px;">Item Name *</label>
                         <input type="text" id="ai-name" class="input" placeholder="e.g. Amul Milk 500ml" style="width:100%;">
                     </div>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-                        <div>
-                            <label style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:6px;">SKU</label>
-                            <input type="text" id="ai-sku" class="input" placeholder="SKU-001" style="width:100%;">
-                        </div>
+                    <div style="display:grid;grid-template-columns:1fr;gap:12px;">
                         <div>
                             <label style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:6px;">Category</label>
                             <select id="ai-category" class="input" style="width:100%;">
@@ -222,7 +218,7 @@
                 <button class="modal-close" onclick="closeImport()"><i class="fas fa-times"></i></button>
             </div>
             <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">
-                Upload a CSV file with columns: <code style="background:var(--bg-secondary);padding:2px 6px;border-radius:4px;font-size:12px;">name, quantity, price, cost_price, category, sku</code>
+                Upload a CSV file with columns: <code style="background:var(--bg-secondary);padding:2px 6px;border-radius:4px;font-size:12px;">name, quantity, price, cost_price, category, expiry_date</code>
             </p>
             <div style="border:2px dashed var(--border-subtle);border-radius:12px;padding:30px;text-align:center;margin-bottom:16px;cursor:pointer;" id="csv-drop-zone" onclick="document.getElementById('csv-file-input').click()" ondragover="event.preventDefault();this.style.borderColor='var(--sidebar-accent)'" ondragleave="this.style.borderColor='var(--border-subtle)'" ondrop="handleCSVDrop(event)">
                 <i class="fas fa-cloud-upload-alt" style="font-size:32px;color:var(--text-muted);margin-bottom:8px;display:block;"></i>
@@ -338,17 +334,33 @@
         function buildFilterPills() {
             const categories = {};
             let lowCount = 0;
+            let expiredCount = 0;
+            let expiringSoonCount = 0;
+            
+            const today = new Date();
+            today.setHours(0,0,0,0);
+            
             const fullMeta = getAllMeta();
             allItems.forEach(i => {
                 const meta = fullMeta[i.item_name] || {};
                 const cat = meta.category || '';
                 if (cat) categories[cat] = (categories[cat] || 0) + 1;
                 if ((i.stock_quantity || 0) <= 10) lowCount++;
+                
+                if (i.expiry_date) {
+                    const exp = new Date(i.expiry_date);
+                    const diffDays = Math.ceil((exp - today) / (1000 * 60 * 60 * 24));
+                    if (diffDays < 0) expiredCount++;
+                    else if (diffDays <= 30) expiringSoonCount++;
+                }
             });
 
             const lowCount2 = allItems.filter(i => (i.stock_quantity || 0) <= 10).length;
             let html = '';
             html += `<button class="filter-pill ${currentFilter === 'all' ? 'active' : ''}" onclick="setFilter('all')">All <span class="count">${allItems.length}</span></button>`;
+            html += `<button class="filter-pill ${currentFilter === 'expired' ? 'active' : ''}" onclick="setFilter('expired')" style="${currentFilter === 'expired' ? '' : 'color:var(--status-error);border-color:var(--status-error);'}"><i class="fas fa-skull"></i> Expired <span class="count">${expiredCount}</span></button>`;
+            html += `<button class="filter-pill ${currentFilter === 'expiring_soon' ? 'active' : ''}" onclick="setFilter('expiring_soon')" style="${currentFilter === 'expiring_soon' ? '' : 'color:var(--status-warning);border-color:var(--status-warning);'}"><i class="fas fa-clock"></i> Expiring Soon <span class="count">${expiringSoonCount}</span></button>`;
+            
             Object.keys(categories).sort().forEach(cat => {
                 html += `<button class="filter-pill ${currentFilter === cat ? 'active' : ''}" onclick="setFilter('${app.esc(cat)}')">${app.esc(cat)} <span class="count">${categories[cat]}</span></button>`;
             });
@@ -365,6 +377,16 @@
             // Filter by category or low-stock
             if (currentFilter === 'low') {
                 items = items.filter(i => (i.stock_quantity || 0) <= 10);
+            } else if (currentFilter === 'expired') {
+                const today = new Date(); today.setHours(0,0,0,0);
+                items = items.filter(i => i.expiry_date && Math.ceil((new Date(i.expiry_date) - today) / (1000 * 60 * 60 * 24)) < 0);
+            } else if (currentFilter === 'expiring_soon') {
+                const today = new Date(); today.setHours(0,0,0,0);
+                items = items.filter(i => {
+                    if (!i.expiry_date) return false;
+                    const diffDays = Math.ceil((new Date(i.expiry_date) - today) / (1000 * 60 * 60 * 24));
+                    return diffDays >= 0 && diffDays <= 30;
+                });
             } else if (currentFilter !== 'all') {
                 items = items.filter(i => (fullMeta[i.item_name]?.category || '') === currentFilter);
             }
@@ -375,7 +397,7 @@
                 items = items.filter(i => {
                     const meta = fullMeta[i.item_name] || {};
                     return (i.item_name || '').toLowerCase().includes(q) ||
-                           (meta.sku || '').toLowerCase().includes(q) ||
+                           (i.expiry_date || '').toLowerCase().includes(q) ||
                            (meta.category || '').toLowerCase().includes(q);
                 });
             }
@@ -390,7 +412,7 @@
                 <thead>
                     <tr>
                         <th>Product</th>
-                        <th>SKU</th>
+                        <th>Expiry Date</th>
                         <th>Category</th>
                         <th>Price</th>
                         <th>Status</th>
@@ -408,6 +430,21 @@
                         else if (qty <= 10) { pillClass = 'orange'; pillLabel = 'Low Stock'; pillIcon = 'fa-exclamation-triangle'; }
                         else { pillClass = 'green'; pillLabel = 'In Stock'; pillIcon = 'fa-check-circle'; }
 
+                        let expiryDisplay = '<span style="font-size:12px;color:var(--text-muted);">—</span>';
+                        if (item.expiry_date) {
+                            const exp = new Date(item.expiry_date);
+                            const today = new Date();
+                            today.setHours(0,0,0,0);
+                            const diffDays = Math.ceil((exp - today) / (1000 * 60 * 60 * 24));
+                            if (diffDays < 0) {
+                                expiryDisplay = `<span class="stock-pill red" title="${Math.abs(diffDays)} days ago"><i class="fas fa-skull"></i> Expired</span> <div style="font-size:11px;margin-top:4px;color:var(--text-muted);">${item.expiry_date}</div>`;
+                            } else if (diffDays <= 30) {
+                                expiryDisplay = `<span class="stock-pill orange"><i class="fas fa-clock"></i> In ${diffDays}d</span> <div style="font-size:11px;margin-top:4px;color:var(--text-muted);">${item.expiry_date}</div>`;
+                            } else {
+                                expiryDisplay = `<span class="stock-pill green"><i class="fas fa-shield-alt"></i> Safe</span> <div style="font-size:11px;margin-top:4px;color:var(--text-muted);">${item.expiry_date}</div>`;
+                            }
+                        }
+
                         const margin = item.price && item.cost_price ? (item.price - item.cost_price) : null;
                         return `
                         <tr data-name="${app.esc(item.item_name)}">
@@ -418,12 +455,11 @@
                                     </div>
                                     <div>
                                         <div>${app.esc(item.item_name)}</div>
-                                        ${item.expiry_date ? `<div style="font-size:11px;color:var(--text-muted);margin-top:2px;"><i class="fas fa-calendar"></i> Exp: ${item.expiry_date}</div>` : ''}
                                         ${margin !== null ? `<div style="font-size:11px;color:var(--status-success);margin-top:2px;">Margin: ₹${margin.toLocaleString('en-IN')}</div>` : ''}
                                     </div>
                                 </div>
                             </td>
-                            <td class="col-sku">${meta.sku || '—'}</td>
+                            <td class="col-expiry">${expiryDisplay}</td>
                             <td class="col-category">
                                 ${meta.category ? `<span class="cat-pill" style="${getCatStyle(meta.category)}">${app.esc(meta.category)}</span>` : `<span style="font-size:12px;color:var(--text-muted);">—</span>`}
                             </td>
@@ -475,7 +511,7 @@
             document.getElementById('add-item-title').innerHTML = `<i class="fas fa-plus-circle" style="color:var(--accent-green)"></i> Add New Item`;
             document.getElementById('ai-name').value = '';
             document.getElementById('ai-name').disabled = false;
-            document.getElementById('ai-sku').value = '';
+            if(document.getElementById('ai-sku')) document.getElementById('ai-sku').value = '';
             document.getElementById('ai-category').value = '';
             document.getElementById('ai-qty').value = '';
             document.getElementById('ai-price').value = '';
@@ -494,7 +530,7 @@
             document.getElementById('add-item-title').innerHTML = `<i class="fas fa-pen" style="color:var(--accent-blue)"></i> Edit ${app.esc(itemName)}`;
             document.getElementById('ai-name').value = itemName;
             document.getElementById('ai-name').disabled = true;
-            document.getElementById('ai-sku').value = meta.sku || '';
+            if(document.getElementById('ai-sku')) document.getElementById('ai-sku').value = meta.sku || '';
             document.getElementById('ai-category').value = meta.category || '';
             document.getElementById('ai-qty').value = item?.stock_quantity || '';
             document.getElementById('ai-price').value = item?.price || '';
@@ -511,7 +547,7 @@
 
         window.submitAddItem = async () => {
             const name = document.getElementById('ai-name').value.trim();
-            const sku = document.getElementById('ai-sku').value.trim();
+            const sku = document.getElementById('ai-sku') ? document.getElementById('ai-sku').value.trim() : '';
             const category = document.getElementById('ai-category').value;
             const qty = parseInt(document.getElementById('ai-qty').value) || 0;
             const price = parseFloat(document.getElementById('ai-price').value) || 0;
@@ -610,7 +646,7 @@
         window.closeImport = () => document.getElementById('import-modal').classList.add('hidden');
 
         window.downloadCSVTemplate = () => {
-            const csv = 'name,quantity,price,cost_price,category,sku\nAmul Milk 500ml,50,60,45,Dairy,\nTata Salt 1kg,100,22,18,Grocery,\nParle-G Biscuit,80,10,7,Grocery,';
+            const csv = 'name,quantity,price,cost_price,category,expiry_date\nAmul Milk 500ml,50,60,45,Dairy,2025-12-31\nTata Salt 1kg,100,22,18,Grocery,\nParle-G Biscuit,80,10,7,Grocery,';
             downloadBlob(new Blob([csv], { type: 'text/csv' }), 'inventory_template.csv');
         };
 
@@ -654,11 +690,14 @@
                 const cost = parseFloat(row.cost_price) || 0;
                 const category = row.category || '';
                 const sku = row.sku || generateSKU(name);
+                const expiry = row.expiry_date || '';
 
                 saveItemMeta(name, { category, sku });
 
                 if (qty > 0) {
-                    const res = await app.api('/add-stock', 'POST', { item_name: name, quantity: qty, price, cost_price: cost });
+                    const payload = { item_name: name, quantity: qty, price, cost_price: cost };
+                    if (expiry) payload.expiry_date = expiry;
+                    const res = await app.api('/add-stock', 'POST', payload);
                     if (res && !res.error) imported++;
                     else failed++;
                 } else {

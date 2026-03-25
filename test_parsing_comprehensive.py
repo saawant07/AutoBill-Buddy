@@ -222,6 +222,8 @@ tests = [
     },
     {
          "text": "raju ki udhari 200", 
+         "expect_mode": "Udhaar",
+         "expect_cust": "Raju",
          "expect_items": [] 
     }
 ]

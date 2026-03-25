@@ -646,7 +646,7 @@ def parse_message_locally(message, available_items, custom_aliases=None):
     # Expanded typos including Hindi
     EXPANDED_VOICE_TYPOS = {
         'keji': 'kg', 'kaji': 'kg', 'kilo': 'kg', 'kilos': 'kg', 'kilogram': 'kg',
-        'doodh': 'milk', 'dudh': 'milk', 'dudth': 'milk', 'melk': 'milk', 'malk': 'milk', 'milkk': 'milk',
+        'doodh': 'milk', 'dudh': 'milk', 'dudth': 'milk', 'melk': 'milk', 'malk': 'milk', 'milkk': 'milk', 'milks': 'milk',
         'chawal': 'rice', 'chaawal': 'rice', 'chaval': 'rice', 'rise': 'rice', 'rais': 'rice', 'raice': 'rice', 'ricee': 'rice',
         'cheeni': 'sugar', 'chini': 'sugar', 'shakkar': 'sugar', 'suger': 'sugar', 'sugur': 'sugar', 'sugarr': 'sugar',
         'aloo': 'potato', 'alu': 'potato', 'aaloo': 'potato',
@@ -728,6 +728,8 @@ def parse_message_locally(message, available_items, custom_aliases=None):
     for cat_alias in custom_aliases.keys():
         for w in cat_alias.lower().split():
             non_names.add(w)
+    for num_word in WORD_TO_NUM.keys():
+        non_names.add(num_word.lower())
 
     for pat in customer_patterns:
         m = re.search(pat, original_text, re.IGNORECASE)
@@ -793,6 +795,16 @@ def parse_message_locally(message, available_items, custom_aliases=None):
                     items_found.append({"item": match1, "qty": qty})
                     consumed_indices.update({i, i+1})
                     i += 2
+                    matched = True
+                    
+            # Try 1-word item skipping 1 unrecognized adjective: "2 amul milk" -> "Milk"
+            if not matched and i + 2 < len(words) and (i+1) not in consumed_indices and (i+2) not in consumed_indices:
+                match_skip = fuzzy_match_item(words[i+2], available_items, EXPANDED_VOICE_TYPOS)
+                if match_skip and not any(it["item"] == match_skip for it in items_found):
+                    # We matched the noun at i+2, ignoring the adjective at i+1
+                    items_found.append({"item": match_skip, "qty": qty})
+                    consumed_indices.update({i, i+1, i+2})
+                    i += 3
                     matched = True
             
             if not matched:
